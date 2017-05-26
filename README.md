@@ -1,4 +1,4 @@
-# Tensors.jl
+# TensorToolbox.jl
 
 [![Build Status](https://travis-ci.org/lanaperisa/Tensors.jl.svg?branch=master)](https://travis-ci.org/lanaperisa/Tensors.jl)
 
@@ -8,7 +8,7 @@ Julia package for tensors. Includes functions for dense tensors and tensors in T
 
 Start with
 ```julia
-using Tensors
+using TensorToolbox
 ```
 
 Define tensor as multidimensional arrays and calculate its norm:
