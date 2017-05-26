@@ -1,6 +1,6 @@
 # TensorToolbox.jl
 
-[![Build Status](https://travis-ci.org/lanaperisa/Tensors.jl.svg?branch=master)](https://travis-ci.org/lanaperisa/Tensors.jl)
+[![Build Status](https://travis-ci.org/lanaperisa/TensorToolbox.jl.svg?branch=master)](https://travis-ci.org/lanaperisa/TensorToolbox.jl)
 
 Julia package for tensors. Includes functions for dense tensors and tensors in Tucker format. Follows the functionality of MATLAB [Tensor toolbox](http://www.sandia.gov/~tgkolda/TensorToolbox/index-2.6.html). 
 
