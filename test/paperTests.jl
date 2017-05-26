@@ -1,4 +1,4 @@
-using Tensors, Gadfly, JLD, DataFrames, TimeIt, Compose, Colors
+using TensorToolbox, Gadfly, JLD, DataFrames, TimeIt, Compose, Colors
 
 @doc """ Function for testing Variants A and B of fast matrix-vector multiplication, when matrix is exactly matricized
 Hadamard product of two randomly generated tensors in Tucker format of size IxIxI and multilinear ranks (R,R,R)

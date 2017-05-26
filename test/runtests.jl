@@ -1,4 +1,4 @@
-using Tensors
+using TensorToolbox
 using Base.Test
 
 X=rand(20,10,50,5);

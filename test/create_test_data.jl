@@ -1,4 +1,4 @@
-using Tensors,JLD
+using TensorToolbox,JLD
 
 
 f1(x,y,z)=1/(x+y+z);
