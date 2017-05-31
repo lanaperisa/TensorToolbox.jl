@@ -28,15 +28,15 @@ for n=1:ndims(T)
   @test size(T.fmat[n]) == (size(X,n),size(X,n))
 end
 
-println("\n\n...Testing function full, i.e. n-mode multiplication (ttm): norm(full(T)-X) = ", norm(full(T) - X))
-@test_approx_eq_eps norm(full(T)-X) 0 1e-12
+println("\n\n...Testing function full, i.e. n-mode multiplication (ttm): vecnorm(full(T)-X) = ", vecnorm(full(T) - X))
+@test_approx_eq_eps vecnorm(full(T)-X) 0 1e-12
 
 A=MatrixCell(ndims(T))
 for n=1:ndims(T)
   A[n]=rand(rand(1:10),size(T,n))
 end
-println("\n...Testing ttm for ttensor T and array of matrices A : norm(full(ttm(T,A))-ttm(full(T),A)) = ", norm(full(ttm(T,A)) - ttm(full(T),A)))
-@test_approx_eq_eps norm(full(ttm(T,A)) - ttm(full(T),A)) 0 1e-10
+println("\n...Testing ttm for ttensor T and array of matrices A : vecnorm(full(ttm(T,A))-ttm(full(T),A)) = ", vecnorm(full(ttm(T,A)) - ttm(full(T),A)))
+@test_approx_eq_eps vecnorm(full(ttm(T,A)) - ttm(full(T),A)) 0 1e-10
 
 R=[5,5,5,5]
 println("\n...Testing hosvd with smaller multilinear rank: ", R)
@@ -64,12 +64,12 @@ println("\n\n...Testing hosvd for tensor with noise.")
 println("For ttensor T, X=full(T) tensor of size ",size(X)," and rank ",R," , N noise tensor and S=hosvd(X+N,",R,").")
 rsz = tuple([[sz...]' 1 1]...)
 Rdm = reshape(randn(rsz), sz);
-N=1e-3 * norm(X) * Rdm / norm(Rdm);
+N=1e-3 * vecnorm(X) * Rdm / vecnorm(Rdm);
 Y = X + N;
 S=hosvd(Y,reqrank=R);
-err=norm(T-S)
-noise=norm(N)
-println("Error( norm(T-S) ): ",err,". Noise norm: ",noise,".")
+err=vecnorm(T-S)
+noise=vecnorm(N)
+println("Error( vecnorm(T-S) ): ",err,". Noise vecnorm: ",noise,".")
 
 f(x,y,z)=1/(x+y+z)
 dx=dy=dz=[n*0.1 for n=1:20]
@@ -85,7 +85,7 @@ print("Factor matrices sizes: ")
 for A in T.fmat
 	print(size(A)," ")
 end
-@test_approx_eq_eps norm(full(T)-X) 0 1e-5
+@test_approx_eq_eps vecnorm(full(T)-X) 0 1e-5
 
 println("\n\n...Testing hosvd with eps_rel=1e-5 on function defined tensor X of size ", size(X))
 T=hosvd(float(X),eps_rel=1e-5)
@@ -120,13 +120,13 @@ println("Has orthogonal factor matrices: ", S.isorth)
 println("After reorthogonalization: ", reorth!(S).isorth)
 @test S.isorth
 
-println("\n\n...Testing norm of ttensor T.")
-println("|norm(T) - norm(full(T))| = ", abs(norm(T) - norm(full(T))))
-@test_approx_eq_eps abs(norm(T) - norm(full(T))) 0 1e-12
+println("\n\n...Testing vecnorm of ttensor T.")
+println("|vecnorm(T) - vecnorm(full(T))| = ", abs(vecnorm(T) - vecnorm(full(T))))
+@test_approx_eq_eps abs(vecnorm(T) - vecnorm(full(T))) 0 1e-12
 
 println("\n\n...Testing scalar multiplication 3*T.")
-println("norm(full(3*T) - 3*full(T)) = ",  norm(full(3*T) - 3*full(T)))
-@test_approx_eq_eps norm(full(3*T) - 3*full(T)) 0 1e-12
+println("vecnorm(full(3*T) - 3*full(T)) = ",  vecnorm(full(3*T) - 3*full(T)))
+@test_approx_eq_eps vecnorm(full(3*T) - 3*full(T)) 0 1e-12
 
 X=randttensor([6,8,2,5,4],[4,3,2,2,3]);
 Y=randttensor([6,8,2,5,4],[3,6,3,4,3]);
@@ -134,8 +134,8 @@ println("\n\n...Creating two random ttensors X and Y of size ", size(X),".")
 println("\n...Testing addition.")
 Z=X+Y;
 F=full(X)+full(Y);
-println("norm(full(X+Y) - (full(X)+full(Y))) = ", norm(full(Z) - F))
-@test_approx_eq_eps norm(full(Z) - F) 0 1e-12
+println("vecnorm(full(X+Y) - (full(X)+full(Y))) = ", vecnorm(full(Z) - F))
+@test_approx_eq_eps vecnorm(full(Z) - F) 0 1e-12
 
 println("\n\n...Testing inner product.")
 Z=innerprod(X,Y)
@@ -143,14 +143,14 @@ println("|innerprod(X,Y) - innerprod(full(X),full(Y))| = ", abs(Z - innerprod(fu
 @test_approx_eq_eps abs(Z - innerprod(full(X),full(Y))) 0 1e-10
 
 println("\n\n...Testing Hadamard product.")
-println("norm(full(X.*Y) - full(X).*full(Y)) = ", norm(full(X.*Y) - full(X).*full(Y)))
-@test_approx_eq_eps  norm(full(X.*Y) - full(X).*full(Y)) 0 1e-10
+println("vecnorm(full(X.*Y) - full(X).*full(Y)) = ", vecnorm(full(X.*Y) - full(X).*full(Y)))
+@test_approx_eq_eps  vecnorm(full(X.*Y) - full(X).*full(Y)) 0 1e-10
 
 
 println("\n\n...Testing singular values of matricizations of Tucker Tensor.")
 R=[3,3,3]
 T=randttensor([10,9,8],R);
-println("\nSingular values of matricizations of random Tucker tensor of size ", size(T), ", rank ",R," and norm ",norm(T),".")
+println("\nSingular values of matricizations of random Tucker tensor of size ", size(T), ", rank ",R," and vecnorm ",vecnorm(T),".")
 for n=1:ndims(T)
   sv = msvdvals(T,n)
   Tn=tenmat(T,n);
@@ -160,7 +160,7 @@ end
 
 R=[5,5,5,5]
 T=randttensor([20,20,20,20],R);
-println("\nSingular values of matricizations of random Tucker tensor of size ", size(T), ", rank ",R," and norm ",norm(T),".")
+println("\nSingular values of matricizations of random Tucker tensor of size ", size(T), ", rank ",R," and vecnorm ",vecnorm(T),".")
 for n=1:ndims(T)
   sv = msvdvals(T,n)
   Tn=tenmat(T,n);

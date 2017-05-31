@@ -1,5 +1,4 @@
-export hosvd, innerprod, krontm, matten, mkrontm, mkrontv, mrank, mttkrp, norm, nrank, sthosvd, tenmat, tkron, ttm, ttt, ttv
-import Base.norm;
+export hosvd, innerprod, krontm, matten, mkrontm, mkrontv, mrank, mttkrp, nrank, sthosvd, tenmat, tkron, ttm, ttt, ttv
 
 @doc """ Higher-order singular value decomposition. """ ->
 #methods={"lapack","lanczos","randsvd"}
@@ -192,10 +191,6 @@ function mttkrp{T<:Number,N}(X::Array{T,N},M::MatrixCell,n::Integer)
   Xn*khatrirao(reverse(M[modes]))
 end
 mttkrp{T1<:Number,T2<:Number,N}(X::Array{T1,N},M::Array{Matrix{T2}},n::Integer)=mttkrp(X,MatrixCell(M),n)
-
-function norm{T<:Number}(X::Array{T})
-	sqrt(sum(X.*X))
-end
 
 function nrank{T<:Number}(X::Array{T},n::Integer)
   rank(tenmat(X,n))

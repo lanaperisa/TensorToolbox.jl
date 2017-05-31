@@ -2,9 +2,9 @@
 
 export ttensor, randttensor
 export coresize, full, had, hadcten, hosvd, hosvd1, hosvd2, hosvd3, hosvd4, innerprod, isequal, lanczos, mhadtm, mhadtv, minus, mrank
-export msvdvals, mtimes, mttkrp, ndims, norm, nrank, nvecs, permutedims, plus, randrange, randsvd, reorth, reorth!, size, tenmat, ttm, ttv, uminus
+export msvdvals, mtimes, mttkrp, ndims, vecnorm, nrank, nvecs, permutedims, plus, randrange, randsvd, reorth, reorth!, size, tenmat, ttm, ttv, uminus
 
-import Base: size, ndims, +, -, *, .*, ==, full, isequal, permutedims
+import Base: size, ndims, +, -, *, .*, ==, full, isequal, permutedims, vecnorm
 
 type ttensor{T<:Number}
 	cten::Array{T}
@@ -389,25 +389,25 @@ function mttkrp{T<:Number}(X::ttensor{T},M::MatrixCell,n::Integer)
 end
 mttkrp{T1<:Number,T2<:Number}(X::ttensor{T1},M::Array{Matrix{T2}},n::Integer)=mttkrp(X,MatrixCell(M),n)
 
-@doc """ Number of modes of ttensor. """ ->
+@doc """ Number of modes of a ttensor. """ ->
 function ndims{T<:Number}(X::ttensor{T})
 	ndims(X.cten)
 end
 
-@doc """ Norm of Tucker tensor. """ ->
-function norm{T<:Number}(X::ttensor{T})
+@doc """ Norm of a ttensor. """ ->
+function vecnorm{T<:Number}(X::ttensor{T})
 	if prod(size(X)) > prod(size(X.cten))
 		if X.isorth == true
-			norm(X.cten)
+			vecnorm(X.cten)
 		else
 			R=MatrixCell(ndims(X))
 			for n=1:ndims(X)
 				R[n]=qrfact(X.fmat[n])[:R]
 			end
-			norm(ttm(X.cten,R))
+			vecnorm(ttm(X.cten,R))
 		end
 	else
-		norm(full(X))
+		vecnorm(full(X))
 	end
 end
 
