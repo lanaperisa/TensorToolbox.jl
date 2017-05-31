@@ -259,18 +259,11 @@ function mhadtv{T1<:Number,T2<:Number,T3<:Number}(X1::ttensor{T1},X2::ttensor{T2
 
   if t=='t'
     @assert(length(v) == I[n],"Vector v is of inappropriate size.")
-    #U=broadcast(.*,v,X1.fmat[n]);  #U=diagm(v)*Aₙ
-    w1=krtv(X1.fmat[n]',X2.fmat[n]',v);
-    #W1=mkrontv(X1.cten,X2.cten,vec(X2.fmat[n]'*U),n,'t') #W1=tenmat(G₁ ⨂ G₂,n)'*vec(Bₙ'*U)
-    W1=mkrontv(X1.cten,X2.cten,w1,n,'t')
+    w1=krtv(X1.fmat[n]',X2.fmat[n]',v); #w1=(Aₖ' ⨀ Bₖ')*v
+    W1=mkrontv(X1.cten,X2.cten,w1,n,'t') #W1=tenmat(G₁ ⨂ G₂,n)'*w1
     for k in N
       W1=reshape(W1,R[k],round(Int,prod(size(W1))/R[k]))
       W2=tkrtv(X1.fmat[k],X2.fmat[k],W1) #vec(W2)=(Aₖ ⨀' Bₖ)*vec(W1)
-      #W2=zeros(I[k],size(W1,2))
-      #for i=1:size(W1,2)
-      #  W3=reshape(W1[:,i],r2[k],r1[k])
-      #  W2[:,i]=sum((X2.fmat[k]*W3).*X1.fmat[k],2)  #diag(Bₖ*P₁*Aₖ')=sum((Bₖ*P₁).*Aₖ,2)
-      #end
       W1=W2'
     end
     vec(W1)
@@ -279,43 +272,25 @@ function mhadtv{T1<:Number,T2<:Number,T3<:Number}(X1::ttensor{T1},X2::ttensor{T2
     W1=v
     for k in N
       W1=reshape(W1,I[k],round(Int,prod(size(W1))/I[k]))
-      #W2=zeros(R[k],size(W1,2))
       W2=krtv(X1.fmat[k]',X2.fmat[k]',W1) #W2=(Aₖ' ⨀ Bₖ')*W1
-      #for i=1:size(W1,2)
-      #  U=broadcast(.*,W1[:,i],X1.fmat[k]);  #vec(U)=diagm(W1[:,i])*Aₖ
-      #  W2[:,i]=vec(X2.fmat[k]'*U);
-      #end
       W1=W2'
     end
     W2=mkrontv(X1.cten,X2.cten,vec(W1),n) #W1=tenmat(G₁ ⨂ G₂),n)*vec(W2)
-    #vec(sum((X2.fmat[n]*reshape(W2,size(X2.fmat[n],2),size(X1.fmat[n],2))).*X1.fmat[n],2)) #(Aₖ' ⨀ Bₖ')'*vec(W2)
-    tkrtv(X1.fmat[n],X2.fmat[n],W2)
+    tkrtv(X1.fmat[n],X2.fmat[n],W2) #(Aₖ ⨀' Bₖ)*W2
   elseif t=='b'
     @assert(length(v) == I[n],"Vector v is of inappropriate size.")
     if variant == 'A'    #use when prod(I[N])-prod(R[N]) < 0
       mhadtv(X1,X2,mhadtv(X1,X2,v,n,'t'),n,'n')
     elseif variant == 'B'
-      #U=broadcast(.*,v,X1.fmat[n]);  #U=diagm(v)*Aₙ
-      w1=krtv(X1.fmat[n]',X2.fmat[n]',v);
-      #W1=mkrontv(X1.cten,X2.cten,vec(X2.fmat[n]'*U),n,'t') #W1=tenmat(G₁ ⨂ G₂,n)'*vec(Bₙ'*U)
-      W1=mkrontv(X1.cten,X2.cten,w1,n,'t')
+      w1=krtv(X1.fmat[n]',X2.fmat[n]',v); #w1=(Aₖ' ⨀ Bₖ')*v
+      W1=mkrontv(X1.cten,X2.cten,w1,n,'t') #W1=tenmat(G₁ ⨂ G₂,n)'*w1
       for k in N
         W1=reshape(W1,R[k],round(Int,prod(size(W1))/R[k]))
-        #W2=zeros(R[k],size(W1,2))
         W2=tkrtv(X1.fmat[k],X2.fmat[k],W1)
         W1=krtv(X1.fmat[k]',X2.fmat[k]',W2)'
-        #for i=1:size(W1,2)
-        #   W3=reshape(W1[:,i],r2[k],r1[k])
-        #   w=sum((X2.fmat[k]*W3).*X1.fmat[k],2)  #diag(Bₖ*P₁*Aₖ')=sum((Bₖ*P₁).*Aₖ,2)
-        #   U=broadcast(.*,w,X1.fmat[k]);
-        #   W2[:,i]=vec(X2.fmat[k]'*U);
-        #end
-        ##vec(W2)=(Aₖ' ⨀ Bₖ')(Aₖ' ⨀ Bₖ')'*vec(W1)
-        #W1=W2'
       end
       W2=mkrontv(X1.cten,X2.cten,vec(W1),n) #W2=tenmat(G₁ ⨂ G₂),n)*vec(W1)
-      #vec(sum((X2.fmat[n]*reshape(W2,size(X2.fmat[n],2),size(X1.fmat[n],2))).*X1.fmat[n],2)) #(Aₖ' ⨀ Bₖ')'*vec(W2)
-      tkrtv(X1.fmat[n],X2.fmat[n],W2)
+      tkrtv(X1.fmat[n],X2.fmat[n],W2) #(Aₖ' ⨀ Bₖ')'*W2
     else
       error("Variant should be either 'A' or 'B'.")
     end

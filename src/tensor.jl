@@ -137,7 +137,7 @@ function mkrontv{T1<:Number,T2<:Number,T3<:Number,N}(X1::Array{T1,N},X2::Array{T
   if t=='n'
     @assert(length(v) == prod(kronsize[ind]),"Vector is of inapropriate size.")
     tenshape=vec([[I2[ind]...] [I1[ind]...]]');
-    vperm=permutedims(reshape(v,tenshape),perfect_shuffle);
+    vperm=permutedims(reshape(v,tenshape...),perfect_shuffle);
     vec(X2n*reshape(vperm,size(X2n,2),size(X1n,2))*X1n')
   elseif t=='t'
     @assert(length(v) == kronsize[n],"Vector is of inapropriate size.")
@@ -147,7 +147,7 @@ function mkrontv{T1<:Number,T2<:Number,T3<:Number,N}(X1::Array{T1,N},X2::Array{T
       W=X2n'*(reshape(v,size(X2n,1),size(X1n,1))*X1n)
     end
     tenshape=[[I2[ind]...];[I1[ind]...]];
-    vec(permutedims(reshape(W,tenshape),invperm(perfect_shuffle)))
+    vec(permutedims(reshape(W,tenshape...),invperm(perfect_shuffle)))
     end
 end
 

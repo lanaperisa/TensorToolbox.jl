@@ -1,7 +1,5 @@
 using Base.Cartesian
 
-import Base.reshape
-
 #export indicesmat2vec, indicesmat, shiftsmat
 export khatrirao, krontkron, krontv, krtv, tkrtv, lanczos, randsvd
 export MatrixCell, VectorCell
@@ -9,10 +7,6 @@ export MatrixCell, VectorCell
 typealias MatrixCell Array{Matrix,1}
 typealias VectorCell Array{Vector,1}
 
-#Extended Base.reshape to work with p defined as vector
-function reshape{T<:Number,D<:Integer}(A::Array{T},p::Vector{D})
-    reshape(A,tuple(p...))
-end
 
 #Transforms matrix of multi-indices into a vector of linear indices
 function indicesmat2vec{D<:Integer}(I::Matrix{D},sz::Tuple)
