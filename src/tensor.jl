@@ -5,7 +5,7 @@ export hosvd, innerprod, krontm, matten, mkrontm, mkrontv, mrank, mttkrp, nrank,
 #If reqrank not defined there are two options:
 # - drop singular values below eps_abs
 # - drop singular values below eps_rel*sigma_1
-function hosvd{T<:Number,N}(X::Array{T,N};method="lapack",reqrank=[],eps_abs=1e-8,eps_rel=0)
+function hosvd{T<:Number,N}(X::Array{T,N};method="lapack",reqrank=[],eps_abs=1e-8,eps_rel=0,p=10)
 	fmat=MatrixCell(N)
   if length(reqrank)>0  && reduce(|,reqrank)!=0 #fixed-rank problem
      if isa(reqrank,Int)
@@ -20,9 +20,9 @@ function hosvd{T<:Number,N}(X::Array{T,N};method="lapack",reqrank=[],eps_abs=1e-
     if method == "lapack"
       fmat[n],S=LAPACK.gesvd!('A','N',Xn)
     elseif method == "lanczos"
-      fmat[n],S=lanczos(Xn,tol=eps_abs,reqrank=reqrank[n])
+      fmat[n],S=lanczos(Xn,tol=eps_abs,reqrank=reqrank[n],p=p)
     elseif method == "randsvd"
-      fmat[n],S=randsvd(Xn,tol=eps_abs,reqrank=reqrank[n])
+      fmat[n],S=randsvd(Xn,tol=eps_abs,reqrank=reqrank[n],p=p)
     else
       fmat[n],S,V=svd(Xn)
     end

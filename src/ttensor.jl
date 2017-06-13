@@ -92,13 +92,13 @@ function hosvd{T<:Number}(X::ttensor{T};method="lapack",reqrank=[],eps_abs=1e-5,
 end
 
 @doc """ HOSVD1 algorithm for getting Tucker representation of Hadamard product of two Tucker tensors. """ ->
-function hosvd1{T1<:Number,T2<:Number}(X1::ttensor{T1},X2::ttensor{T2};method="randsvd",reqrank=[],eps_abs=1e-8,eps_rel=0)
+function hosvd1{T1<:Number,T2<:Number}(X1::ttensor{T1},X2::ttensor{T2};method="randsvd",reqrank=[],eps_abs=1e-8,eps_rel=0,p=10)
   Xprod=full(X1).*full(X2);
-  hosvd(Xprod,method=method,reqrank=reqrank,eps_abs=eps_abs,eps_rel=eps_rel)
+  hosvd(Xprod,method=method,reqrank=reqrank,eps_abs=eps_abs,eps_rel=eps_rel,p=p)
 end
 
 @doc """ HOSVD2 algorithm for getting Tucker representation of Hadamard product of two Tucker tensors. """ ->
-function hosvd2{T1<:Number,T2<:Number}(X1::ttensor{T1},X2::ttensor{T2};method="randsvd",reqrank=[],eps_abs=1e-8,eps_rel=0)
+function hosvd2{T1<:Number,T2<:Number}(X1::ttensor{T1},X2::ttensor{T2};method="randsvd",reqrank=[],eps_abs=1e-8,eps_rel=0,p=10)
 @assert(size(X1) == size(X2))
   N=ndims(X1)
 	Ahad=MatrixCell(N) #initialize factor matrices
@@ -109,7 +109,7 @@ function hosvd2{T1<:Number,T2<:Number}(X1::ttensor{T1},X2::ttensor{T2};method="r
     Q[n],R[n]=qr(Ahad[n])
     n+=1
 	 end
-  X=hosvd(krontm(X1.cten,X2.cten,R),method=method,reqrank=reqrank,eps_abs=1e-8,eps_rel=0);
+  X=hosvd(krontm(X1.cten,X2.cten,R),method=method,reqrank=reqrank,eps_abs=eps_abs,eps_rel=eps_rel,p=p);
   cten=X.cten;
   fmat=MatrixCell(N)
   [fmat[n]=Q[n]*X.fmat[n] for n=1:N];

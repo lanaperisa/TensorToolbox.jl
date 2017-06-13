@@ -165,11 +165,12 @@ end
 
 
 @doc """ Lanczos tridiagonalization algorithm - returns left singular vectors and singular values of a matrix. """ ->
-function lanczos{N<:Number}(A::Matrix{N};tol=1e-8,maxit=1000,reqrank=0)
+function lanczos{N<:Number}(A::Matrix{N};tol=1e-8,maxit=1000,reqrank=0,p=10)
+  #p...oversamling parameter
   m,n=size(A)
   K=min(m,maxit);
   if reqrank != 0
-      K=min(reqrank+10,K);
+      K=min(reqrank+p,K);
   end
   α=zeros(K)
   β=zeros(K)
@@ -207,11 +208,12 @@ function lanczos{N<:Number}(A::Matrix{N};tol=1e-8,maxit=1000,reqrank=0)
 end
 
 @doc """ Randomized SVD algorithm - returns left singular vectors and singular values of a matrix. """ ->
-function randsvd{N<:Number}(A::Matrix{N};tol=1e-8,maxit=1000,reqrank=0,r=10)
-  #r... oversampling parameter
+function randsvd{N<:Number}(A::Matrix{N};tol=1e-8,maxit=1000,reqrank=0,r=10,p=10)
+  #p... oversampling parameter
+  #r... number of samples for testing convergence
   m,n=size(A)
   if reqrank!=0
-    Y=A*(A'*randn(m,reqrank+r));
+    Y=A*(A'*randn(m,reqrank+p));
     Q=qrfact(Y)[:Q];
   else
     maxit=min(m,n,maxit);
@@ -222,15 +224,15 @@ function randsvd{N<:Number}(A::Matrix{N};tol=1e-8,maxit=1000,reqrank=0,r=10)
     maxcolnorm=maximum([norm(Y[:,i]) for i=1:r]);
     while maxcolnorm > rangetol && j<maxit
       j+=1;
-      p=Q'*Y[:,j];
-      Y[:,j]-=Q*p;
+      v=Q'*Y[:,j];
+      Y[:,j]-=Q*v;
       q=Y[:,j]/norm(Y[:,j]);
       Q=[Q q];
       w=A*(A'*randn(m));
-      p=Q'*w;
-      Y=[Y w-Q*p]; #Y[:,j+r]=w-Q*p;
-      p=q'*Y[:,j+1:j+r-1]
-      Y[:,j+1:j+r-1]-=q*p;
+      v=Q'*w;
+      Y=[Y w-Q*v]; #Y[:,j+r]=w-Q*v;
+      v=q'*Y[:,j+1:j+r-1]
+      Y[:,j+1:j+r-1]-=q*v;
       maxcolnorm=maximum([norm(Y[:,i]) for i=j+1:j+r]);
     end
   end

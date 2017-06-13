@@ -1,10 +1,9 @@
-using TensorToolbox,JLD
-
+using TensorToolbox, JLD
 
 f1(x,y,z)=1/(x+y+z);
 f2(x,y,z)=1/((x+y+z)^(1/2));
 
-X1=cell(4);X2=cell(4);
+X1=Array(Any,4);X2=Array(Any,4);
 sz=[50,100,200,400]
 i=1;
 for s in sz
