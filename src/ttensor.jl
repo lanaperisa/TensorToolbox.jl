@@ -377,7 +377,8 @@ function vecnorm{T<:Number}(X::ttensor{T})
 		else
 			R=MatrixCell(ndims(X))
 			for n=1:ndims(X)
-				R[n]=qrfact(X.fmat[n])[:R]
+				#R[n]=qrfact(X.fmat[n])[:R]
+				R[n]=qr(X.fmat[n])[2];
 			end
 			vecnorm(ttm(X.cten,R))
 		end
@@ -452,7 +453,8 @@ function randrange{T1<:Number,T2<:Number,N}(C1::Array{T1,N},C2::Array{T2,N},KR::
       w=krontkron(reverse(KR[remmodes]),reverse(y),'t')
       Y[:,i]=KR[mode]*mkrontv(C1,C2,w,mode)
     end
-    Q=full(qrfact(Y)[:Q]);
+    #Q=full(qrfact(Y)[:Q]);
+    Q=qr(Y)[1];
   else
     maxit=min(m,n,maxit);
     rangetol=tol*sqrt(pi/2)/10;
@@ -504,7 +506,8 @@ function randsvd{T1<:Number,T2<:Number}(X1::ttensor{T1},X2::ttensor{T2},mode::In
   n=prod(deleteat!(copy([I...]),mode))
   if reqrank!=0
      Y=mhadtv(X1,X2,randn(m,reqrank+p),mode,variant=variant);  #Y=A*(A'*randn(m,reqrank+p));
-     Q=full(qrfact(Y)[:Q]);
+     #Q=full(qrfact(Y)[:Q]);
+     Q=qr(Y)[1];
   else
     maxit=min(m,n,maxit);
     rangetol=tol*sqrt(pi/2)/10;

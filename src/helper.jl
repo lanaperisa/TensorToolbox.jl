@@ -214,7 +214,8 @@ function randsvd{N<:Number}(A::Matrix{N};tol=1e-8,maxit=1000,reqrank=0,r=10,p=10
   m,n=size(A)
   if reqrank!=0
     Y=A*(A'*randn(m,reqrank+p));
-    Q=qrfact(Y)[:Q];
+    #Q=qrfact(Y)[:Q];
+    Q=qr(Y)[1];
   else
     maxit=min(m,n,maxit);
     rangetol=tol*sqrt(pi/2)/10; #assures ||A-Q*Q'*A||<=tol
