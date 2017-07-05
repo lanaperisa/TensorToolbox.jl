@@ -165,9 +165,13 @@ function hosvd4{T1<:Number,T2<:Number}(X1::ttensor{T1},X2::ttensor{T2};reqrank=[
   end
   [fmat[n]=Q[n]'*KR[n] for n=1:N]
   H=krontm(X1.cten,X2.cten,fmat)
-  Htucker=hosvd(H,reqrank=reqrank,method=method,eps_abs=tol)
-  [fmat[n]=Q[n]*Htucker.fmat[n] for n=1:N]
-  ttensor(Htucker.cten,fmat)
+  if norm(reqrank) != 0 #fixed-precision problem
+    Htucker=hosvd(H,reqrank=reqrank,method=method,eps_abs=tol)
+    [fmat[n]=Q[n]*Htucker.fmat[n] for n=1:N]
+    return ttensor(Htucker.cten,fmat)
+  else
+    return ttensor(H,Q)
+  end
 end
 
 @doc """ Inner product of two Tucker tensors. """ ->
