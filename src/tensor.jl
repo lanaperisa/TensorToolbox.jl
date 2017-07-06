@@ -26,7 +26,7 @@ function hosvd{T<:Number,N}(X::Array{T,N};method="lapack",reqrank=[],eps_abs=1e-
     else
       fmat[n],S,V=svd(Xn)
     end
-    if reqrank[n]!=0
+    if reqrank[n]!=0 && size(fmat[n],2)>reqrank[n]
       fmat[n]=fmat[n][:,1:reqrank[n]];
     else
       eps_rel != 0 ? tol=eps_rel*S[1] : tol=eps_abs;

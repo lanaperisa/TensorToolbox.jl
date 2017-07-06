@@ -243,8 +243,13 @@ function randsvd{N<:Number}(A::Matrix{N};tol=1e-8,maxit=1000,reqrank=0,r=10,p=10
   U=E[:vectors][:,end:-1:1];
   S=sqrt(abs(E[:values][end:-1:1]));
   if reqrank != 0
-      U=Q*U[:,1:reqrank];
-      S=S[1:reqrank];
+      if size(U,2)<reqrank
+	  warn("Requested rank exceeds the actual rank. Try changing eps_abs.");
+          U=Q*U;
+      else
+	U=Q*U[:,1:reqrank];
+      	S=S[1:reqrank];
+      end
   else
     I=find(x-> x>tol ? true : false,S)
     U=Q*U[:,I];
