@@ -418,5 +418,5 @@ function hosvd4test{D<:Integer}(R,S::Vector{D};timeit_limit=500,create_plot=0,di
   end
 
 end
-hosvd4test{D<:Integer}(R,I::Range{D};create_plot=0,dir=".")=hosvd4test(R,collect(I),create_plot=create_plot,dir=dir)
+hosvd4test{D<:Integer}(R,S::Range{D};create_plot=0,dir=".")=hosvd4test(R,collect(S),create_plot=create_plot,dir=dir)
 #
