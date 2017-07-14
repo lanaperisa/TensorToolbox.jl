@@ -84,7 +84,7 @@ end
 hadcten{T1<:Number,T2<:Number,T3<:Number}(X1::ttensor{T1},X2::ttensor{T2},fmat::Array{Matrix{T3}})=hadcten(X1,X2,MatrixCell(fmat))
 
 @doc """ HOSVD for Tucker tensor. """ ->
-function hosvd{T<:Number}(X::ttensor{T};method="lapack",reqrank=[],eps_abs=1e-5,eps_rel=0)
+function hosvd{T<:Number}(X::ttensor{T};method="lapack",reqrank=[],eps_abs=[],eps_rel=[])
 	F=hosvd(X.cten,method=method,reqrank=reqrank,eps_abs=eps_abs,eps_rel=eps_rel)
   fmat=MatrixCell(ndims(X))
   [fmat[n]=X.fmat[n]*F.fmat[n] for n=1:ndims(X)]
@@ -92,13 +92,13 @@ function hosvd{T<:Number}(X::ttensor{T};method="lapack",reqrank=[],eps_abs=1e-5,
 end
 
 @doc """ HOSVD1 algorithm for getting Tucker representation of Hadamard product of two Tucker tensors. """ ->
-function hosvd1{T1<:Number,T2<:Number}(X1::ttensor{T1},X2::ttensor{T2};method="randsvd",reqrank=[],eps_abs=1e-8,eps_rel=0,p=10)
+function hosvd1{T1<:Number,T2<:Number}(X1::ttensor{T1},X2::ttensor{T2};method="randsvd",reqrank=[],eps_abs=[],eps_rel=[],p=10)
   Xprod=full(X1).*full(X2);
   hosvd(Xprod,method=method,reqrank=reqrank,eps_abs=eps_abs,eps_rel=eps_rel,p=p)
 end
 
 @doc """ HOSVD2 algorithm for getting Tucker representation of Hadamard product of two Tucker tensors. """ ->
-function hosvd2{T1<:Number,T2<:Number}(X1::ttensor{T1},X2::ttensor{T2};method="randsvd",reqrank=[],eps_abs=1e-8,eps_rel=0,p=10)
+function hosvd2{T1<:Number,T2<:Number}(X1::ttensor{T1},X2::ttensor{T2};method="randsvd",reqrank=[],eps_abs=[],eps_rel=[],p=10)
 @assert(size(X1) == size(X2))
   N=ndims(X1)
 	Ahad=MatrixCell(N) #initialize factor matrices
@@ -117,27 +117,25 @@ function hosvd2{T1<:Number,T2<:Number}(X1::ttensor{T1},X2::ttensor{T2};method="r
 end
 
 @doc """ HOSVD3 algorithm for getting Tucker representation of Hadamard product of two Tucker tensors. """ ->
-function hosvd3{T1<:Number,T2<:Number}(X1::ttensor{T1},X2::ttensor{T2};reqrank=[],method="lanczos",variant='B',eps_abs=1e-8,eps_rel=0,p=10)
+function hosvd3{T1<:Number,T2<:Number}(X1::ttensor{T1},X2::ttensor{T2};reqrank=[],method="lanczos",variant='B',eps_abs=[],eps_rel=[],p=10)
  	@assert(size(X1) == size(X2))
   N=ndims(X1)
 	Ahad=MatrixCell(N) #initilize factor matrices
   if method != "lanczos" && method != "randsvd"
     error("Incorect method name.")
   end
-  if length(reqrank) == 0
-	  reqrank=zeros(N);
-  elseif isa(reqrank,Int)
-    reqrank=repmat([reqrank],N)
-  end
+  reqrank=check_vector_input(reqrank,N,0);
+  eps_abs=check_vector_input(eps_abs,N,1e-8);
+  eps_rel=check_vector_input(eps_rel,N,0);
   @assert(N==length(reqrank),"Dimensions mismatch.")
   for n=1:N
     if method=="lanczos"
-      Ahad[n],S=lanczos(X1,X2,n,variant=variant,reqrank=reqrank[n],tol=eps_abs,p=p)
+      Ahad[n],S=lanczos(X1,X2,n,variant=variant,reqrank=reqrank[n],tol=eps_abs[n],p=p)
     elseif method=="randsvd"
-      Ahad[n],S=randsvd(X1,X2,n,variant=variant,reqrank=reqrank[n],tol=eps_abs,p=p)
+      Ahad[n],S=randsvd(X1,X2,n,variant=variant,reqrank=reqrank[n],tol=eps_abs[n],p=p)
     end
     if reqrank[n] == 0
-      eps_rel != 0 ?  tol=eps_rel*S[1] : tol=eps_abs;
+      eps_rel[n] != 0 ?  tol=eps_rel[n]*S[1] : tol=eps_abs[n];
       I=find(x-> x>tol ? true : false,S)
       Ahad[n]=Ahad[n][:,I];
     end
@@ -147,26 +145,23 @@ function hosvd3{T1<:Number,T2<:Number}(X1::ttensor{T1},X2::ttensor{T2};reqrank=[
 end
 
 @doc """ HOSVD4 algorithm for getting Tucker representation of Hadamard product of two Tucker tensors. """ ->
-function hosvd4{T1<:Number,T2<:Number}(X1::ttensor{T1},X2::ttensor{T2};reqrank=[],method="lapack",tol=1e-8,p=10)
+function hosvd4{T1<:Number,T2<:Number}(X1::ttensor{T1},X2::ttensor{T2};reqrank=[],method="lapack",eps_abs=[],eps_rel=[],p=10)
   @assert(size(X1) == size(X2))
   N=ndims(X1)
-  if length(reqrank) == 0
-	  reqrank=repmat([0],N)
-  elseif isa(reqrank,Int)
-    reqrank=repmat([reqrank],N)
-  end
-  @assert(N==length(reqrank),"Dimensions mismatch.")
+  reqrank=check_vector_input(reqrank,N,0);
+  eps_abs=check_vector_input(eps_abs,N,1e-8);
+  #eps_rel=check_vector_input(eps_rel,N,0);
   Q=MatrixCell(N) #range approximation of of tenmat(X1.*X2,n)
   KR=MatrixCell(N); #transpose Khatri-Rao product of X1.fmat and X2.fmat
   fmat=MatrixCell(N);
   [KR[n]=khatrirao(X1.fmat[n],X2.fmat[n],'t') for n=1:N]
   for n=1:N
-    Q[n]=randrange(X1.cten,X2.cten,KR,n,reqrank=reqrank[n],tol=tol,p=p);
+    Q[n]=randrange(X1.cten,X2.cten,KR,n,reqrank=reqrank[n],tol=eps_abs[n],p=p);
   end
   [fmat[n]=Q[n]'*KR[n] for n=1:N]
   H=krontm(X1.cten,X2.cten,fmat)
   if norm(reqrank) != 0 #fixed-precision problem
-    Htucker=hosvd(H,reqrank=reqrank,method=method,eps_abs=tol)
+    Htucker=hosvd(H,reqrank=reqrank,method=method,eps_abs=eps_abs,eps_rel=eps_rel)
     [fmat[n]=Q[n]*Htucker.fmat[n] for n=1:N]
     return ttensor(Htucker.cten,fmat)
   else

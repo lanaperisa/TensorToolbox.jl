@@ -7,6 +7,19 @@ export MatrixCell, VectorCell
 typealias MatrixCell Array{Matrix,1}
 typealias VectorCell Array{Vector,1}
 
+function check_vector_input(input,dim::Integer,default_value::Number)
+  if length(input)>0
+     if isa(input,Number)
+        input=repmat([input],dim)
+    else
+      @assert(dim==length(input),"Dimensions mismatch.")
+    end
+  else #fixed-precision problem
+    input=repmat([default_value],dim)
+  end
+  input
+end
+
 
 #Transforms matrix of multi-indices into a vector of linear indices
 function indicesmat2vec{D<:Integer}(I::Matrix{D},sz::Tuple)

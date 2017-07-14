@@ -5,31 +5,28 @@ export hosvd, innerprod, krontm, matten, mkrontm, mkrontv, mrank, mttkrp, nrank,
 #If reqrank not defined there are two options:
 # - drop singular values below eps_abs
 # - drop singular values below eps_rel*sigma_1
-function hosvd{T<:Number,N}(X::Array{T,N};method="lapack",reqrank=[],eps_abs=1e-8,eps_rel=0,p=10)
+function hosvd{T<:Number,N}(X::Array{T,N};method="lapack",reqrank=[],eps_abs=[],eps_rel=[],p=10)
 	fmat=MatrixCell(N)
-  if length(reqrank)>0  && reduce(|,reqrank)!=0 #fixed-rank problem
-     if isa(reqrank,Int)
-        reqrank=repmat([reqrank],N)
-    end
-  else #fixed-precision problem
-    reqrank=repmat([0],N)
-  end
-  @assert(N==length(reqrank),"Dimensions mismatch.")
+
+  reqrank=check_vector_input(reqrank,N,0);
+  eps_abs=check_vector_input(eps_abs,N,1e-8);
+  eps_rel=check_vector_input(eps_rel,N,0);
+
 	for n=1:N
     Xn=float(tenmat(X,n))
     if method == "lapack"
       fmat[n],S=LAPACK.gesvd!('A','N',Xn)
     elseif method == "lanczos"
-      fmat[n],S=lanczos(Xn,tol=eps_abs,reqrank=reqrank[n],p=p)
+      fmat[n],S=lanczos(Xn,tol=eps_abs[n],reqrank=reqrank[n],p=p)
     elseif method == "randsvd"
-      fmat[n],S=randsvd(Xn,tol=eps_abs,reqrank=reqrank[n],p=p)
+      fmat[n],S=randsvd(Xn,tol=eps_abs[n],reqrank=reqrank[n],p=p)
     else
       fmat[n],S,V=svd(Xn)
     end
     if reqrank[n]!=0 && size(fmat[n],2)>reqrank[n]
       fmat[n]=fmat[n][:,1:reqrank[n]];
     else
-      eps_rel != 0 ? tol=eps_rel*S[1] : tol=eps_abs;
+      eps_rel[n] != 0 ? tol=eps_rel[n]*S[1] : tol=eps_abs[n];
       I=find(x-> x>tol ? true : false,S)
       fmat[n]=fmat[n][:,I]
     end
@@ -175,9 +172,12 @@ function mkrontm{T1<:Number,T2<:Number,T3<:Number,N}(X1::Array{T1,N},X2::Array{T
   mkrontv(X1,X2,M,n,t)
 end
 
-
+@doc """Multilinear rank of a tensor. """->
 function mrank{T<:Number,N}(X::Array{T,N})
    ntuple(n->nrank(X,n),N)
+end
+function mrank{T<:Number,N}(X::Array{T,N},tol::Number)
+   ntuple(n->nrank(X,n,tol),N)
 end
 
 @doc """ Matricized tensor times Khatri-Rao product. """ ->
@@ -192,8 +192,12 @@ function mttkrp{T<:Number,N}(X::Array{T,N},M::MatrixCell,n::Integer)
 end
 mttkrp{T1<:Number,T2<:Number,N}(X::Array{T1,N},M::Array{Matrix{T2}},n::Integer)=mttkrp(X,MatrixCell(M),n)
 
+@doc """n-rank of a tensor. """->
 function nrank{T<:Number}(X::Array{T},n::Integer)
   rank(tenmat(X,n))
+end
+function nrank{T<:Number}(X::Array{T},n::Integer,tol::Number)
+  rank(tenmat(X,n),tol)
 end
 
 @doc """ Sequentially truncated HOSVD. """ ->
