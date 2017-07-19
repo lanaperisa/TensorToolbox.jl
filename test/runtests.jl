@@ -55,6 +55,10 @@ println("\n\n...Testing size of ttensor T : ", size(T))
 @test size(T) == size(X)
 println("\n...Testing ndims of ttensor T : ", ndims(T))
 @test ndims(T) == ndims(X)
+println("\n...Testing nrank of ttensor T for mode 1: ", nrank(T,1))
+@test nrank(T,1) == R[1]
+println("\n...Testing mrank of ttensor T: ", mrank(T))
+@test mrank(T) == tuple(R...)
 
 R=[5,5,5];
 T=hosvd(rand(60,50,40),reqrank=R);
@@ -75,7 +79,7 @@ f(x,y,z)=1/(x+y+z)
 dx=dy=dz=[n*0.1 for n=1:20]
 X=Float64[ f(x,y,z) for x=dx, y=dy, z=dz ]
 
-println("\n\n...Testing hosvd with eps_abs=1e-5 on function defined tensor X of size ", size(X))
+println("\n\n...Testing hosvd with eps_abs=1e-5 on function defined tensor X of size ", size(X), " and multlinear rank", mrank(X))
 T=hosvd(X,eps_abs=1e-5)
 println("Results:")
 println("Type of output T: ", typeof(T))
