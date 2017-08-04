@@ -14,7 +14,7 @@ using TensorToolbox
 Define tensor as multidimensional arrays and calculate its norm:
 ```julia
 X=rand(4,3,2)
-norm(X)
+vecnorm(X)
 ```
 For two tensors of same size calculate their inner product:
 ```julia
@@ -95,7 +95,7 @@ Basic functions:
 size(X) 
 coresize(X)
 ndims(X)
-norm(X)
+vecnorm(X)
 full(X)  #Creates full tensor out of Tucker format
 reorth(X) #Orthogonalize factor matrices
 permutedims(X,[2,1,3]) 
