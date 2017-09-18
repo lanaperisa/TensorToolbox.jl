@@ -107,8 +107,8 @@ function errortest{D<:Integer}(R::Integer,osp::Vector{D};f=1,create_plot=0,dir="
 	      println("T=hosvd3(T1,T2,reqrank=[$R,$R,$R],eps_abs=1e-30,p=$p) ...")
         T=hosvd3(T1,T2,variant='A',reqrank=[R,R,R],eps_abs=1e-30,p=p);
       elseif method == 4
-        println("T=hosvd4(T1,T2,reqrank=[$R,$R,$R],tol=1e-16,p=$p) ...")
-        T=hosvd4(T1,T2,reqrank=[R,R,R],tol=1e-16,p=p);
+        println("T=hosvd4(T1,T2,reqrank=[$R,$R,$R],eps_abs=1e-16,p=$p) ...")
+        T=hosvd4(T1,T2,reqrank=[R,R,R],eps_abs=1e-16,p=p);
       end
       @eval ($err[$k]=vecnorm(full($T)-$Z));
       println("err[$k] = ",@eval ($err[$k]));
