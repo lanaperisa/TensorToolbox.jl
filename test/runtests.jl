@@ -29,14 +29,14 @@ for n=1:ndims(T)
 end
 
 println("\n\n...Testing function full, i.e. n-mode multiplication (ttm): vecnorm(full(T)-X) = ", vecnorm(full(T) - X))
-@test_approx_eq_eps vecnorm(full(T)-X) 0 1e-12
+@test vecnorm(full(T)-X) ≈ 0 atol=1e-12
 
 A=MatrixCell(ndims(T))
 for n=1:ndims(T)
   A[n]=rand(rand(1:10),size(T,n))
 end
 println("\n...Testing ttm for ttensor T and array of matrices A : vecnorm(full(ttm(T,A))-ttm(full(T),A)) = ", vecnorm(full(ttm(T,A)) - ttm(full(T),A)))
-@test_approx_eq_eps vecnorm(full(ttm(T,A)) - ttm(full(T),A)) 0 1e-10
+@test vecnorm(full(ttm(T,A)) - ttm(full(T),A))≈ 0 atol=1e-10
 
 R=[5,5,5,5]
 println("\n...Testing hosvd with smaller multilinear rank: ", R)
@@ -89,7 +89,7 @@ print("Factor matrices sizes: ")
 for A in T.fmat
 	print(size(A)," ")
 end
-@test_approx_eq_eps vecnorm(full(T)-X) 0 1e-5
+@test vecnorm(full(T)-X) ≈ 0 atol=1e-5
 
 println("\n\n...Testing hosvd with eps_rel=1e-5 on function defined tensor X of size ", size(X))
 T=hosvd(float(X),eps_rel=1e-5)
@@ -126,11 +126,11 @@ println("After reorthogonalization: ", reorth!(S).isorth)
 
 println("\n\n...Testing vecnorm of ttensor T.")
 println("|vecnorm(T) - vecnorm(full(T))| = ", abs(vecnorm(T) - vecnorm(full(T))))
-@test_approx_eq_eps abs(vecnorm(T) - vecnorm(full(T))) 0 1e-12
+@test abs(vecnorm(T) - vecnorm(full(T))) ≈ 0 atol=1e-12
 
 println("\n\n...Testing scalar multiplication 3*T.")
 println("vecnorm(full(3*T) - 3*full(T)) = ",  vecnorm(full(3*T) - 3*full(T)))
-@test_approx_eq_eps vecnorm(full(3*T) - 3*full(T)) 0 1e-12
+@test vecnorm(full(3*T) - 3*full(T)) ≈ 0 atol=1e-12
 
 X=randttensor([6,8,2,5,4],[4,3,2,2,3]);
 Y=randttensor([6,8,2,5,4],[3,6,3,4,3]);
@@ -139,16 +139,16 @@ println("\n...Testing addition.")
 Z=X+Y;
 F=full(X)+full(Y);
 println("vecnorm(full(X+Y) - (full(X)+full(Y))) = ", vecnorm(full(Z) - F))
-@test_approx_eq_eps vecnorm(full(Z) - F) 0 1e-12
+@test vecnorm(full(Z) - F) ≈ 0 atol=1e-12
 
 println("\n\n...Testing inner product.")
 Z=innerprod(X,Y)
 println("|innerprod(X,Y) - innerprod(full(X),full(Y))| = ", abs(Z - innerprod(full(X),full(Y))))
-@test_approx_eq_eps abs(Z - innerprod(full(X),full(Y))) 0 1e-10
+@test abs(Z - innerprod(full(X),full(Y))) ≈ 0 atol=1e-10
 
 println("\n\n...Testing Hadamard product.")
 println("vecnorm(full(X.*Y) - full(X).*full(Y)) = ", vecnorm(full(X.*Y) - full(X).*full(Y)))
-@test_approx_eq_eps  vecnorm(full(X.*Y) - full(X).*full(Y)) 0 1e-10
+@test  vecnorm(full(X.*Y) - full(X).*full(Y)) ≈ 0 atol=1e-10
 
 
 println("\n\n...Testing singular values of matricizations of Tucker Tensor.")
@@ -159,7 +159,7 @@ for n=1:ndims(T)
   sv = msvdvals(T,n)
   Tn=tenmat(T,n);
   println("Mode-$n singular values error: ",norm(sv-svdfact!(tenmat(full(T),n))[:S][1:length(sv)]))
-  @test_approx_eq_eps norm(sv-svdfact!(tenmat(full(T),n))[:S][1:length(sv)]) 0 1e-10
+  @test norm(sv-svdfact!(tenmat(full(T),n))[:S][1:length(sv)]) ≈ 0 atol=1e-10
 end
 
 R=[5,5,5,5]
@@ -169,7 +169,7 @@ for n=1:ndims(T)
   sv = msvdvals(T,n)
   Tn=tenmat(T,n);
   println("Mode-$n singular values error: ",norm(sv-svdfact!(tenmat(full(T),n))[:S][1:length(sv)]))
-  @test_approx_eq_eps norm(sv-svdfact!(tenmat(full(T),n))[:S][1:length(sv)]) 0 1e-10
+  @test norm(sv-svdfact!(tenmat(full(T),n))[:S][1:length(sv)]) ≈ 0 atol=1e-10
 end
 
 println("\n\n")

@@ -4,8 +4,10 @@ using Base.Cartesian
 export khatrirao, krontkron, krontv, krtv, tkrtv, lanczos, randsvd
 export MatrixCell, VectorCell
 
-typealias MatrixCell Array{Matrix,1}
-typealias VectorCell Array{Vector,1}
+#typealias MatrixCell Array{Matrix,1}
+#typealias VectorCell Array{Vector,1}
+const MatrixCell = Array{Matrix,1}
+const VectorCell = Array{Vector,1}
 
 function check_vector_input(input,dim::Integer,default_value::Number)
   if length(input)>0

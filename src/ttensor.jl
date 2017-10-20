@@ -10,7 +10,7 @@ type ttensor{T<:Number}
 	cten::Array{T}
 	fmat::MatrixCell
 	isorth::Bool
-	function ttensor(cten::Array{T},fmat::MatrixCell,isorth::Bool)
+	function ttensor{T}(cten::Array{T},fmat::MatrixCell,isorth::Bool) where T<:Number
 		for A in fmat
 			if norm(A'*A-eye(size(A,2)))>(size(A,1)^2)*eps()
 				isorth=false
