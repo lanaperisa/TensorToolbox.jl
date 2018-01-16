@@ -11,7 +11,7 @@ Start with
 using TensorToolbox
 ```
 
-Define tensor as multidimensional arrays and calculate its norm:
+Define tensor as multidimensional array and calculate its norm:
 ```julia
 X=rand(4,3,2)
 vecnorm(X)
