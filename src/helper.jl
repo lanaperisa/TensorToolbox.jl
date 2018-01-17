@@ -1,7 +1,7 @@
 using Base.Cartesian
 
 #export indicesmat2vec, indicesmat, shiftsmat
-export khatrirao, krontkron, krontv, krtv, tkrtv, lanczos, randsvd
+export khatrirao, krontkron, krontv, krtv, tkrtv, lanczos, lanczos_tridiag, randsvd
 export MatrixCell, VectorCell
 
 #typealias MatrixCell Array{Matrix,1}
@@ -179,9 +179,26 @@ function tkrtv{T1<:Number,T2<:Number,T3<:Number}(A::Matrix{T1},B::Matrix{T2},M::
 end
 
 
-@doc """ Lanczos tridiagonalization algorithm - returns left singular vectors and singular values of a matrix. """ ->
+@doc """ Lanczos based SVD - returns left singular vectors and singular values of a matrix. """ ->
 function lanczos{N<:Number}(A::Matrix{N};tol=1e-8,maxit=1000,reqrank=0,p=10)
   #p...oversamling parameter
+  Q,T=lanczos_tridiag(A,tol=tol,maxit=maxit,reqrank=reqrank,p=p)
+  E=eigfact(T,tol,Inf);
+  U=E[:vectors][:,end:-1:1];
+  S=sqrt(abs(E[:values][end:-1:1]));
+  if reqrank!=0
+    U=Q*U[:,1:reqrank];
+    S=S[1:reqrank];
+  else
+    I=find(x-> x>tol ? true : false,S)
+    U=Q*U[:,I];
+    S=S[I];
+  end
+  U,S
+end
+
+@doc """ Lanczos tridiagonalization algorithm - returns orthonormal Q and symmetric tridiagonal T such that A≈Q*T*Q'. """ ->
+function lanczos_tridiag{N<:Number}(A::Matrix{N};tol=1e-8,maxit=1000,reqrank=0,p=10)
   m,n=size(A)
   K=min(m,maxit);
   if reqrank != 0
@@ -208,19 +225,8 @@ function lanczos{N<:Number}(A::Matrix{N};tol=1e-8,maxit=1000,reqrank=0,p=10)
     end
   end
   T=SymTridiagonal(α[1:k], β[1:k-1])
-  E=eigfact(T,tol,Inf);
-  U=E[:vectors][:,end:-1:1];
-  S=sqrt(abs(E[:values][end:-1:1]));
-  if reqrank!=0
-    U=Q*U[:,1:reqrank];
-    S=S[1:reqrank];
-  else
-    I=find(x-> x>tol ? true : false,S)
-    U=Q*U[:,I];
-    S=S[I];
+  Q,T
   end
-  U,S
-end
 
 @doc """ Randomized SVD algorithm - returns left singular vectors and singular values of a matrix. """ ->
 function randsvd{N<:Number}(A::Matrix{N};tol=1e-8,maxit=1000,reqrank=0,r=10,p=10)

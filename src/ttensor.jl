@@ -70,7 +70,7 @@ function had{T1<:Number,T2<:Number}(X1::ttensor{T1},X2::ttensor{T2})
   cten=tkron(X1.cten,X2.cten) #Kronecker product of core tensors
   ttensor(cten,fmat)
 end
-.*{T1<:Number,T2<:Number}(X1::ttensor{T1},X2::ttensor{T2}) = had(X1,X2)
+Base.broadcast{T1<:Number,T2<:Number}(.*,X1::ttensor{T1},X2::ttensor{T2}) = had(X1,X2)
 
 @doc """ Calculates core tensor of Hadamard product of two Tucker tensors for given factor matrices. """ ->
 function hadcten{T1<:Number,T2<:Number}(X1::ttensor{T1},X2::ttensor{T2},fmat::MatrixCell)
