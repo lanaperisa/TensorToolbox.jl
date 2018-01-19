@@ -110,14 +110,20 @@ krontm{T1<:Number,T2<:Number,T3<:Number,D<:Integer}(X1::Array{T1},X2::Array{T2},
 krontm{T1<:Number,T2<:Number,T3<:Number,N}(X1::Array{T1,N},X2::Array{T2,N},M::Array{Matrix{T3}},n::Integer,t='n')=krontm(X1,X2,MatrixCell{M},n,t)
 
 
-@doc """ Folds matrix into tensor. """ ->
-#Folds matrix into tensor of dimension dims by mode n
+@doc """ Folds matrix into tensor of dimension dims by mode n. """ ->
 function matten{T<:Number,D<:Integer}(A::Matrix{T},n::Integer,dims::Vector{D})
 	@assert(dims[n]==size(A,1),"Dimensions mismatch")
 	m = setdiff(1:length(dims), n)
 	@assert prod(dims[m])==size(A,2)
 	X = reshape(A,[dims[n];dims[m]]...)
 	permutedims(X,invperm([n;m]))
+end
+
+@doc """ Folds matrix into tensor of dimension dims by rows R and columns C. """ ->
+function matten{T<:Number,D<:Integer}(A::Matrix{T},R::Vector{D},C::Vector{D},dims::Vector{D})
+	@assert(prod(dims[R])==size(A,1) && prod(dims[C])==size(A,2),"Dimensions mismatch")
+	X = reshape(A,[dims[R];dims[C]]...)
+	permutedims(X,invperm([R;C]))
 end
 
 @doc """ Matricized Kronecker product of tensors times vector. """ ->
@@ -192,6 +198,31 @@ function mttkrp{T<:Number,N}(X::Array{T,N},M::MatrixCell,n::Integer)
 end
 mttkrp{T1<:Number,T2<:Number,N}(X::Array{T1,N},M::Array{Matrix{T2}},n::Integer)=mttkrp(X,MatrixCell(M),n)
 
+@doc """Creates identity tensor of given dimension (generalization of eye)."""
+@generated function neye{T<:Number,D<:Integer,N}(I::Array{T,N},dims::Vector{D})
+  quote
+    N=length(dims);
+  	@nloops $N i I begin
+	 	ind = [(@ntuple $N i)...]
+    if length(unique(ind))==1
+         I[ind...]=1;
+    end
+	end
+	I
+  end
+end
+function neye{D<:Integer}(dims::Vector{D})
+    I=zeros(tuple(dims...));
+    neye(I,dims);
+end
+function neye(d1,d2...)
+  dims=[d1]
+  for d in d2
+		push!(dims,d)
+	end
+	neye(dims)
+end
+
 @doc """n-rank of a tensor. """->
 function nrank{T<:Number}(X::Array{T},n::Integer)
   rank(tenmat(X,n))
@@ -219,13 +250,35 @@ function sthosvd{T<:Number,D<:Integer,N}(X::Array{T,N},R::Vector{D},p::Vector{D}
 	ttensor(X,fmat)
 end
 
-@doc """ Tensor matricization. """ ->
-#n-mode matricization
+@doc """ Tensor matricization by mode n. """ ->
 function tenmat{T<:Number,N}(X::Array{T,N},n::Integer)
 	@assert(n<=ndims(X),"Mode exceedes number of dimensions")
 	I=size(X)
 	m=setdiff(1:N,n)
 	reshape(permutedims(X,[n;m]),I[n],prod(I[m]))
+end
+
+@doc """ Tensor matricization by mode rows R or columns C. """ ->
+function tenmat{T<:Number,N}(X::Array{T,N};R=[],C=[])
+    @assert(R!=[] || C!=[],"Al least one of R and C needs to be specified.")
+    if R!=[] && C!=[]
+        @assert(sort([R;C])==collect(1:N),"Incorrect mode partitioning.")
+    elseif R==[]
+        @assert(!(false in [c in collect(1:N) for c in C]),"Incorrect modes.")
+        if isa(C,Integer)
+            C=[C]
+        end
+        R=collect(1:N);deleteat!(R,sort(C));
+    else
+        @assert(!(false in [r in collect(1:N) for r in R]),"Incorrect modes.")
+        if isa(R,Integer)
+            R=[R]
+        end
+        C=collect(1:N);deleteat!(C,sort(R));
+    end
+	  I=size(X);
+    J=prod(I[R]);K=prod(I[C]);
+	reshape(permutedims(X,[R;C]),J,K)
 end
 
 @doc """ Kronecker product of two tensors - direct generalization of Kronecker product of matrices. """ ->
