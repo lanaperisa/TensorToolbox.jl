@@ -4,7 +4,7 @@ using Base.Test
 X=rand(20,10,50,5);
 
 println("\n...Test tensor X of size: ", size(X))
-println("\n...Testing matten and tenmat.")
+println("\n...Testing matten and tenmat by mode.")
 for n=1:ndims(X)
   Xn=tenmat(X,n);
   N=setdiff(1:ndims(X),n);
@@ -13,6 +13,10 @@ for n=1:ndims(X)
   println("Check if it folds back correctly: ",matten(Xn,n,[size(X)...]) == X)
   @test matten(Xn,n,[size(X)...]) == X
 end
+println("\n...Testing matten and tenmat by rows and columns.")
+R=[2,1];C=[4,3];
+Xmat=tenmat(X,R=R,C=C);
+@test matten(Xmat,R,C,[size(X)...]) == X;
 
 println("\n...Testing hosvd.")
 println("\nCreating exact decomposition with rank = size(X):")
