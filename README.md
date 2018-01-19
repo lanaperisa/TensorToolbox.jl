@@ -16,19 +16,25 @@ Define tensor as multidimensional array and calculate its norm:
 X=rand(4,3,2)
 vecnorm(X)
 ```
+Create identity tensor:
+```julia
+I=neye(2,2,2)
+```
 For two tensors of same size calculate their inner product:
 ```julia
 X=rand(3,3,3,3);Y=rand(3,3,3,3);
 innerprod(X,Y)
 ```
-*n-mode matricization* of a tensor:
+*Matricization* of a tensor:
 ```julia
-X=rand(4,3,2);n=1;
-A=tenmat(X,n)
+X=rand(4,3,2);n=1; 
+A=tenmat(X,n) #by mode n
+B=tenmat(X,R=[2,1],C=3) #by row modes [2,1] and column mode 3
 ```
 Fold matrix back to tensor:
 ```julia
-X=matten(A,n,[4,3,2])
+X=matten(A,n,[4,3,2]) # by mode n
+X=matten(B,[2,1],[3],[4,3,2]) # by row modes [2,1] and column mode 3
 ```
 *n-mode product* of a tensor and a matrix or an array of matrices:
 ```julia
