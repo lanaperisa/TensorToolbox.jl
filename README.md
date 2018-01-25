@@ -2,8 +2,11 @@
 
 [![Build Status](https://travis-ci.org/lanaperisa/TensorToolbox.jl.svg?branch=master)](https://travis-ci.org/lanaperisa/TensorToolbox.jl)
 
-Julia package for tensors. Includes functions for dense tensors and tensors in Tucker format. Follows the functionality of MATLAB [Tensor toolbox](http://www.sandia.gov/~tgkolda/TensorToolbox/index-2.6.html). 
+Julia package for tensors. Includes functions for dense tensors and tensors in Tucker format. Follows the functionality of MATLAB [Tensor toolbox](http://www.sandia.gov/~tgkolda/TensorToolbox/index-2.6.html).
 
+&#x1F536;&#x1F536; *Work in progress:* 
+ - functions for tensors in Kruskal format (src/ktensor.jl)
+ - functions for Hierarchical Tucker tensors (src/htensor.jl)
 ## Basics
 
 Start with
