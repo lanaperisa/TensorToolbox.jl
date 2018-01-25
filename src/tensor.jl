@@ -1,4 +1,30 @@
-export hosvd, innerprod, krontm, matten, mkrontm, mkrontv, mrank, mttkrp, nrank, sthosvd, tenmat, tkron, ttm, ttt, ttv
+export diagt, hosvd, innerprod, krontm, matten, mkrontm, mkrontv, mrank, mttkrp, neye, nrank, sthosvd, tenmat, tkron, ttm, ttt, ttv
+
+@doc """Creates diagonal tensor for a given vector of diagonal elements and dimension of tensor. Generalization of diagm. """->
+function diagt{T<:Number}(elements::Vector{T})
+    N=length(elements)
+    dims=repmat([N],N)
+    I=zeros(tuple(dims...))
+    diagt(I,elements,dims)
+end
+function diagt{T<:Number,D<:Integer}(elements::Vector{T},dims::Vector{D})
+    I=zeros(tuple(dims...))
+    diagt(I,elements,dims)
+end
+@generated function diagt{T1<:Number,T2<:Number,D<:Integer,N}(I::Array{T1,N},elements::Vector{T2},dims::Vector{D})
+  quote
+      @assert(length(elements)==minimum(dims),"Dimension mismatch.")
+      n=1
+      @nloops $N i I begin
+	 	    ind = [(@ntuple $N i)...]
+        if length(unique(ind))==1
+            I[ind...]=elements[n]
+            n+=1;
+        end
+	  end
+	  I
+  end
+end
 
 @doc """ Higher-order singular value decomposition. """ ->
 #methods={"lapack","lanczos","randsvd"}
@@ -198,22 +224,10 @@ function mttkrp{T<:Number,N}(X::Array{T,N},M::MatrixCell,n::Integer)
 end
 mttkrp{T1<:Number,T2<:Number,N}(X::Array{T1,N},M::Array{Matrix{T2}},n::Integer)=mttkrp(X,MatrixCell(M),n)
 
-@doc """Creates identity tensor of given dimension (generalization of eye)."""
-@generated function neye{T<:Number,D<:Integer,N}(I::Array{T,N},dims::Vector{D})
-  quote
-    N=length(dims);
-  	@nloops $N i I begin
-	 	ind = [(@ntuple $N i)...]
-    if length(unique(ind))==1
-         I[ind...]=1;
-    end
-	end
-	I
-  end
-end
+@doc """Creates identity tensor of a given dimension. Generalization of eye."""
 function neye{D<:Integer}(dims::Vector{D})
-    I=zeros(tuple(dims...));
-    neye(I,dims);
+    I=zeros(tuple(dims...))
+    neye(I,dims)
 end
 function neye(d1,d2...)
   dims=[d1]
@@ -221,6 +235,17 @@ function neye(d1,d2...)
 		push!(dims,d)
 	end
 	neye(dims)
+end
+@generated function neye{T<:Number,D<:Integer,N}(I::Array{T,N},dims::Vector{D})
+  quote
+  	@nloops $N i I begin
+	 	ind = [(@ntuple $N i)...]
+    if length(unique(ind))==1
+         I[ind...]=1
+    end
+	end
+	I
+  end
 end
 
 @doc """n-rank of a tensor. """->

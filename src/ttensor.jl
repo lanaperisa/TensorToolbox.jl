@@ -1,10 +1,10 @@
 #Tensors in Tucker format + functions
 
 export ttensor, randttensor
-export coresize, full, had, hadcten, hosvd, hosvd1, hosvd2, hosvd3, hosvd4, innerprod, isequal, lanczos, mhadtm, mhadtv, minus, mrank
+export coresize, display, full, had, hadcten, hosvd, hosvd1, hosvd2, hosvd3, hosvd4, innerprod, isequal, lanczos, mhadtm, mhadtv, minus, mrank
 export msvdvals, mtimes, mttkrp, ndims, vecnorm, nrank, nvecs, permutedims, plus, randrange, randsvd, reorth, reorth!, size, tenmat, ttm, ttv, uminus
 
-import Base: size, ndims, +, -, *, .*, ==, full, isequal, permutedims, vecnorm
+import Base: size, ndims, +, -, *, .*, ==, display, full, isequal, permutedims, vecnorm
 
 type ttensor{T<:Number}
 	cten::Array{T}
@@ -53,7 +53,18 @@ function coresize{T<:Number}(X::ttensor{T})
   size(X.cten)
 end
 
-@doc """ Makes full tensor out of a Tucker tensor. """ ->
+@doc """Displays a ttensor.""" ->
+function display{T<:Number}(X::ttensor{T},name="ttensor")
+    println("$name.cten: ")
+    show(STDOUT, "text/plain", X.cten)
+    for n=1:ndims(X)
+        println("\n\n$name.fmat[$n]:")
+        show(STDOUT, "text/plain", X.fmat[n])
+    end
+end
+
+
+#@doc """ Makes full tensor out of a Tucker tensor. """ ->
 function full{T<:Number}(X::ttensor{T})
   ttm(X.cten,X.fmat)
 end
@@ -341,7 +352,7 @@ function msvdvals{T<:Number}(X::ttensor{T},n::Integer)
   svdvals(Gn)
 end
 
-@doc """ Scalar times ttensor. """ ->
+@doc """ Scalar times tensor. """ ->
 #Multiplies core tensor by the scalar
 function mtimes{T<:Number}(α::Number,X::ttensor{T})
 	ttensor(α*X.cten,X.fmat);
@@ -349,7 +360,7 @@ end
 *{T1<:Number,T2<:Number}(α::T1,X::ttensor{T2})=mtimes(α,X)
 *{T1<:Number,T2<:Number}(X::ttensor{T1},α::T2)=*(α,X)
 
-@doc """ Matricized Tucker tensor times Khatri-Rao product. """->
+@doc """ Matricized tensor times Khatri-Rao product. """->
 function mttkrp{T<:Number}(X::ttensor{T},M::MatrixCell,n::Integer)
   N=ndims(X)
   @assert(length(M) == N,"Wrong number of matrices")
@@ -363,12 +374,12 @@ function mttkrp{T<:Number}(X::ttensor{T},M::MatrixCell,n::Integer)
 end
 mttkrp{T1<:Number,T2<:Number}(X::ttensor{T1},M::Array{Matrix{T2}},n::Integer)=mttkrp(X,MatrixCell(M),n)
 
-@doc """ Number of modes of a ttensor. """ ->
+#@doc """ Number of modes of a ttensor. """ ->
 function ndims{T<:Number}(X::ttensor{T})
 	ndims(X.cten)
 end
 
-@doc """ Norm of a ttensor. """ ->
+#@doc """ Norm of a ttensor. """ ->
 function vecnorm{T<:Number}(X::ttensor{T})
 	if prod(size(X)) > prod(size(X.cten))
 		if X.isorth == true
@@ -420,7 +431,7 @@ function permutedims{T<:Number,D<:Integer}(X::ttensor{T},perm::Vector{D})
 end
 
 function plus{T1<:Number,T2<:Number}(X1::ttensor{T1},X2::ttensor{T2})
-	@assert size(X1) == size(X2)
+	@assert(size(X1) == size(X2),"Dimension mismatch.")
 	fmat=Matrix[[X1.fmat[n] X2.fmat[n]] for n=1:ndims(X1)] #concatenate factor matrices
 	coresize=tuple([size(X1.cten)...]+[size(X2.cten)...]...)
 	cten=zeros(coresize) #initialize core tensor
@@ -587,7 +598,7 @@ function size{T<:Number}(X::ttensor{T},n::Integer)
   size(X.fmat[n],1)
 end
 
-@doc """ n-mode matricization of Tucker tensor. """ ->
+@doc """ n-mode matricization of tensor. """ ->
 tenmat{T<:Number}(X::ttensor{T},n::Integer)=tenmat(full(X),n)
 
 @doc """ Tucker tensor times matrices (n-mode product). """ ->

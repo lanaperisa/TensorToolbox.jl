@@ -6,5 +6,8 @@ module TensorToolbox
 include("helper.jl")
 include("tensor.jl")
 include("ttensor.jl")
+include("ktensor.jl")
+include("dimtree.jl")
+include("htensor.jl")
 
 end #module

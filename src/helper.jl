@@ -2,12 +2,11 @@ using Base.Cartesian
 
 #export indicesmat2vec, indicesmat, shiftsmat
 export khatrirao, krontkron, krontv, krtv, tkrtv, lanczos, lanczos_tridiag, randsvd
-export MatrixCell, VectorCell
+export VectorCell, MatrixCell, TensorCell
 
-#typealias MatrixCell Array{Matrix,1}
-#typealias VectorCell Array{Vector,1}
-const MatrixCell = Array{Matrix,1}
 const VectorCell = Array{Vector,1}
+const MatrixCell = Array{Matrix,1}
+const TensorCell = Array{Array,1}
 
 function check_vector_input(input,dim::Integer,default_value::Number)
   if length(input)>0
@@ -76,12 +75,17 @@ function khatrirao(M::MatrixCell,t='n')
       reshape(X,size(X,1),K)
     end
 end
-khatrirao{T<:Number}(M::Array{Matrix{T}},t='n')=khatrirao(MatrixCell(M))
+khatrirao{T<:Number}(M::Array{Matrix{T}},t='n')=khatrirao(MatrixCell(M),t)
 function khatrirao{T1<:Number,T2<:Number}(M1::Matrix{T1}, M2::Matrix{T2},t='n')
   M=MatrixCell(2);
   M[1]=M1;M[2]=M2;
   khatrirao(M,t)
 end
+#Skip nth matrix from M
+function khatrirao(M::MatrixCell,n::Integer,t='n')
+    khatrirao(deleteat!(M,n),t)
+end
+khatrirao{T<:Number}(M::Array{Matrix{T}},n::Integer,t='n')=khatrirao(MatrixCell(M),n,t)
 
 @doc """Kronecker times Kronecer. Kronecker product of matrices multiplied by kronecker product of vectors. """ ->
 function krontkron(A::MatrixCell,v::VectorCell,t='n')
