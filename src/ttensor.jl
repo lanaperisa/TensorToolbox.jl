@@ -4,8 +4,6 @@ export ttensor, randttensor
 export coresize, display, full, had, hadcten, hosvd, hosvd1, hosvd2, hosvd3, hosvd4, innerprod, isequal, lanczos, mhadtm, mhadtv, minus, mrank
 export msvdvals, mtimes, mttkrp, ndims, vecnorm, nrank, nvecs, permutedims, plus, randrange, randsvd, reorth, reorth!, size, tenmat, ttm, ttv, uminus
 
-import Base: size, ndims, +, -, *, .*, ==, display, full, isequal, permutedims, vecnorm
-
 type ttensor{T<:Number}
 	cten::Array{T}
 	fmat::MatrixCell
@@ -53,8 +51,12 @@ function coresize{T<:Number}(X::ttensor{T})
   size(X.cten)
 end
 
+function Base.show{T<:Number}(io::IO,X::ttensor{T})
+    display(X)
+end
 @doc """Displays a ttensor.""" ->
 function display{T<:Number}(X::ttensor{T},name="ttensor")
+    println("Tucker tensor of size ",size(X),":\n")
     println("$name.cten: ")
     show(STDOUT, "text/plain", X.cten)
     for n=1:ndims(X)
@@ -193,7 +195,7 @@ function innerprod{T1<:Number,T2<:Number}(X1::ttensor{T1},X2::ttensor{T2})
 	end
 end
 
-@doc """ True if Tucker tensors have equal core tensors and factor matrices, false otherwise. """ ->
+@doc """ Checks wheater two tensors have equal components. """ ->
 function isequal{T1<:Number,T2<:Number}(X1::ttensor{T1},X2::ttensor{T2})
   if (X1.cten == X2.cten) && (X1.fmat == X2.fmat)
     true

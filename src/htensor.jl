@@ -3,7 +3,7 @@
 export htensor, trtensor, htdecomp
 export display, full
 
-import Base: display, full
+import Base: display, full, show
 
 @doc """Hierarchical Tucker tensor."""->
 type htensor#{T<:Number}
@@ -82,10 +82,13 @@ function htdecomp{T<:Number,N}(X::Array{T,N},tree::dimtree)
 end
 htdecomp{T<:Number,N}(X::Array{T,N})=htdecomp(X,balanced_dimtree(X))
 
-
+function Base.show(io::IO,X::htensor)
+    display(X)
+end
 
 #@doc """Displays a htensor.""" ->
 function display(X::htensor,name="htensor")
+    println("Hierarchical Tucker tensor of size ",size(X),":\n")
     println("$name.tree: ")
     show(STDOUT, "text/plain", X.tree.mat)
     for n=1:length(X.trten)
