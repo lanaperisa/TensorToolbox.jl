@@ -2,7 +2,7 @@
 
 export ttensor, randttensor
 export coresize, display, full, had, hadcten, hosvd, hosvd1, hosvd2, hosvd3, hosvd4, innerprod, isequal, lanczos, mhadtm, mhadtv, minus, mrank
-export msvdvals, mtimes, mttkrp, ndims, vecnorm, nrank, nvecs, permutedims, plus, randrange, randsvd, reorth, reorth!, size, tenmat, ttm, ttv, uminus
+export msvdvals, mtimes, mttkrp, ndims, nrank, nvecs, permutedims, plus, randrange, randsvd, reorth, reorth!, size, tenmat, ttm, ttv, uminus, vecnorm
 
 type ttensor{T<:Number}
 	cten::Array{T}
@@ -384,7 +384,7 @@ end
 #@doc """ Norm of a ttensor. """ ->
 function vecnorm{T<:Number}(X::ttensor{T})
 	if prod(size(X)) > prod(size(X.cten))
-		if X.isorth == true
+		if X.isorth
 			vecnorm(X.cten)
 		else
 			R=MatrixCell(ndims(X))
@@ -403,26 +403,33 @@ function nrank{T<:Number}(X::ttensor{T},n::Integer)
   rank(X.fmat[n])
 end
 
-@doc """ Computes eigenvalues of Xₙ*Xₙ', where Xₙ is the n-mode matricization of a Tucker tensor. """ ->
-#Computes the r leading eigenvalues of Xₙ*Xₙ', where Xₙ is the mode-n matricization of X.
-function nvecs{T<:Number}(X::ttensor{T},n::Integer,r=0)
+@doc """ Computes the leading mode-n vectors for a tensor. """ ->
+#Computes the r leading eigenvectors of Xₙ*Xₙ', where Xₙ is the mode-n matricization of X.
+function nvecs{T<:Number}(X::ttensor{T},n::Integer,r=0;flipsign=false)
   if r==0
     r=size(X,n)
   end
   N=ndims(X)
   V=MatrixCell(N)
-  for i=1:N
-    if i==n
-      V[i]=X.fmat[i];
-    else
-      V[i]=X.fmat[i]'*X.fmat[i];
-    end
+  V[n]=X.fmat[n]
+  for m in setdiff(1:N,n)
+    V[m]=X.fmat[m]'*X.fmat[m]
   end
   H=ttm(X.cten,V)
-  Hn=tenmat(H,n);
-  Gn=tenmat(X.cten,n);
-  Y=Symmetric(Hn*Gn'*X.fmat[n]');
-  sort(eigvals(Y),rev=true)[1:r]
+  Hn=tenmat(H,n)
+  Gn=tenmat(X.cten,n)
+  V=eigs(Symmetric(Hn*Gn'*X.fmat[n]'),nev=r,which=:LM)[2]
+  if flipsign
+      #Make the largest magnitude element be positive
+      maxind = findmax(abs.(V),1)[2]
+      for i = 1:r
+          ind=ind2sub(size(V),maxind[i])
+          if V[ind...] < 0
+             V[:,ind[2]] = V[:,ind[2]] * -1
+          end
+      end
+  end
+  V
 end
 
 function permutedims{T<:Number,D<:Integer}(X::ttensor{T},perm::Vector{D})
@@ -564,7 +571,7 @@ end
 @doc """ Orthogonalize factor matrices of a Tucker tensor. """ ->
 function reorth{T<:Number}(X::ttensor{T})
   N=ndims(X)
-	if X.isorth == true
+	if X.isorth
 		X
 	else
 		Q=MatrixCell(N)
@@ -603,7 +610,7 @@ end
 @doc """ n-mode matricization of tensor. """ ->
 tenmat{T<:Number}(X::ttensor{T},n::Integer)=tenmat(full(X),n)
 
-@doc """ Tucker tensor times matrices (n-mode product). """ ->
+#@doc """ Tucker tensor times matrices (n-mode product). """ ->
 #Multiplies ttensor X with matrices from array M by modes; t='t' transposes matrices
 function ttm{T<:Number,D<:Integer}(X::ttensor{T},M::MatrixCell,modes::Vector{D},t='n')
   if t=='t'
@@ -639,7 +646,7 @@ ttm{T1<:Number,T2<:Number}(X::ttensor{T1},M::Array{Matrix{T2}},t::Char)=ttm(X,Ma
 ttm{T1<:Number,T2<:Number}(X::ttensor{T1},M::Array{Matrix{T2}})=ttm(X,MatrixCell(M))
 ttm{T1<:Number,T2<:Number}(X::ttensor{T1},M::Array{Matrix{T2}},n::Integer,t='n')=ttm(X,MatrixCell(M),n,t)
 
-@doc """ Tucker tensor times vectors (n-mode product). """ ->
+#@doc """ Tucker tensor times vectors (n-mode product). """ ->
 function ttv{T<:Number,D<:Integer}(X::ttensor{T},V::VectorCell,modes::Vector{D})
   N=ndims(X)
   remmodes=setdiff(1:N,modes)
