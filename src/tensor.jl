@@ -1,24 +1,28 @@
-export diagt, hosvd, innerprod, krontm, matten, mkrontm, mkrontv, mrank, mttkrp, neye, nrank, sthosvd, tenmat, tkron, ttm, ttt, ttv
+export diagt, hosvd, innerprod, krontm, matten, mkrontv, mrank, mttkrp, neye, nrank, sthosvd, tenmat, tkron, ttm, ttt, ttv
 
-@doc """Creates diagonal tensor for a given vector of diagonal elements and dimension of tensor. Generalization of diagm. """->
-function diagt{T<:Number}(elements::Vector{T})
-    N=length(elements)
+"""
+    diagt(v[,dims])
+
+Creates a diagonal tensor for a given vector of diagonal elements. Generalization of diagm.
+"""
+function diagt{T<:Number}(v::Vector{T})
+    N=length(v)
     dims=repmat([N],N)
     I=zeros(tuple(dims...))
-    diagt(I,elements,dims)
+    diagt(I,v,dims)
 end
-function diagt{T<:Number,D<:Integer}(elements::Vector{T},dims::Vector{D})
+function diagt{T<:Number,D<:Integer}(v::Vector{T},dims::Vector{D})
     I=zeros(tuple(dims...))
-    diagt(I,elements,dims)
+    diagt(I,v,dims)
 end
-@generated function diagt{T1<:Number,T2<:Number,D<:Integer,N}(I::Array{T1,N},elements::Vector{T2},dims::Vector{D})
+@generated function diagt{T1<:Number,T2<:Number,D<:Integer,N}(I::Array{T1,N},v::Vector{T2},dims::Vector{D})
   quote
-      @assert(length(elements)==minimum(dims),"Dimension mismatch.")
+      @assert(length(v)==minimum(dims),"Dimension mismatch.")
       n=1
       @nloops $N i I begin
 	 	    ind = [(@ntuple $N i)...]
         if length(unique(ind))==1
-            I[ind...]=elements[n]
+            I[ind...]=v[n]
             n+=1;
         end
 	  end
@@ -26,11 +30,18 @@ end
   end
 end
 
-@doc """ Higher-order singular value decomposition. """ ->
-#methods={"lapack","lanczos","randsvd"}
-#If reqrank not defined there are two options:
-# - drop singular values below eps_abs
-# - drop singular values below eps_rel*sigma_1
+"""
+    hosvd(X; <keyword arguments>)
+
+Higher-order singular value decomposition.
+
+# Arguments:
+- `method` ∈ {"lapack","lanczos","randsvd"} Method for SVD. Default: "lapack".
+- `reqrank::Vector`: Requested mutlilinear rank. Optional.
+- `eps_abs::Integer/Vector`: Drop singular values (of mode-n matricization) below eps_abs. Optional.
+- `eps_rel::Integer/Vector`: Drop singular values (of mode-n matricization) below eps_rel*sigma_1. Optional.
+- `p::Integer`: Oversampling parameter. Defaul p=10.
+"""
 function hosvd{T<:Number,N}(X::Array{T,N};method="lapack",reqrank=[],eps_abs=[],eps_rel=[],p=10)
 	fmat=MatrixCell(N)
 
@@ -60,13 +71,28 @@ function hosvd{T<:Number,N}(X::Array{T,N};method="lapack",reqrank=[],eps_abs=[],
   ttensor(ttm(X,fmat,'t'),fmat)
 end
 
+"""
+   innerprod(X,Y)
+
+Inner product of two tensors.
+"""
 function innerprod{T1<:Number,T2<:Number}(X1::Array{T1},X2::Array{T2})
 	@assert(size(X1) == size(X2),"Dimension mismatch")
 	sum(X1.*conj(X2))
 end
 
-@doc """ Kronecker product of two tensors times matrices (n-mode product). """ ->
-#Multiplies tensor tkron(X1,X2) with matrices from array M by modes; t='t' transposes matrices
+"""
+   krontm(X,Y,M[,modes,t='n'])
+
+Kronecker product of two tensors times matrix (n-mode product): (X ⊗ Y) x₁ M₁ x₂ M₂ x₃ ⋯ xₙ Mₙ
+
+# Arguments:
+- `X::Array`
+- `Y::Array`
+- `M::Matrix/MatrixCell`
+- `modes::Integer/Vector` : Modes for multiplication. Default: 1:length(M).
+- `t='t'`: Transposes matrices M.
+"""
 function krontm{T1<:Number,T2<:Number,D<:Integer,N}(X1::Array{T1,N},X2::Array{T2,N},M::MatrixCell,modes::Vector{D},t='n')
   if t=='t'
     M=vec(M')
@@ -136,7 +162,12 @@ krontm{T1<:Number,T2<:Number,T3<:Number,D<:Integer}(X1::Array{T1},X2::Array{T2},
 krontm{T1<:Number,T2<:Number,T3<:Number,N}(X1::Array{T1,N},X2::Array{T2,N},M::Array{Matrix{T3}},n::Integer,t='n')=krontm(X1,X2,MatrixCell{M},n,t)
 
 
-@doc """ Folds matrix into tensor of dimension dims by mode n. """ ->
+"""
+    matten(A,n,dims)
+    matten(A,R,C,dims)
+
+Folds matrix A into a tensor of dimension dims by mode n or by row and column vectors R and C.
+"""
 function matten{T<:Number,D<:Integer}(A::Matrix{T},n::Integer,dims::Vector{D})
 	@assert(dims[n]==size(A,1),"Dimensions mismatch")
 	m = setdiff(1:length(dims), n)
@@ -145,14 +176,19 @@ function matten{T<:Number,D<:Integer}(A::Matrix{T},n::Integer,dims::Vector{D})
 	permutedims(X,invperm([n;m]))
 end
 
-@doc """ Folds matrix into tensor of dimension dims by rows R and columns C. """ ->
 function matten{T<:Number,D<:Integer}(A::Matrix{T},R::Vector{D},C::Vector{D},dims::Vector{D})
 	@assert(prod(dims[R])==size(A,1) && prod(dims[C])==size(A,2),"Dimensions mismatch")
 	X = reshape(A,[dims[R];dims[C]]...)
 	permutedims(X,invperm([R;C]))
 end
 
-@doc """ Matricized Kronecker product of tensors times vector. """ ->
+"""
+    mkrontv(X,Y,v,n,t='n')
+
+Matricized Kronecker product of tensors X and Y times vector v (n-mode multiplication).
+If t='t' transposes matricized Kronecker product.
+If v is a matrix, multiplies column by column.
+"""
 #for t='n' calculates tenmat(tkron(X1,X2),n)*v
 #for t='t' calculates tenmat(tkron(X1,X2),n)'*v
 function mkrontv{T1<:Number,T2<:Number,T3<:Number,N}(X1::Array{T1,N},X2::Array{T2,N},v::Vector{T3},n::Integer,t='n')
@@ -204,7 +240,11 @@ function mkrontm{T1<:Number,T2<:Number,T3<:Number,N}(X1::Array{T1,N},X2::Array{T
   mkrontv(X1,X2,M,n,t)
 end
 
-@doc """Multilinear rank of a tensor. """->
+"""
+    mrank(X[,tol])
+
+Multilinear rank of a tensor with optionally given tolerance.
+"""
 function mrank{T<:Number,N}(X::Array{T,N})
    ntuple(n->nrank(X,n),N)
 end
@@ -212,7 +252,11 @@ function mrank{T<:Number,N}(X::Array{T,N},tol::Number)
    ntuple(n->nrank(X,n,tol),N)
 end
 
-@doc """ Matricized tensor times Khatri-Rao product. """ ->
+"""
+    mttkrp(X,M,n)
+
+Matricized tensor X (by mode n) times Khatri-Rao product of matrices from M in reverse order.
+"""
 function mttkrp{T<:Number,N}(X::Array{T,N},M::MatrixCell,n::Integer)
   modes=setdiff(1:N,n)
   I=[size(X)...]
@@ -224,10 +268,18 @@ function mttkrp{T<:Number,N}(X::Array{T,N},M::MatrixCell,n::Integer)
 end
 mttkrp{T1<:Number,T2<:Number,N}(X::Array{T1,N},M::Array{Matrix{T2}},n::Integer)=mttkrp(X,MatrixCell(M),n)
 
-@doc """Creates identity tensor of a given dimension. Generalization of eye."""
+"""
+    neye(dims)
+
+Identity tensor of a given dimension. Generalization of eye.
+"""
 function neye{D<:Integer}(dims::Vector{D})
     I=zeros(tuple(dims...))
     neye(I,dims)
+end
+function neye(dims::Integer;n=0)
+  @assert(n>0,"Wrong input.")
+  neye(repmat([dims],n,1)[:])
 end
 function neye(d1,d2...)
   dims=[d1]
@@ -248,7 +300,11 @@ end
   end
 end
 
-@doc """n-rank of a tensor. """->
+"""
+    nrank(X,n)
+
+Rank of the n-mode matricization of a tensor X (n-rank).
+"""
 function nrank{T<:Number}(X::Array{T},n::Integer)
   rank(tenmat(X,n))
 end
@@ -256,26 +312,35 @@ function nrank{T<:Number}(X::Array{T},n::Integer,tol::Number)
   rank(tenmat(X,n),tol)
 end
 
-@doc """ Sequentially truncated HOSVD. """ ->
-function sthosvd{T<:Number,D<:Integer,N}(X::Array{T,N},R::Vector{D},p::Vector{D})
-	@assert(N==length(R)==length(p),"Dimensions mismatch")
+"""
+    sthosvd(X,reqrank,p)
+
+Sequentially truncated HOSVD of a tensor X of predifined rank and processing order p.
+"""
+function sthosvd{T<:Number,D<:Integer,N}(X::Array{T,N},reqrank::Vector{D},p::Vector{D})
+	@assert(N==length(reqrank)==length(p),"Dimensions mismatch")
 	I=[size(X)...]
 	fmat=MatrixCell(N)
 	for n=1:N
-		fmat[n]=zeros(I[n],R[n])
+		fmat[n]=zeros(I[n],reqrank[n])
 	end
 	for n in p
 		Xn=tenmat(X,n)
 		U,S,V=svd(Xn)
-		fmat[n]=U[:,1:R[n]]
-		Xn=diagm(S[1:R[n]])*V'[1:R[n],:]
-		I[n]=R[n]
+		fmat[n]=U[:,1:reqrank[n]]
+		Xn=diagm(S[1:reqrank[n]])*V'[1:reqrank[n],:]
+		I[n]=reqrank[n]
 		X=matten(Xn,n,I)
 	end
 	ttensor(X,fmat)
 end
 
-@doc """ Tensor matricization by mode n. """ ->
+"""
+    tenmat(X,n)
+    tenmat(X,R=[],C=[])
+
+Mode-n matricization of a tensor or matricization by row and column vectors R and C.
+"""
 function tenmat{T<:Number,N}(X::Array{T,N},n::Integer)
 	@assert(n<=ndims(X),"Mode exceedes number of dimensions")
 	I=size(X)
@@ -283,7 +348,6 @@ function tenmat{T<:Number,N}(X::Array{T,N},n::Integer)
 	reshape(permutedims(X,[n;m]),I[n],prod(I[m]))
 end
 
-@doc """ Tensor matricization by mode rows R or columns C. """ ->
 function tenmat{T<:Number,N}(X::Array{T,N};R=[],C=[])
     @assert(R!=[] || C!=[],"Al least one of R and C needs to be specified.")
     if R!=[] && C!=[]
@@ -306,7 +370,11 @@ function tenmat{T<:Number,N}(X::Array{T,N};R=[],C=[])
 	reshape(permutedims(X,[R;C]),J,K)
 end
 
-@doc """ Kronecker product of two tensors - direct generalization of Kronecker product of matrices. """ ->
+"""
+    tkron(X,Y)
+
+Kronecker product of two tensors X and Y. Direct generalization of Kronecker product of matrices.
+"""
 function tkron{T1<:Number,T2<:Number,N1,N2}(X1::Array{T1,N1},X2::Array{T2,N2})
   if N1<3 && N2<3
     kron(X1,X2)
@@ -324,8 +392,13 @@ function tkron{T1<:Number,T2<:Number,N1,N2}(X1::Array{T1,N1},X2::Array{T2,N2})
   end
 end
 
-@doc """ Tensor times matrices (n-mode product). """ ->
-#Multiplies tensor X with matrices from array M by modes; t='t' transposes matrices.
+"""
+    ttm(X,M[,modes,t='n'])
+
+Tensor times matrix (n-mode product):  (X ⊗ Y) x₁ M₁ x₂ M₂ x₃ ⋯ xₙ Mₙ
+Default modes: 1:length(M).
+If t='t' transposes matrices from M.
+"""
 function ttm{T<:Number,D<:Integer,N}(X::Array{T,N},M::MatrixCell,modes::Vector{D},t='n')
   if t=='t'
     M=vec(M')
@@ -373,14 +446,23 @@ ttm{T1<:Number,T2<:Number,D<:Integer}(X::Array{T1},M::Array{Matrix{T2}},R::Range
 ttm{T1<:Number,T2<:Number,D<:Integer}(X::Array{T1},M::Array{Matrix{T2}},R::Range{D})=ttm(X,MatrixCell(M),R)
 ttm{T1<:Number,T2<:Number,N}(X::Array{T1,N},M::Array{Matrix{T2}},n::Integer,t='n')=ttm(X,MatrixCell(M),n,t)
 
-@doc """ Outer product of two tensors. """ ->
+"""
+    ttv(X,Y)
+
+Outer product of two tensors.
+"""
 function ttt{T1<:Number,T2<:Number}(X1::Array{T1},X2::Array{T2})
   sz=tuple([[size(X1)...];[size(X2)...]]...);
   Xprod=vec(X1)*vec(X2)';
   reshape(Xprod,sz)
 end
 
-@doc """ Tensor times vectors (n-mode product). """ ->
+"""
+    ttv(X,V[,modes])
+
+Tensor times vectors (n-mode product):  (X ⊗ Y) x₁ V₁ x₂ V₂ x₃ ⋯ xₙ Vₙ
+Default modes: 1:length(M).
+"""
 function ttv{T<:Number,D<:Integer,N}(X::Array{T,N},V::VectorCell,modes::Vector{D})
   remmodes=setdiff(1:N,modes)'
   if N > 1
