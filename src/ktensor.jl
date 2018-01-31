@@ -1,7 +1,7 @@
 #Tensors in Kruskal (CP) format + functions
 
-export ktensor, arrange, arrange!, display, extract, innerprod, isequal, full, minus, mtimes, mttkrp, ncomponents, ndims
-export normalize, normalize!, permutedims, plus, redistribute, redistribute!, size, tenmat, ttensor, vecnorm, uminus
+export ktensor, arrange, arrange!, display, extract, innerprod, isequal, fixsigns, fixsigns!, full, minus, mtimes, mttkrp, ncomponents, ndims
+export normalize, normalize!, nvecs, permutedims, plus, redistribute, redistribute!, size, tenmat, tocell, ttensor, ttm, ttv, uminus, vecnorm
 
 type ktensor{T<:Number}
 	lambda::Vector{T}
@@ -45,7 +45,7 @@ function arrange{T<:Number}(X::ktensor{T},mode=-1)
     [fmat[n]=Xnorm.fmat[n][:,p] for n=1:N]
     #Absorb the weight into one factor, if requested
     if mode>0
-        fmat[mode]=fmat[mode].*repmat(lambda',size(X,mode),1)
+        fmat[mode]=fmat[mode].*repmat(lambda',size(X,mode),1) #fmat[mode]*diagm(lambda)
         lambda = ones(lambda)
     end
     ktensor(lambda,fmat)
@@ -67,7 +67,7 @@ function arrange!{T<:Number}(X::ktensor{T},mode=-1)
     [X.fmat[n]=X.fmat[n][:,p] for n=1:N]
     #Absorb the weight into one factor, if requested
     if mode>0
-        X.fmat[mode]=X.fmat[mode].*repmat(X.lambda',size(X,mode),1)
+        X.fmat[mode]=X.fmat[mode].*repmat(X.lambda',size(X,mode),1) #X.fmat[mode]*diagm(X.lambda)
         X.lambda = ones(X.lambda)
     end
     X
@@ -101,6 +101,40 @@ function extract{T<:Number,D<:Integer}(X::ktensor{T},factors::Vector{D})
     ktensor(lambda, fmat)
 end
 extract{T<:Number}(X::ktensor{T},factors::Integer)=extract(X,[factors])
+
+@doc """Fix sign ambiguity of a ktensor."""->
+function fixsigns{T<:Number}(X::ktensor{T})
+    N=ndims(X)
+    sgn=zeros(Int,N)
+    fmat=deepcopy(X.fmat)
+     for r=1:ncomponents(X)
+        for n=1:N
+            maxind=indmax(abs.(X.fmat[n][:,r]))
+            sgn[n]=sign(X.fmat[n][maxind,r])
+        end
+        negind=find(sgn.==-1)
+        nflip=2*floor(Int,length(negind)/2)
+        for i=1:nflip
+            fmat[negind[i]][:,r]=-X.fmat[negind[i]][:,r]
+        end
+    end
+    ktensor(X.lambda,fmat)
+end
+function fixsigns!{T<:Number}(X::ktensor{T})
+    N=ndims(X)
+    sgn=zeros(Int,N)
+     for r=1:ncomponents(X)
+        for n=1:N
+            maxind=indmax(abs.(X.fmat[n][:,r]))
+            sgn[n]=sign(X.fmat[n][maxind,r])
+        end
+        negind=find(sgn.==-1)
+        nflip=2*floor(Int,length(negind)/2)
+        for i=1:nflip
+            X.fmat[negind[i]][:,r]=-X.fmat[negind[i]][:,r]
+        end
+    end
+end
 
 #@doc """ Makes full tensor out of a ktensor. """ ->
 function full{T<:Number}(X::ktensor{T})
@@ -181,7 +215,7 @@ function normalize{T<:Number}(X::ktensor{T},mode=-1;normtype=2,factor=-1)
     mode=-2
   end
   N=ndims(X)
-  lambda=deepcopy(X.lambda)
+  lambda=deepcopy(float(X.lambda))
   fmat=deepcopy(X.fmat)
   if factor>0
     @assert(0<factor<=N,"Factor exceeds dimension.")
@@ -212,11 +246,11 @@ function normalize{T<:Number}(X::ktensor{T},mode=-1;normtype=2,factor=-1)
     #D = diagm(nthroot(X.lambda,ndims(X)))
     #[fmat[n]=X.fmat[n]*D for n=1:N]
     d=(lambda').^(1/N)
-   [fmat[n]=fmat[n].*repmat(d,size(X,n),1) for n=1:N]
+   [fmat[n]=fmat[n].*repmat(d,size(X,n),1) for n=1:N] #fmat[n]*diagm(d)
     lambda = ones(lambda)
   elseif mode > 0
     #fmat[mode] = fmat[mode]*diagm(lambda)
-    fmat[mode] = fmat[mode].*repmat(lambda',size(X,mode),1)
+    fmat[mode] = fmat[mode].*repmat(lambda',size(X,mode),1) #fmat[mode]*diagm(lambda)
     lambda = ones(lambda)
   elseif mode==-2
     p = sortperm(lambda,rev=true)
@@ -257,16 +291,37 @@ function normalize!{T<:Number}(X::ktensor{T},mode=-1;normtype=2,factor=-1)
   end
   if mode == 0
      d=(X.lambda').^(1/N)
-     [X.fmat[n]=X.fmat[n].*repmat(d,size(X,n),1) for n=1:N]
+     [X.fmat[n]=X.fmat[n].*repmat(d,size(X,n),1) for n=1:N] #X.fmat[n]*diagm(d)
      X.lambda = ones(X.lambda)
   elseif mode > 0
-    X.fmat[mode] = X.fmat[mode].*repmat(X.lambda',size(X,mode),1)
+    X.fmat[mode] = X.fmat[mode].*repmat(X.lambda',size(X,mode),1) #X.fmat[n]*diagm(X.lambda)
     X.lambda = ones(X.lambda)
   elseif mode==-2
     p = sortperm(X.lambda,rev=true)
     X = arrange(X,p)
   end
    X
+end
+
+#@doc """ Computes the leading mode-n vectors for a tensor. """ ->
+#Computes the r leading eigenvectors of Xₙ*Xₙ', where Xₙ is the mode-n matricization of X.
+function nvecs{T<:Number}(X::ktensor{T},n::Integer,r=0;flipsign=false)
+    M = X.lambda * X.lambda'
+    for m in setdiff(1:ndims(X),n)
+        M = M .* (X.fmat[m]' * X.fmat[m])
+    end
+    V=eigs(Symmetric(X.fmat[n] * M * X.fmat[n]'),nev=r,which=:LM)[2]
+    if flipsign
+        #Make the largest magnitude element be positive
+        maxind = findmax(abs.(V),1)[2]
+        for i = 1:r
+            ind=ind2sub(size(V),maxind[i])
+            if V[ind...] < 0
+                V[:,ind[2]] = V[:,ind[2]] * -1
+            end
+        end
+    end
+    V
 end
 
 @doc """Permute dimensions of a ktensor."""->
@@ -286,7 +341,7 @@ end
 
 @doc """Distribute lambda values to a specified mode.."""->
 function redistribute{T<:Number}(X::ktensor{T},mode::Integer)
-    lambda=deepcopy(X.lambda)
+    lambda=deepcopy(float(X.lambda))
     fmat=deepcopy(X.fmat)
     for r = 1:ncomponents(X)
         fmat[mode][:,r] = fmat[mode][:,r] * lambda[r];
@@ -318,11 +373,98 @@ end
 #@doc """ n-mode matricization of a tensor. """ ->
 tenmat{T<:Number}(X::ktensor{T},n::Integer)=tenmat(full(X),n)
 
+@doc """Converts ktensor into MatrixCell."""->
+function tocell{T<:Number}(X::ktensor{T},mode::Integer)
+    Y = normalize(X,mode)
+    Y.fmat
+end
+function tocell{T<:Number}(X::ktensor{T})
+    if isequal(X.lambda,ones(size(X.lambda)))
+        return X.fmat;
+    end
+    N=ndims(X)
+    d = (X.lambda').^(1/N)
+    fmat=MatrixCell(N)
+    for n = 1:N
+        fmat[n] = X.fmat[n].*repmat(d,size(X.fmat[n],1),1)
+    end
+    fmat
+end
+
 @doc """Create ttensor out of ktensor."""->
 function ttensor{T<:Number}(X::ktensor{T})
     Xred=redistribute(X,1)
     ttensor(neye(ndims(X)),Xred.fmat)
 end
+
+#Multiplies ktensor X with matrices from array M by modes; t='t' transposes matrices
+function ttm{T<:Number,D<:Integer}(X::ktensor{T},M::MatrixCell,modes::Vector{D},t='n')
+  if t=='t'
+	 M=vec(M')
+	end
+	@assert(length(modes)<=length(M),"Too few matrices")
+	@assert(length(M)<=ndims(X),"Too many matrices")
+  if length(modes)<length(M)
+    M=M[modes]
+  end
+  fmat=deepcopy(X.fmat)
+  for n=1:length(modes)
+    fmat[modes[n]]=M[n]*fmat[modes[n]]
+  end
+    ktensor(X.lambda,fmat)
+end
+ttm{T<:Number,D<:Integer}(X::ktensor{T},M::MatrixCell,modes::Range{D},t='n')=ttm(X,M,collect(modes),t)
+ttm{T1<:Number,T2<:Number}(X::ktensor{T1},M::Matrix{T2},n::Integer,t='n')=ttm(X,[M],[n],t)
+ttm{T<:Number}(X::ktensor{T},M::MatrixCell,t::Char)=ttm(X,M,1:length(M),t)
+ttm{T<:Number}(X::ktensor{T},M::MatrixCell)=ttm(X,M,1:length(M))
+function ttm{T<:Number}(X::ktensor{T},M::MatrixCell,n::Integer,t='n')
+	if n>0
+		ttm(X,M[n],n,t)
+	else
+		modes=setdiff(1:ndims(X),-n)
+		ttm(X,M,modes,t)
+	end
+end
+#If array of matrices isn't defined as MatrixCell, but as M=[M1,M2,...,Mn]:
+ttm{T1<:Number,T2<:Number,D<:Integer}(X::ktensor{T1},M::Array{Matrix{T2}},modes::Vector{D},t='n')=ttm(X,MatrixCell(M),modes,t)
+ttm{T1<:Number,T2<:Number,D<:Integer}(X::ktensor{T1},M::Array{Matrix{T2}},modes::Range{D},t='n')=ttm(X,MatrixCell(M),modes,t)
+ttm{T1<:Number,T2<:Number}(X::ktensor{T1},M::Array{Matrix{T2}},t::Char)=ttm(X,MatrixCell(M),t)
+ttm{T1<:Number,T2<:Number}(X::ktensor{T1},M::Array{Matrix{T2}})=ttm(X,MatrixCell(M))
+ttm{T1<:Number,T2<:Number}(X::ktensor{T1},M::Array{Matrix{T2}},n::Integer,t='n')=ttm(X,MatrixCell(M),n,t)
+
+#@doc """ Kruskal tensor times vectors (n-mode product). """ ->
+function ttv{T<:Number,D<:Integer}(X::ktensor{T},V::VectorCell,modes::Vector{D})
+  N=ndims(X)
+  remmodes=setdiff(1:N,modes)
+  lambda=deepcopy(float(X.lambda))
+  if length(modes) < length(V)
+    V=V[modes]
+  end
+  for n=1:length(modes)
+      lambda=lambda.*(X.fmat[modes[n]]'*V[n])
+  end
+  if isempty(remmodes)
+    sum(lambda)
+  else
+    ktensor(lambda,X.fmat[remmodes])
+  end
+end
+ttv{T1<:Number,T2<:Number}(X::ktensor{T1},v::Vector{T2},n::Integer)=ttv(X,Vector[v],[n])
+ttv{T<:Number,D<:Integer}(X::ktensor{T},V::VectorCell,modes::Range{D})=ttv(X,V,collect(modes))
+ttv{T<:Number}(X::ktensor{T},V::VectorCell)=ttv(X,V,1:length(V))
+function ttv{T<:Number}(X::ktensor{T},V::VectorCell,n::Integer)
+	if n>0
+		ttm(X,V[n],n)
+	else
+		modes=setdiff(1:ndims(X),-n)
+		ttm(X,A,modes)
+	end
+end
+#If array of vectors isn't defined as VectorCell, but as V=[v1,v2,...,vn]:
+ttv{T1<:Number,T2<:Number,D<:Integer}(X::ktensor{T1},V::Array{Vector{T2}},modes::Vector{D})=ttv(X,VectorCell(V),modes)
+ttv{T1<:Number,T2<:Number,D<:Integer}(X::ktensor{T1},V::Array{Vector{T2}},modes::Range{D})=ttv(X,VectorCell(V),modes)
+ttv{T1<:Number,T2<:Number}(X::ktensor{T1},V::Array{Vector{T2}})=ttv(X,VectorCell(V))
+ttv{T1<:Number,T2<:Number}(X::ktensor{T1},V::Array{Vector{T2}},n::Integer)=ttv(X,VectorCell(V),n)
 
 #@doc """ Frobenius norm of a ktensor. """ ->
 function vecnorm{T<:Number}(X::ktensor{T})
