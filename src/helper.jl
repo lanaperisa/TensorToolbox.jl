@@ -1,13 +1,33 @@
 using Base.Cartesian
 
 #export indicesmat2vec, indicesmat, shiftsmat
-export khatrirao, krontkron, krontv, krtv, tkrtv, lanczos, lanczos_tridiag, randsvd
+export khatrirao, krontkron, kron, krontv, krtv, tkrtv, lanczos, lanczos_tridiag, randsvd
 export VectorCell, MatrixCell, TensorCell
 
+"""
+    VectorCell(N)
+
+Cell of vectors of length N.
+"""
 const VectorCell = Array{Vector,1}
+"""
+    MatrixCell(N)
+
+Cell of matrices of length N.
+"""
 const MatrixCell = Array{Matrix,1}
+"""
+    TensorCell(N)
+
+Cell of multidimensional arrays of length N.
+"""
 const TensorCell = Array{Array,1}
 
+"""
+    check_vector_input(input,dim,default_value)
+
+Check whether input vector is of appropriate size or if input is number create vector out of it.
+"""
 function check_vector_input(input,dim::Integer,default_value::Number)
   if length(input)>0
      if isa(input,Number)
@@ -21,14 +41,21 @@ function check_vector_input(input,dim::Integer,default_value::Number)
   input
 end
 
+"""
+    indicesmat2vec(M,sz)
 
-#Transforms matrix of multi-indices into a vector of linear indices
+For creating block diagonal tensors. Transforms matrix of multi-indices into a vector of linear indices.
+"""
 function indicesmat2vec{D<:Integer}(I::Matrix{D},sz::Tuple)
 	mult = [1 cumprod([sz[1:end-1]...])']
 	(I - 1) * mult' + 1
 end
 
-#Creates a matrix of all multi-indices of a tensor shifted by a vector - each row of a matrix is one multi-index
+"""
+    indicesmat(A,shift)
+
+For creating block diagonal tensors. Creates a matrix of all multi-indices of a tensor shifted by a vector - each row of a matrix is one multi-index.
+"""
 @generated function indicesmat{T<:Number,D<:Integer,N}(A::Array{T,N},shift::Vector{D})
   quote
 	I=zeros(D,0,N)
@@ -40,7 +67,11 @@ end
   end
 end
 
-#Creates a matrix of all shifts for element-wise multiplication with block sizes defined in blsize - each row of a matrix is one shift vector
+""""
+    shiftsmat(A,blsize)
+
+For creating block diagonal tensors. Creates a matrix of all shifts for element-wise multiplication with block sizes defined in blsize - each row of a matrix is one shift vector.
+"""
 @generated function shiftsmat{T<:Number,D<:Integer,N}(A::Array{T,N},blsize::Vector{D})
   quote
     I=zeros(D,0,N)
@@ -52,8 +83,13 @@ end
     end
 end
 
-@doc """ Khatri-Rao product of matrices. """ ->
-#if t='t' computes transpose Khatri-Rao
+"""
+    khatrirao(M,t='n')
+    khatrirao(M,n,t='n')
+
+Khatri-Rao product of matrices from M:  M₁⊙ ⋯ ⊙ Mₙ. Optionally skip nth matrix.
+If t='t', compute transpose Khatri-Rao product: M₁⊙ᵀ ⋯ ⊙ᵀ Mₙ.
+"""
 function khatrirao(M::MatrixCell,t='n')
     N=length(M)
     if t== 't'
@@ -81,13 +117,40 @@ function khatrirao{T1<:Number,T2<:Number}(M1::Matrix{T1}, M2::Matrix{T2},t='n')
   M[1]=M1;M[2]=M2;
   khatrirao(M,t)
 end
+function khatrirao(M1::MatrixCell, M2::MatrixCell,t='n')
+    @assert(length(M1)==length(M2),"Matrix cells must be of same length.")
+    N=length(M1)
+    M=MatrixCell(N)
+    for n=1:N
+      M[n]=khatrirao(M1[n],M2[n],t)
+    end
+    M
+end
 #Skip nth matrix from M
 function khatrirao(M::MatrixCell,n::Integer,t='n')
     khatrirao(deleteat!(M,n),t)
 end
 khatrirao{T<:Number}(M::Array{Matrix{T}},n::Integer,t='n')=khatrirao(MatrixCell(M),n,t)
 
-@doc """Kronecker times Kronecer. Kronecker product of matrices multiplied by kronecker product of vectors. """ ->
+
+#Extension of Base.kron to work with MatrixCell
+function kron(M::MatrixCell)
+  N=length(M)
+  K=M[1]
+  for n=2:N
+      K=kron(K,M[n])
+  end
+  K
+end
+#If array of matrices isn't defined as MatrixCell, but as M=[M1,M2,...,Mn]:
+kron{T<:Number}(M::Array{Matrix{T}})=kron(MatrixCell(M))
+
+"""
+    krontkron(A,v,t='n')
+
+Kronecker product of matrices multiplied by Kronecker product of vectors.
+"""
+#Kronecker times Kronecker
 function krontkron(A::MatrixCell,v::VectorCell,t='n')
   if t=='t'
     A=vec(A')
@@ -103,7 +166,12 @@ krontkron{T1<:Number,T2<:Number}(A::Array{Matrix{T1}},v::Array{Vector{T2}},t='n'
 krontkron{T<:Number}(A::Array{Matrix{T}},v::VectorCell,t='n')=krontkron(MatrixCell(A),v,t)
 krontkron{T<:Number}(A::MatrixCell,v::Array{Vector{T}},t='n')=krontkron(A,VectorCell(v),t)
 
-@doc """Kronecker product times vector or matrix. """
+"""
+    krontv(A,B,v)
+
+Kronecker product times vector: (A ⊗ B)v.
+If v is a matrix, multiply column by column.
+"""
 function krontv{T1<:Number,T2<:Number,T3<:Number}(A::Matrix{T1},B::Matrix{T2},v::Vector{T3})
   m,n=size(A);
   p,q=size(B);
@@ -128,7 +196,12 @@ function krontv{T1<:Number,T2<:Number,T3<:Number}(A::Matrix{T1},B::Matrix{T2},M:
   Mprod
 end
 
-@doc """Khatri-Rao product times a vector or a matrix. """
+"""
+    krtv(A,B,v)
+
+Khatri-Rao product times vector: (A ⊙ B)v.
+If v is a matrix, multiply column by column.
+"""
 function krtv{T1<:Number,T2<:Number,T3<:Number}(A::Matrix{T1},B::Matrix{T2},v::Vector{T3})
   @assert(size(A,2)==size(B,2),"Dimension mismatch.")
   m,n=size(A);
@@ -155,7 +228,12 @@ function krtv{T1<:Number,T2<:Number,T3<:Number}(A::Matrix{T1},B::Matrix{T2},M::M
   Mprod
 end
 
-@doc """Transpose Khatri-Rao product times vector of matrix. """
+"""
+   tkrtv(A,B,v)
+
+Transpose Khatri-Rao product times vector: (A ⊙ᵀ B)v.
+If v is a matrix, multiply column by column.
+"""
 function tkrtv{T1<:Number,T2<:Number,T3<:Number}(A::Matrix{T1},B::Matrix{T2},v::Vector{T3})
   @assert(size(A,1)==size(B,1),"Dimension mismatch.")
   m,n=size(A);
@@ -183,13 +261,23 @@ function tkrtv{T1<:Number,T2<:Number,T3<:Number}(A::Matrix{T1},B::Matrix{T2},M::
 end
 
 
-@doc """ Lanczos based SVD - returns left singular vectors and singular values of a matrix. """ ->
+"""
+    lanczos(A; <keyword arguments>)
+
+Lanczos based SVD - computes left singular vectors and singular values of a matrix.
+
+## Arguments:
+- `A::Matrix`
+- `tol`: Tolerance - discard singular values below tol. Default: 1e-8.
+- `maxit`: Maximal number of iterations. Default: 1000.
+- `reqrank`: Number of singular values and singular vectors to compute. Optional.
+- `p`: Oversampling parameter. Default: p=10.
+"""
 function lanczos{N<:Number}(A::Matrix{N};tol=1e-8,maxit=1000,reqrank=0,p=10)
-  #p...oversamling parameter
   Q,T=lanczos_tridiag(A,tol=tol,maxit=maxit,reqrank=reqrank,p=p)
   E=eigfact(T,tol,Inf);
   U=E[:vectors][:,end:-1:1];
-  S=sqrt(abs(E[:values][end:-1:1]));
+  S=sqrt.(abs.(E[:values][end:-1:1]));
   if reqrank!=0
     U=Q*U[:,1:reqrank];
     S=S[1:reqrank];
@@ -201,7 +289,18 @@ function lanczos{N<:Number}(A::Matrix{N};tol=1e-8,maxit=1000,reqrank=0,p=10)
   U,S
 end
 
-@doc """ Lanczos tridiagonalization algorithm - returns orthonormal Q and symmetric tridiagonal T such that A≈Q*T*Q'. """ ->
+"""
+    lanczos_tridiag(A; <keyword arguments>)
+
+Lanczos tridiagonalization algorithm - returns orthonormal Q and symmetric tridiagonal T such that A≈Q*T*Q'.
+
+## Arguments:
+- `A::Matrix`
+- `tol`: Tolerance. Default: 1e-8.
+- `maxit`: Maximal number of iterations. Default: 1000.
+- `reqrank`: Number of singular values and singular vectors to compute. Optional.
+- `p`: Oversampling parameter. Default: p=10.
+"""
 function lanczos_tridiag{N<:Number}(A::Matrix{N};tol=1e-8,maxit=1000,reqrank=0,p=10)
   m,n=size(A)
   K=min(m,maxit);
@@ -232,10 +331,20 @@ function lanczos_tridiag{N<:Number}(A::Matrix{N};tol=1e-8,maxit=1000,reqrank=0,p
   Q,T
   end
 
-@doc """ Randomized SVD algorithm - returns left singular vectors and singular values of a matrix. """ ->
+"""
+   randsvd(A; <keyword arguments>)
+
+Randomized SVD algorithm - returns left singular vectors and singular values of a matrix.
+
+## Arguments:
+- `A::Matrix`
+- `tol`: Tolerance - discard singular values below tol. Default: 1e-8.
+- `maxit`: Maximal number of iterations. Default: 1000.
+- `reqrank`: Number of singular values and singular vectors to compute. Optional.
+- `r`: Number of samples for stopping criterion. Default: r=10.
+- `p`: Oversampling parameter. Default: p=10.
+"""
 function randsvd{N<:Number}(A::Matrix{N};tol=1e-8,maxit=1000,reqrank=0,r=10,p=10)
-  #p... oversampling parameter
-  #r... number of samples for testing convergence
   m,n=size(A)
   if reqrank!=0
     Y=A*(A'*randn(m,reqrank+p));
@@ -243,7 +352,7 @@ function randsvd{N<:Number}(A::Matrix{N};tol=1e-8,maxit=1000,reqrank=0,r=10,p=10
     Q=qr(Y)[1];
   else
     maxit=min(m,n,maxit);
-    rangetol=tol*sqrt(pi/2)/10; #assures ||A-Q*Q'*A||<=tol
+    rangetol=tol*sqrt.(pi/2)/10; #assures ||A-Q*Q'*A||<=tol
     Y=A*(A'*randn(m,r));
     j=0;
     Q=zeros(m,0);
@@ -266,13 +375,13 @@ function randsvd{N<:Number}(A::Matrix{N};tol=1e-8,maxit=1000,reqrank=0,r=10,p=10
   B=Symmetric(B'*B);
   E=eigfact(B,tol,Inf);
   U=E[:vectors][:,end:-1:1];
-  S=sqrt(abs(E[:values][end:-1:1]));
+  S=sqrt.(abs.(E[:values][end:-1:1]));
   if reqrank != 0
       if size(U,2)<reqrank
-	  warn("Requested rank exceeds the actual rank. Try changing eps_abs.");
-          U=Q*U;
+	      warn("Requested rank exceeds the actual rank. Try changing tolerance.");
+        U=Q*U;
       else
-	U=Q*U[:,1:reqrank];
+	      U=Q*U[:,1:reqrank];
       	S=S[1:reqrank];
       end
   else

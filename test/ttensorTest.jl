@@ -17,15 +17,17 @@ for n=1:ndims(T)
   @test size(T.fmat[n]) == (size(X,n),size(X,n))
 end
 
-println("\n\n...Testing function full, i.e. n-mode multiplication (ttm): vecnorm(full(T)-X) = ", vecnorm(full(T) - X))
-@test vecnorm(full(T)-X) ≈ 0 atol=1e-12
+err=vecnorm(full(T) - X)
+println("\n\n...Testing function full, i.e. n-mode multiplication (ttm): vecnorm(full(T)-X) = ", err)
+@test err ≈ 0 atol=1e-12
 
 A=MatrixCell(ndims(T))
 for n=1:ndims(T)
   A[n]=rand(rand(1:10),size(T,n))
 end
-println("\n...Testing ttm for ttensor T and array of matrices A : vecnorm(full(ttm(T,A))-ttm(full(T),A)) = ", vecnorm(full(ttm(T,A)) - ttm(full(T),A)))
-@test vecnorm(full(ttm(T,A)) - ttm(full(T),A))≈ 0 atol=1e-10
+err=vecnorm(full(ttm(T,A)) - ttm(full(T),A))
+println("\n...Testing ttm for ttensor T and array of matrices A : vecnorm(full(ttm(T,A))-ttm(full(T),A)) = ", err)
+@test err ≈ 0 atol=1e-10
 
 R=[5,5,5,5]
 println("\n...Testing hosvd with smaller multilinear rank: ", R)
@@ -49,6 +51,12 @@ println("\n...Testing nrank of ttensor T for mode 1: ", nrank(T,1))
 println("\n...Testing mrank of ttensor T: ", mrank(T))
 @test mrank(T) == tuple(R...)
 
+println("\n...Testing functions matten and tenmat (by mode).")
+for n=1:ndims(T)
+  Tn=tenmat(T,n)
+  @test vecnorm(Tn-tenmat(full(T),n)) ≈ 0 atol=1e-12
+end
+
 R=[5,5,5];
 T=hosvd(rand(60,50,40),reqrank=R);
 sz = size(T);
@@ -66,7 +74,7 @@ println("Error( vecnorm(T-S) ): ",err,". Noise vecnorm: ",noise,".")
 
 f(x,y,z)=1/(x+y+z)
 dx=dy=dz=[n*0.1 for n=1:20]
-X=Float64[ f(x,y,z) for x=dx, y=dy, z=dz ]
+X=[ f(x,y,z) for x=dx, y=dy, z=dz ]
 
 println("\n\n...Testing hosvd with eps_abs=1e-5 on function defined tensor X of size ", size(X), " and multlinear rank", mrank(X))
 T=hosvd(X,eps_abs=1e-5)
@@ -114,12 +122,14 @@ println("After reorthogonalization: ", reorth!(S).isorth)
 @test S.isorth
 
 println("\n\n...Testing vecnorm of ttensor T.")
-println("|vecnorm(T) - vecnorm(full(T))| = ", abs(vecnorm(T) - vecnorm(full(T))))
-@test abs(vecnorm(T) - vecnorm(full(T))) ≈ 0 atol=1e-12
+err=abs(vecnorm(T) - vecnorm(full(T)))
+println("|vecnorm(T) - vecnorm(full(T))| = ", err)
+@test err ≈ 0 atol=1e-12
 
 println("\n\n...Testing scalar multiplication 3*T.")
-println("vecnorm(full(3*T) - 3*full(T)) = ",  vecnorm(full(3*T) - 3*full(T)))
-@test vecnorm(full(3*T) - 3*full(T)) ≈ 0 atol=1e-12
+err=vecnorm(full(3*T) - 3*full(T))
+println("vecnorm(full(3*T) - 3*full(T)) = ", err )
+@test err ≈ 0 atol=1e-12
 
 X=randttensor([6,8,2,5,4],[4,3,2,2,3]);
 Y=randttensor([6,8,2,5,4],[3,6,3,4,3]);
@@ -127,17 +137,20 @@ println("\n\n...Creating two random ttensors X and Y of size ", size(X),".")
 println("\n...Testing addition.")
 Z=X+Y;
 F=full(X)+full(Y);
-println("vecnorm(full(X+Y) - (full(X)+full(Y))) = ", vecnorm(full(Z) - F))
-@test vecnorm(full(Z) - F) ≈ 0 atol=1e-12
+err=vecnorm(full(Z) - F)
+println("vecnorm(full(X+Y) - (full(X)+full(Y))) = ",err )
+@test err ≈ 0 atol=1e-12
 
 println("\n\n...Testing inner product.")
 Z=innerprod(X,Y)
-println("|innerprod(X,Y) - innerprod(full(X),full(Y))| = ", abs(Z - innerprod(full(X),full(Y))))
-@test abs(Z - innerprod(full(X),full(Y))) ≈ 0 atol=1e-10
+err=abs(Z - innerprod(full(X),full(Y)))
+println("|innerprod(X,Y) - innerprod(full(X),full(Y))| = ",err )
+@test err ≈ 0 atol=1e-10
 
 println("\n\n...Testing Hadamard product.")
-println("vecnorm(full(X.*Y) - full(X).*full(Y)) = ", vecnorm(full(X.*Y) - full(X).*full(Y)))
-@test  vecnorm(full(X.*Y) - full(X).*full(Y)) ≈ 0 atol=1e-10
+err=vecnorm(full(X.*Y) - full(X).*full(Y))
+println("vecnorm(full(X.*Y) - full(X).*full(Y)) = ", err)
+@test  err ≈ 0 atol=1e-10
 
 
 println("\n\n...Testing singular values of matricizations of Tucker Tensor.")
@@ -160,3 +173,39 @@ for n=1:ndims(T)
   println("Mode-$n singular values error: ",norm(sv-svdfact!(tenmat(full(T),n))[:S][1:length(sv)]))
   @test norm(sv-svdfact!(tenmat(full(T),n))[:S][1:length(sv)]) ≈ 0 atol=1e-10
 end
+
+println("\n...Testing function mhadtv.")
+X=randttensor([5,4,3],[3,3,3])
+Y=randttensor([5,4,3],[2,2,2])
+println("\n\n...Creating two random ttensors X and Y of size ", size(X),".")
+v=rand(12)
+n=1
+println("Multiplying mode-$n matricized had(X,Y) by a random vector.")
+Z=mhadtv(X,Y,v,n,'n')
+Hn=tenmat(X.*Y,n)
+err = vecnorm(Z-Hn*v)
+println("Multiplication error: ",err)
+@test err ≈ 0 atol=1e-12
+v=rand(5)
+Z=mhadtv(X,Y,v,n,'t')
+err = vecnorm(Z-Hn'*v)
+println("Multiplication error: ",err)
+@test err ≈ 0 atol=1e-12
+v=rand(5)
+Z=mhadtv(X,Y,v,n,'b')
+err = vecnorm(Z-Hn*Hn'*v)
+println("Multiplication error: ",err)
+@test err ≈ 0 atol=1e-12
+
+println("\n...Testing function mttkrp.")
+X=randttensor([5,4,3],[3,3,3])
+n=1
+M1=rand(5,5);
+M2=rand(4,5);
+M3=rand(3,5);
+M=[M1,M2,M3]
+println("Multiplying mode-$n matricized tensor X by Khatri-Rao product of matrices.")
+Z=mttkrp(X,M,n)
+err = vecnorm(Z-tenmat(X,n)*khatrirao(M3,M2))
+println("Multiplication error: ",err)
+@test err ≈ 0 atol=1e-12

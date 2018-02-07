@@ -1,9 +1,15 @@
 #Tensors in Tucker format + functions
 
 export ttensor, randttensor
-export coresize, display, full, had, hadcten, hosvd, hosvd1, hosvd2, hosvd3, hosvd4, innerprod, isequal, lanczos, mhadtm, mhadtv, minus, mrank
+export coresize, cp_als, display, full, had, hadcten, hosvd, hosvd1, hosvd2, hosvd3, hosvd4, innerprod, isequal, lanczos, mhadtv, minus, mrank
 export msvdvals, mtimes, mttkrp, ndims, nrank, nvecs, permutedims, plus, randrange, randsvd, reorth, reorth!, size, tenmat, ttm, ttv, uminus, vecnorm
 
+"""
+    ttensor(cten,fmat)
+
+Tensor in Tucker format defined by its core tensor and factor matrices.
+For ttensor X, X.isorth=true if factor matrices are othonormal.
+"""
 type ttensor{T<:Number}
 	cten::Array{T}
 	fmat::MatrixCell
@@ -20,7 +26,6 @@ end
 ttensor{T}(cten::Array{T},fmat::MatrixCell,isorth::Bool)=ttensor{T}(cten,fmat,isorth)
 ttensor{T}(cten::Array{T},fmat::MatrixCell)=ttensor{T}(cten,fmat,true)
 ttensor{T}(cten::Array{T},mat::Matrix)=ttensor{T}(cten,collect(mat),true)
-@doc """ Tucker tensor is defined by its core tensor and factor matrices. """ ->
 function ttensor{T}(cten::Array{T},mat...)
   fmat=MatrixCell(0)
   for M in mat
@@ -32,46 +37,129 @@ end
 ttensor{T,T1<:Number}(cten::Array{T},fmat::Array{Matrix{T1}},isorth::Bool)=ttensor{T}(cten,MatrixCell(fmat),isorth)
 ttensor{T,T1<:Number}(cten::Array{T},fmat::Array{Matrix{T1}})=ttensor{T}(cten,MatrixCell(fmat),true)
 
-@doc """ Creates random Tucker tensor. """ ->
-#I...size, R...rank
+"""
+    randttensor(I::Vector,R::Vector)
+    randttensor(I::Integer,R::Integer,N::Integer)
+
+Creates random Tucker tensor of size I and multilinear rank R, or of order N and size I × ⋯ × I and mulilinear rank (R,...,R).
+"""
 function randttensor{D<:Integer}(I::Vector{D},R::Vector{D})
   @assert(size(I)==size(R),"Size and rank should be of same length.")
   cten=randn(tuple(R...)) #create radnom core tensor
   fmat=Matrix[randn(I[n],R[n]) for n=1:length(I)] #create random factor matrices
   ttensor(cten,fmat)
 end
-randttensor(I::Number,R::Number,N::Integer)=randttensor(repmat([I],N),repmat([R],N));
+randttensor(I::Integer,R::Integer,N::Integer)=randttensor(repmat([I],N),repmat([R],N));
 #For input defined as tuples or nx1 matrices - ranttensor(([I,I,I],[R,R,R]))
 function randttensor(arg...)
   randttensor([arg[1]...],[arg[2]...])
 end
 
-@doc """ Returns dimension of core of Tucker tensor. """ ->
+"""
+    coresize(X)
+
+Size of core tensor of a ttensor.
+"""
 function coresize{T<:Number}(X::ttensor{T})
   size(X.cten)
 end
 
-function Base.show{T<:Number}(io::IO,X::ttensor{T})
-    display(X)
-end
-@doc """Displays a ttensor.""" ->
-function display{T<:Number}(X::ttensor{T},name="ttensor")
-    println("Tucker tensor of size ",size(X),":\n")
-    println("$name.cten: ")
-    show(STDOUT, "text/plain", X.cten)
-    for n=1:ndims(X)
-        println("\n\n$name.fmat[$n]:")
-        show(STDOUT, "text/plain", X.fmat[n])
+#Compute a CP decomposition with R components of a tensor X. **Documentation in tensor.jl.
+function cp_als{T<:Number}(X::ttensor{T},R::Integer;init="rand",tol=1e-4,maxit=1000,dimorder=[])
+    N=ndims(X)
+    nr=vecnorm(X)
+    K=ktensor
+    if length(dimorder) == 0
+        dimorder=collect(1:N)
     end
+    fmat=MatrixCell(N)
+    if isa(init,Vector) || isa(init,MatrixCell)
+        @assert(length(init)==N,"Wrong number of initial matrices.")
+        for n in dimorder[2:end]
+            @assert(size(init[n])==(size(X,n),R),"$(n)-th initial matrix is of wrong size.")
+            fmat[n]=init[n]
+        end
+    elseif init=="rand"
+        [fmat[n]=rand(size(X,n),R) for n in dimorder[2:end]]
+    elseif init=="eigs" || init=="nvecs"
+        [fmat[n]=nvecs(X,n,R) for n in dimorder[2:end]]
+    else
+        error("Initialization method wrong.")
+    end
+    G = zeros(R,R,N); #initalize gramians
+    [G[:,:,n]=fmat[n]'*fmat[n] for n in dimorder[2:end]]
+    fit=0
+    for k=1:maxit
+        fitold=fit
+        lambda=[]
+        for n in dimorder
+            fmat[n]=mttkrp(X,fmat,n)
+            W=reshape(prod(G[:,:,setdiff(collect(1:N),n)],3),Val{2})
+            fmat[n]=fmat[n]/W
+            if k == 1
+                lambda = sqrt.(sum(fmat[n].^2,1))' #2-norm
+            else
+                lambda = maximum(maximum(abs.(fmat[n]),1),1)' #max-norm
+            end
+            fmat[n] = fmat[n]./lambda'
+            G[:,:,n] = fmat[n]'*fmat[n]
+        end
+        K=ktensor(vec(lambda),fmat)
+        if nr==0
+            fit=vecnorm(K)^2-2*innerprod(X,K)
+        else
+            nr_res=sqrt.(nr^2+vecnorm(K)^2-2*innerprod(X,K))
+            fir=1-nr_res/nr
+        end
+        fitchange=abs.(fitold-fit)
+        if k>1 && fitchange<tol
+            break
+        end
+    end
+    arrange!(K)
+    fixsigns!(K)
+    K
 end
 
+"""
+---
+TensorToolbox:
 
-#@doc """ Makes full tensor out of a Tucker tensor. """ ->
+    display(X[,name])
+
+Displays a ttensor of a given name.
+"""
+function display{T<:Number}(X::ttensor{T},name="ttensor")
+  print("Tucker tensor of size ",size(X)," with core tensor of size ",coresize(X))
+  if X.isorth == true
+    print(" with orthonormal factor matrices")
+  end
+  print(":\n")
+  println("$name.cten: ")
+  show(STDOUT, "text/plain", X.cten)
+  for n=1:ndims(X)
+      println("\n\n$name.fmat[$n]:")
+      show(STDOUT, "text/plain", X.fmat[n])
+  end
+end
+
+"""
+---
+TensorToolbox:
+
+    full(X)
+
+Make full tensor out of a ttensor.
+"""
 function full{T<:Number}(X::ttensor{T})
   ttm(X.cten,X.fmat)
 end
 
-@doc """ Hadamard multiplication of two ttensors. """ ->
+"""
+   had(X,Y)
+
+Hadamard (element-wise) product of two ttensors. Same as: X.*Y.
+"""
 function had{T1<:Number,T2<:Number}(X1::ttensor{T1},X2::ttensor{T2})
   @assert(size(X1) == size(X2))
 	fmat=MatrixCell(ndims(X1)) #initilize factor matrix
@@ -85,7 +173,11 @@ function had{T1<:Number,T2<:Number}(X1::ttensor{T1},X2::ttensor{T2})
 end
 Base.broadcast{T1<:Number,T2<:Number}(.*,X1::ttensor{T1},X2::ttensor{T2}) = had(X1,X2)
 
-@doc """ Calculates core tensor of Hadamard product of two Tucker tensors for given factor matrices. """ ->
+"""
+    hadcten(X,Y,fmat)
+
+Core tensor of Hadamard product of two ttensors with given factor matrices.
+"""
 function hadcten{T1<:Number,T2<:Number}(X1::ttensor{T1},X2::ttensor{T2},fmat::MatrixCell)
   N=ndims(X1);
   C=MatrixCell(N)
@@ -96,7 +188,7 @@ function hadcten{T1<:Number,T2<:Number}(X1::ttensor{T1},X2::ttensor{T2},fmat::Ma
 end
 hadcten{T1<:Number,T2<:Number,T3<:Number}(X1::ttensor{T1},X2::ttensor{T2},fmat::Array{Matrix{T3}})=hadcten(X1,X2,MatrixCell(fmat))
 
-@doc """ HOSVD for Tucker tensor. """ ->
+#HOSVD for a ttensor. **Documentation in tensor.jl
 function hosvd{T<:Number}(X::ttensor{T};method="lapack",reqrank=[],eps_abs=[],eps_rel=[])
 	F=hosvd(X.cten,method=method,reqrank=reqrank,eps_abs=eps_abs,eps_rel=eps_rel)
   fmat=MatrixCell(ndims(X))
@@ -104,22 +196,45 @@ function hosvd{T<:Number}(X::ttensor{T};method="lapack",reqrank=[],eps_abs=[],ep
   reorth(ttensor(F.cten,fmat))
 end
 
-@doc """ HOSVD1 algorithm for getting Tucker representation of Hadamard product of two Tucker tensors. """ ->
+"""
+   hosvd1(X,Y; <keyword arguments>)
+
+Hadamard product of ttensors X and Y as ttensor. Creates the product and calls hosvd.
+See also: hosvd2, hosvd3, hosvd4.
+
+## Arguments:
+- `method` ∈ {"lapack","lanczos","randsvd"}. Method for SVD. Default: "randsvd".
+- `reqrank::Vector`: Requested mutlilinear rank. Optional.
+- `eps_abs::Number/Vector`: Drop singular values (of mode-n matricization) below eps_abs. Optional.
+- `eps_rel::Number/Vector`: Drop singular values (of mode-n matricization) below eps_rel*sigma_1. Optional.
+- `p::Integer`: Oversampling parameter. Defaul p=10.
+"""
 function hosvd1{T1<:Number,T2<:Number}(X1::ttensor{T1},X2::ttensor{T2};method="randsvd",reqrank=[],eps_abs=[],eps_rel=[],p=10)
   Xprod=full(X1).*full(X2);
   hosvd(Xprod,method=method,reqrank=reqrank,eps_abs=eps_abs,eps_rel=eps_rel,p=p)
 end
 
-@doc """ HOSVD2 algorithm for getting Tucker representation of Hadamard product of two Tucker tensors. """ ->
+"""
+   hosvd2(X,Y; <keyword arguments>)
+
+Hadamard product of ttensors X and Y as ttensor. Orthogonalizes factor matrices from structure and calls hosvd on updated core tensor.
+See also: hosvd1, hosvd3, hosvd4.
+
+## Arguments:
+- `method` ∈ {"lapack","lanczos","randsvd"} Method for SVD. Default: "randsvd".
+- `reqrank::Vector`: Requested mutlilinear rank. Optional.
+- `eps_abs::Number/Vector`: Drop singular values (of mode-n matricization) below eps_abs. Optional.
+- `eps_rel::Number/Vector`: Drop singular values (of mode-n matricization) below eps_rel*sigma_1. Optional.
+- `p::Integer`: Oversampling parameter. Defaul p=10.
+"""
 function hosvd2{T1<:Number,T2<:Number}(X1::ttensor{T1},X2::ttensor{T2};method="randsvd",reqrank=[],eps_abs=[],eps_rel=[],p=10)
 @assert(size(X1) == size(X2))
   N=ndims(X1)
-	Ahad=MatrixCell(N) #initialize factor matrices
   Q=MatrixCell(N);R=MatrixCell(N);
   n=1
   for (A1,A2) in zip(X1.fmat,X2.fmat)
-    Ahad[n]=khatrirao(A1,A2,'t')
-    Q[n],R[n]=qr(Ahad[n])
+    Ahad=khatrirao(A1,A2,'t')
+    Q[n],R[n]=qr(Ahad)
     n+=1
 	 end
   X=hosvd(krontm(X1.cten,X2.cten,R),method=method,reqrank=reqrank,eps_abs=eps_abs,eps_rel=eps_rel,p=p);
@@ -129,8 +244,21 @@ function hosvd2{T1<:Number,T2<:Number}(X1::ttensor{T1},X2::ttensor{T2};method="r
   ttensor(cten,fmat)
 end
 
-@doc """ HOSVD3 algorithm for getting Tucker representation of Hadamard product of two Tucker tensors. """ ->
-function hosvd3{T1<:Number,T2<:Number}(X1::ttensor{T1},X2::ttensor{T2};reqrank=[],method="lanczos",variant='B',eps_abs=[],eps_rel=[],p=10)
+"""
+   hosvd3(X,Y; <keyword arguments>)
+
+Hadamard product of ttensors X and Y as ttensor. Structure exploiting, works with (X ∗ Y)ₙ(X ∗ Y)ₙᵀ matrices.
+See also: hosvd1, hosvd2, hosvd4.
+
+## Arguments:
+- `method` ∈ {"lanczos","randsvd"} Structure exploiting method for SVD. Default: "lanczos".
+- `reqrank::Vector`: Requested mutlilinear rank. Optional.
+- `variant` ∈ {'A','B'} Variant of multiplication (X ∗ Y)ₙ(X ∗ Y)ₙᵀ. Default: 'B'.
+- `eps_abs::Number/Vector`: Drop singular values (of mode-n matricization) below eps_abs. Optional.
+- `eps_rel::Number/Vector`: Drop singular values (of mode-n matricization) below eps_rel*sigma_1. Optional.
+- `p::Integer`: Oversampling parameter. Defaul p=10.
+"""
+function hosvd3{T1<:Number,T2<:Number}(X1::ttensor{T1},X2::ttensor{T2};method="lanczos",reqrank=[],variant='B',eps_abs=[],eps_rel=[],p=10)
  	@assert(size(X1) == size(X2))
   N=ndims(X1)
 	Ahad=MatrixCell(N) #initilize factor matrices
@@ -157,17 +285,31 @@ function hosvd3{T1<:Number,T2<:Number}(X1::ttensor{T1},X2::ttensor{T2};reqrank=[
   ttensor(core,Ahad)
 end
 
-@doc """ HOSVD4 algorithm for getting Tucker representation of Hadamard product of two Tucker tensors. """ ->
-function hosvd4{T1<:Number,T2<:Number}(X1::ttensor{T1},X2::ttensor{T2};reqrank=[],method="lapack",eps_abs=[],eps_rel=[],p=10)
+"""
+   hosvd4(X,Y; <keyword arguments>)
+
+Hadamard product of ttensors X and Y as ttensor. Uses rank-1 randomized algorithm for finding range of (X ∗ Y)ₙ.
+If reqrank defined, calls additonal hosvd on updated core tensor.
+See also: hosvd1, hosvd2, hosvd3.
+
+## Arguments:
+- `method` ∈ {"lapack","lanczos","randsvd"} Method for SVD. Default: "lapack".
+- `reqrank::Vector`: Requested mutlilinear rank. Optional.
+- `eps_abs::Number/Vector`: Drop singular values (of mode-n matricization) below eps_abs. Optional.
+- `eps_rel::Number/Vector`: Drop singular values (of mode-n matricization) below eps_rel*sigma_1. Optional.
+- `p::Integer`: Oversampling parameter. Defaul p=10.
+"""
+function hosvd4{T1<:Number,T2<:Number}(X1::ttensor{T1},X2::ttensor{T2};method="lapack",reqrank=[],eps_abs=[],eps_rel=[],p=10)
   @assert(size(X1) == size(X2))
   N=ndims(X1)
   reqrank=check_vector_input(reqrank,N,0);
   eps_abs=check_vector_input(eps_abs,N,1e-8);
-  #eps_rel=check_vector_input(eps_rel,N,0);
-  Q=MatrixCell(N) #range approximation of of tenmat(X1.*X2,n)
-  KR=MatrixCell(N); #transpose Khatri-Rao product of X1.fmat and X2.fmat
+  eps_rel=check_vector_input(eps_rel,N,0);
+  Q=MatrixCell(N) #range approximation of tenmat(X1.*X2,n)
+  #KR=MatrixCell(N); #transpose Khatri-Rao product of X1.fmat and X2.fmat
   fmat=MatrixCell(N);
-  [KR[n]=khatrirao(X1.fmat[n],X2.fmat[n],'t') for n=1:N]
+  #[KR[n]=khatrirao(X1.fmat[n],X2.fmat[n],'t') for n=1:N]
+  KR=khatrirao(X1.fmat,X2.fmat,'t')
   for n=1:N
     Q[n]=randrange(X1.cten,X2.cten,KR,n,reqrank=reqrank[n],tol=eps_abs[n],p=p);
   end
@@ -182,7 +324,7 @@ function hosvd4{T1<:Number,T2<:Number}(X1::ttensor{T1},X2::ttensor{T2};reqrank=[
   end
 end
 
-@doc """ Inner product of two Tucker tensors. """ ->
+#Inner product of two ttensors. **Documentation in tensor.jl.
 function innerprod{T1<:Number,T2<:Number}(X1::ttensor{T1},X2::ttensor{T2})
 	@assert size(X1) == size(X2)
 	if prod(size(X1.cten)) > prod(size(X2.cten))
@@ -195,7 +337,12 @@ function innerprod{T1<:Number,T2<:Number}(X1::ttensor{T1},X2::ttensor{T2})
 	end
 end
 
-@doc """ Checks wheater two tensors have equal components. """ ->
+"""
+    isequal(X::ttensor,Y::ttensor)
+    isequal(X::ktensor,Y::ktensor)
+
+Two tensors in decomposed format are equal if they have equal components. Same as: X==Y.
+"""
 function isequal{T1<:Number,T2<:Number}(X1::ttensor{T1},X2::ttensor{T2})
   if (X1.cten == X2.cten) && (X1.fmat == X2.fmat)
     true
@@ -205,11 +352,52 @@ function isequal{T1<:Number,T2<:Number}(X1::ttensor{T1},X2::ttensor{T2})
 end
 =={T1<:Number,T2<:Number}(X1::ttensor{T1},X2::ttensor{T2})=isequal(X1,X2)
 
-@doc """ Lanczos tridiagonalization algorithm for finding left singular vectors and singular values of matrix ZnZn',
-         where Zn is n-mode matricization of Z=X1.*X2 and X1 and X2 two Tucker tensors.""" ->
-function lanczos{T1<:Number,T2<:Number}(X1::ttensor{T1},X2::ttensor{T2},mode::Integer;variant='B',tol=1e-8,maxit=1000,reqrank=0,p=10)
-  #p...oversampling parameter
+"""
+    lanczos(X,Y,n; <keyword arguments>)
+
+Structure exploiting Lanczos based SVD - computes left singular vectors and singular values of n-mode matricization (X ∗ Y)ₙ.
+Works with matrix (X ∗ Y)ₙ(X ∗ Y)ₙᵀ.
+
+## Arguments:
+- `reqrank::Integer`: Requested rank. Optional.
+- `variant` ∈ {'A','B'} Variant of multiplication (X ∗ Y)ₙ(X ∗ Y)ₙᵀ. Default: 'B'.
+- `tol::Number/Vector`: Tolerance. Default: 1e-8.
+- `maxit`: Maximal number of iterations. Default: 1000.
+- `p::Integer`: Oversampling parameter. Defaul p=10.
+"""
+function lanczos{T1<:Number,T2<:Number}(X1::ttensor{T1},X2::ttensor{T2},mode::Integer;reqrank=0,variant='B',tol=1e-8,maxit=1000,p=10)
   @assert(size(X1)==size(X2),"Dimensions mismatch")
+  Q,T=lanczos_tridiag(X1,X2,mode,reqrank=reqrank,variant=variant,tol=tol,maxit=maxit,p=p)
+  E=eigfact(T,tol,Inf);
+  U=E[:vectors][:,end:-1:1];
+  S=sqrt.(abs.(E[:values][end:-1:1]));
+  if reqrank!=0
+    if reqrank > size(U,2)
+      warn("Required rank for mode $mode exceeds actual rank, the resulting rank will be ",size(U,2),". Try changing tolerance.");
+    else
+      U=U[:,1:reqrank];
+      S=S[1:reqrank];
+    end
+  end
+  U=Q*U;
+  U,S
+end
+
+"""
+    lanczos_tridiag(X,Y,n; <keyword arguments>)
+
+Structure exploiting Lanczos tridiagonalization algorithm for n-mode matricization A=(X ∗ Y)ₙ(X ∗ Y)ₙᵀ.
+Returns orthonormal Q and symmetric tridiagonal T such that A≈Q*T*Q'.
+
+
+## Arguments:
+- `reqrank::Integer`: Requested rank. Optional.
+- `variant` ∈ {'A','B'} Variant of multiplication (X ∗ Y)ₙ(X ∗ Y)ₙᵀ. Default: 'B'.
+- `tol::Number/Vector`: Tolerance. Default: 1e-8.
+- `maxit`: Maximal number of iterations. Default: 1000.
+- `p::Integer`: Oversampling parameter. Defaul p=10.
+"""
+function lanczos_tridiag{T1<:Number,T2<:Number}(X1::ttensor{T1},X2::ttensor{T2},mode::Integer;reqrank=0,variant='B',tol=1e-8,maxit=1000,p=10)
   I=size(X1)
   m=I[mode]
   n=prod(deleteat!(copy([I...]),mode))
@@ -238,26 +426,19 @@ function lanczos{T1<:Number,T2<:Number}(X1::ttensor{T1},X2::ttensor{T2},mode::In
     end
   end
   T=SymTridiagonal(α[1:k], β[1:k-1])
-  E=eigfact(T,tol,Inf);
-  U=E[:vectors][:,end:-1:1];
-  S=sqrt(abs(E[:values][end:-1:1]));
-  if reqrank!=0
-    if reqrank > size(U,2)
-      warn("Required rank for mode $mode exceeds actual rank, the resulting rank will be ",size(U,2),". Try changing eps_abs.");
-    else
-      U=U[:,1:reqrank];
-      S=S[1:reqrank];
-    end
-  end
-  U=Q*U;
-  U,S
+  Q,T
 end
 
-@doc """ Matricized Hadamard product of two Tucker tensors times vector. """ ->
-#For Xₙ=tenmat(had(X1,X2),n), where X1 and X2 are ttensors and v is a vector,
-  # for t='b', returns Xₙ*Xₙ'*v.
-  # for t='n', returns Xₙ*v.
-  # for t='t', returns Xₙ'*v.
+"""
+    mhadtv(X,Y,v,n,t='b';variant='B')
+
+
+Mode-n matricized Hadamard product of ttensors X and Y times vector v.
+- `t='b'`:  (X ∗ Y)ₙ(X ∗ Y)ₙᵀv. Variant of multiplication (X ∗ Y)ₙ(X ∗ Y)ₙᵀ can be specified to 'A' or 'B'.
+- `t='n'`:  (X ∗ Y)ₙᵀv.
+- `t='t'`:  (X ∗ Y)ₙᵀv.
+If v is a matrix, multiply column by column.
+"""
 function mhadtv{T1<:Number,T2<:Number,T3<:Number}(X1::ttensor{T1},X2::ttensor{T2},v::Vector{T3},n::Integer,t='b';variant='B')
   @assert(size(X1)==size(X2),"Dimensions mismatch")
   I=size(X1)
@@ -274,7 +455,7 @@ function mhadtv{T1<:Number,T2<:Number,T3<:Number}(X1::ttensor{T1},X2::ttensor{T2
     w1=krtv(X1.fmat[n]',X2.fmat[n]',v); #w1=(Aₖ' ⨀ Bₖ')*v
     W1=mkrontv(X1.cten,X2.cten,w1,n,'t') #W1=tenmat(G₁ ⨂ G₂,n)'*w1
     for k in N
-      W1=reshape(W1,R[k],round(Int,prod(size(W1))/R[k]))
+      W1=reshape(W1,R[k],round.(Int,prod(size(W1))/R[k]))
       W2=tkrtv(X1.fmat[k],X2.fmat[k],W1) #vec(W2)=(Aₖ ⨀' Bₖ)*vec(W1)
       W1=W2'
     end
@@ -283,7 +464,7 @@ function mhadtv{T1<:Number,T2<:Number,T3<:Number}(X1::ttensor{T1},X2::ttensor{T2
     @assert(length(v) == prod(deleteat!(copy(collect(I)),n)),"Vector v is of inappropriate size.")
     W1=v
     for k in N
-      W1=reshape(W1,I[k],round(Int,prod(size(W1))/I[k]))
+      W1=reshape(W1,I[k],round.(Int,prod(size(W1))/I[k]))
       W2=krtv(X1.fmat[k]',X2.fmat[k]',W1) #W2=(Aₖ' ⨀ Bₖ')*W1
       W1=W2'
     end
@@ -297,7 +478,7 @@ function mhadtv{T1<:Number,T2<:Number,T3<:Number}(X1::ttensor{T1},X2::ttensor{T2
       w1=krtv(X1.fmat[n]',X2.fmat[n]',v); #w1=(Aₖ' ⨀ Bₖ')*v
       W1=mkrontv(X1.cten,X2.cten,w1,n,'t') #W1=tenmat(G₁ ⨂ G₂,n)'*w1
       for k in N
-        W1=reshape(W1,R[k],round(Int,prod(size(W1))/R[k]))
+        W1=reshape(W1,R[k],round.(Int,prod(size(W1))/R[k]))
         W2=tkrtv(X1.fmat[k],X2.fmat[k],W1)
         W1=krtv(X1.fmat[k]',X2.fmat[k]',W2)'
       end
@@ -308,7 +489,6 @@ function mhadtv{T1<:Number,T2<:Number,T3<:Number}(X1::ttensor{T1},X2::ttensor{T2
     end
   end
 end
-#Computes Xₙ*M for t='n', Xₙ'*M for t='t' and Xₙ*Xₙ'*M for t='b', for Xₙ=tenmat(hadamard(X1,X2),n).
 function mhadtv{T1<:Number,T2<:Number,T3<:Number}(X1::ttensor{T1},X2::ttensor{T2},M::Matrix{T3},n::Integer,t='b';variant='B')
   @assert(size(X1)==size(X2),"Dimensions mismatch")
     if sort(collect(size(vec(M))))[1]==1
@@ -336,16 +516,31 @@ function mhadtm{T1<:Number,T2<:Number,T3<:Number}(X1::ttensor{T1},X2::ttensor{T2
   mhadtm(X1,X2,M,n,t,variant=variant)
 end
 
+"""
+    minus(X::ttensor,Y::ttensor)
+    minus(X::ktensor,Y::ktensor)
+
+Subtraction of two tensors. Same as: X-Y.
+"""
 function minus{T1<:Number,T2<:Number}(X1::ttensor{T1},X2::ttensor{T2})
   X1+(-1)*X2
 end
 -{T1<:Number,T2<:Number}(X1::ttensor{T1},X2::ttensor{T2})=minus(X1,X2)
 
+
+#Multilinear rank of a ttensor. **Documentation in tensor.jl.
 function mrank{T<:Number}(X::ttensor{T})
   ntuple(n->nrank(X,n),ndims(X))
 end
+function mrank{T<:Number}(X::ttensor{T},tol::Number)
+   ntuple(n->nrank(X,n,tol),ndims(X))
+end
 
-@doc """ Singular values of n-mode matricization of Tucker Tensor. """ ->
+"""
+   msvdvals(X,n)
+
+Singular values of mode-n matricization of a ttensor calculated directly. See also: nvecs.
+"""
 function msvdvals{T<:Number}(X::ttensor{T},n::Integer)
   if X.isorth != true
     reorth!(X)
@@ -354,57 +549,45 @@ function msvdvals{T<:Number}(X::ttensor{T},n::Integer)
   svdvals(Gn)
 end
 
-@doc """ Scalar times tensor. """ ->
-#Multiplies core tensor by the scalar
+"""
+    mtimes(a,X)
+
+Scalar times ttensor. Same as: a*X.
+"""
 function mtimes{T<:Number}(α::Number,X::ttensor{T})
 	ttensor(α*X.cten,X.fmat);
 end
 *{T1<:Number,T2<:Number}(α::T1,X::ttensor{T2})=mtimes(α,X)
 *{T1<:Number,T2<:Number}(X::ttensor{T1},α::T2)=*(α,X)
 
-@doc """ Matricized tensor times Khatri-Rao product. """->
+#Matricized ttensor times Khatri-Rao product. **Documentation in tensor.jl.
 function mttkrp{T<:Number}(X::ttensor{T},M::MatrixCell,n::Integer)
   N=ndims(X)
-  @assert(length(M) == N,"Wrong number of matrices")
+  @assert(length(M) == N,"Wrong number of matrices.")
   modes=setdiff(1:N,n)
   I=[size(X)...]
   K=size(M[modes[1]],2)
   @assert(!any(map(Bool,[size(M[m],2)-K for m in modes])),"Matrices must have the same number of columns")
   @assert(!any(map(Bool,[size(M[m],1)-I[m] for m in modes])),"Matrices are of wrong size")
-  Y=mttkrp(X.cten,vec(X.fmat').*M,n)
+  Y=mttkrp(X.cten,vec(X.fmat[modes]').*M[modes],n)
   X.fmat[n]*Y
 end
 mttkrp{T1<:Number,T2<:Number}(X::ttensor{T1},M::Array{Matrix{T2}},n::Integer)=mttkrp(X,MatrixCell(M),n)
 
-#@doc """ Number of modes of a ttensor. """ ->
+#Number of modes of a ttensor. **Documentation in Base.
 function ndims{T<:Number}(X::ttensor{T})
 	ndims(X.cten)
 end
 
-#@doc """ Norm of a ttensor. """ ->
-function vecnorm{T<:Number}(X::ttensor{T})
-	if prod(size(X)) > prod(size(X.cten))
-		if X.isorth
-			vecnorm(X.cten)
-		else
-			R=MatrixCell(ndims(X))
-			for n=1:ndims(X)
-				#R[n]=qrfact(X.fmat[n])[:R]
-				R[n]=qr(X.fmat[n])[2];
-			end
-			vecnorm(ttm(X.cten,R))
-		end
-	else
-		vecnorm(full(X))
-	end
-end
-
+#n-rank of a ttensor. **Documentation in tensor.jl.
 function nrank{T<:Number}(X::ttensor{T},n::Integer)
   rank(X.fmat[n])
 end
+function nrank{T<:Number}(X::ttensor{T},n::Integer,tol::Number)
+  rank(X.fmat[n],tol)
+end
 
-@doc """ Computes the leading mode-n vectors for a tensor. """ ->
-#Computes the r leading eigenvectors of Xₙ*Xₙ', where Xₙ is the mode-n matricization of X.
+#Computes the r leading left singular vectors of mode-n matricization of a tensor X. **Documentation in tensor.jl.
 function nvecs{T<:Number}(X::ttensor{T},n::Integer,r=0;flipsign=false)
   if r==0
     r=size(X,n)
@@ -420,7 +603,6 @@ function nvecs{T<:Number}(X::ttensor{T},n::Integer,r=0;flipsign=false)
   Gn=tenmat(X.cten,n)
   V=eigs(Symmetric(Hn*Gn'*X.fmat[n]'),nev=r,which=:LM)[2]
   if flipsign
-      #Make the largest magnitude element be positive
       maxind = findmax(abs.(V),1)[2]
       for i = 1:r
           ind=ind2sub(size(V),maxind[i])
@@ -432,6 +614,7 @@ function nvecs{T<:Number}(X::ttensor{T},n::Integer,r=0;flipsign=false)
   V
 end
 
+#Permute dimensions of a ttensor. **Documentation in Base.
 function permutedims{T<:Number,D<:Integer}(X::ttensor{T},perm::Vector{D})
   @assert(collect(1:ndims(X))==sort(perm),"Invalid permutation")
   cten=permutedims(X.cten,perm)
@@ -439,6 +622,12 @@ function permutedims{T<:Number,D<:Integer}(X::ttensor{T},perm::Vector{D})
   ttensor(cten,fmat)
 end
 
+"""
+    minus(X::ttensor,Y::ttensor)
+    minus(X::ktensor,Y::ktensor)
+
+Addition of two tensors. Same as: X+Y.
+"""
 function plus{T1<:Number,T2<:Number}(X1::ttensor{T1},X2::ttensor{T2})
 	@assert(size(X1) == size(X2),"Dimension mismatch.")
 	fmat=Matrix[[X1.fmat[n] X2.fmat[n]] for n=1:ndims(X1)] #concatenate factor matrices
@@ -454,11 +643,28 @@ function plus{T1<:Number,T2<:Number}(X1::ttensor{T1},X2::ttensor{T2})
 end
 +{T1<:Number,T2<:Number}(X1::ttensor{T1},X2::ttensor{T2})=plus(X1,X2)
 
-@doc """ Randomized range approximation for matrix Zn, where Zn is n-mode matricization of Z=X1.*X2 and X1 and X2 two Tucker tensors.
-        As input accepts core tensors and transpose Khatri-Rao product of factor matrices of X1 and X2. """ ->
+"""
+    randrange(X,Y,n; <keyword arguments>)
+
+Structure exploiting randomized range approximation of n-mode matricization of Hadamard product (X ∗ Y)ₙ, where X and Y are ttensors.
+
+### Arguments:
+- `reqrank::Integer`: Requested rank. Optional.
+- `tol::Number/Vector`: Tolerance. Default: 1e-8.
+- `maxit`: Maximal number of iterations. Default: 1000.
+- `r`: Number of samples for stopping criterion. Default: r=10.
+- `p::Integer`: Oversampling parameter. Defaul p=10.
+"""
+
+function randrange{T1<:Number,T2<:Number}(X1::ttensor{T1},X2::ttensor{T2},mode::Integer;tol=1e-8,maxit=1000,reqrank=0,p=10,r=10)
+  @assert(size(X1) == size(X2))
+  N=ndims(X1)
+  KR=MatrixCell(N); #transpose Khatri-Rao product of X1.fmat and X2.fmat
+  [KR[n]=khatrirao(X1.fmat[n],X2.fmat[n],'t') for n=1:N]
+  randrange(X1.cten,X2.cten,KR,mode,tol=tol,maxit=maxit,reqrank=reqrank,p=p,r=r)
+end
+
 function randrange{T1<:Number,T2<:Number,N}(C1::Array{T1,N},C2::Array{T2,N},KR::MatrixCell,mode::Integer;tol=1e-8,maxit=1000,reqrank=0,p=10,r=10)
-  #p... oversampling parameter
-  #r... balances computational cost and reliability
   I=zeros(Int,N)
   [I[n]= size(KR[n],1) for n=1:N]
   m=I[mode]
@@ -476,7 +682,7 @@ function randrange{T1<:Number,T2<:Number,N}(C1::Array{T1,N},C2::Array{T2,N},KR::
     Q=qr(Y)[1];
   else
     maxit=min(m,n,maxit);
-    rangetol=tol*sqrt(pi/2)/10;
+    rangetol=tol*sqrt.(pi/2)/10;
     Y=zeros(m,r);
     for i=1:r
       [y[k]=randn(size(KR[remmodes[k]],1)) for k=1:N-1]
@@ -506,19 +712,21 @@ function randrange{T1<:Number,T2<:Number,N}(C1::Array{T1,N},C2::Array{T2,N},KR::
 end
 randrange{T1<:Number,T2<:Number,T3<:Number,N}(C1::Array{T1,N},C2::Array{T2,N},KR::Array{Matrix{T3}},mode::Integer;tol=1e-8,maxit=1000,reqrank=0,p=10,r=10)=randrange(C1,C2,MatrixCell(KR),mode,tol,maxit,reqrank,p,r)
 
-function randrange{T1<:Number,T2<:Number}(X1::ttensor{T1},X2::ttensor{T2},mode::Integer;tol=1e-8,maxit=1000,reqrank=0,p=10,r=10)
-  @assert(size(X1) == size(X2))
-  N=ndims(X1)
-  KR=MatrixCell(N); #transpose Khatri-Rao product of X1.fmat and X2.fmat
-  [KR[n]=khatrirao(X1.fmat[n],X2.fmat[n],'t') for n=1:N]
-  randrange(X1.cten,X2.cten,KR,mode,tol=tol,maxit=maxit,reqrank=reqrank,p=p,r=r)
-end
+"""
+    randsvd(X,Y,n; <keyword arguments>)
 
-@doc """ Randomized SVD algorithm for finding left singular vectors and singular values of matrix ZnZn',
-         where Zn is n-mode matricization of Z=X1.*X2 and X1 and X2 two Tucker tensors.""" ->
+Structure exploiting randomized SVD - computes left singular vectors and singular values of n-mode matricization (X ∗ Y)ₙ.
+Works with matrix (X ∗ Y)ₙ(X ∗ Y)ₙᵀ.
+
+## Arguments:
+- `reqrank::Integer`: Requested rank. Optional.
+- `variant` ∈ {'A','B'} Variant of multiplication (X ∗ Y)ₙ(X ∗ Y)ₙᵀ. Default: 'B'.
+- `tol::Number/Vector`: Tolerance. Default: 1e-8.
+- `maxit`: Maximal number of iterations. Default: 1000.
+- `r`: Number of samples for stopping criterion. Default: r=10.
+- `p::Integer`: Oversampling parameter. Defaul p=10.
+"""
 function randsvd{T1<:Number,T2<:Number}(X1::ttensor{T1},X2::ttensor{T2},mode::Integer;variant='B',tol=1e-8,maxit=1000,reqrank=0,p=10,r=10)
-  #p... oversampling parameter
-  #r... balances computational cost and reliability
   @assert(size(X1)==size(X2),"Dimensions mismatch")
   I=size(X1)
   m=I[mode]
@@ -529,7 +737,7 @@ function randsvd{T1<:Number,T2<:Number}(X1::ttensor{T1},X2::ttensor{T2},mode::In
      Q=qr(Y)[1];
   else
     maxit=min(m,n,maxit);
-    rangetol=tol*sqrt(pi/2)/10;
+    rangetol=tol*sqrt.(pi/2)/10;
     Y=mhadtv(X1,X2,randn(m,r),mode,variant=variant);  #Y=A*(A'*randn(m,r));
     j=0;
     Q=zeros(m,0);
@@ -555,7 +763,7 @@ function randsvd{T1<:Number,T2<:Number}(X1::ttensor{T1},X2::ttensor{T2},mode::In
   #B=Symmetric(Q'*B);
   E=eigfact(B,tol,Inf);
   U=E[:vectors][:,end:-1:1];
-  S=sqrt(abs(E[:values][end:-1:1]));
+  S=sqrt.(abs.(E[:values][end:-1:1]));
   if reqrank != 0
     if reqrank > size(U,2)
       warn("Required rank for mode $mode exceeds actual rank, the resulting rank will be smaller.")
@@ -568,7 +776,11 @@ function randsvd{T1<:Number,T2<:Number}(X1::ttensor{T1},X2::ttensor{T2},mode::In
   U,S
 end
 
-@doc """ Orthogonalize factor matrices of a Tucker tensor. """ ->
+"""
+      reorth(X)
+
+Orthogonalize factor matrices of a ttensor.
+"""
 function reorth{T<:Number}(X::ttensor{T})
   N=ndims(X)
 	if X.isorth
@@ -587,6 +799,11 @@ function reorth{T<:Number}(X::ttensor{T})
 	end
 end
 
+"""
+    reorth!(X)
+
+Orthogonalize factor matrices of a ttensor. Rewrite ttensor.
+"""
 function reorth!{T<:Number}(X::ttensor{T})
 	if X.isorth != true
 		for n=1:ndims(X)
@@ -599,19 +816,24 @@ function reorth!{T<:Number}(X::ttensor{T})
   X
 end
 
+#Size of a ttensor. **Documentation in Base.
 function size{T<:Number}(X::ttensor{T})
 	tuple([size(X.fmat[n],1) for n=1:ndims(X)]...)
 end
-#n-th dimension of X
+#Size of n-th mode of a ttensor.
 function size{T<:Number}(X::ttensor{T},n::Integer)
   size(X.fmat[n],1)
 end
 
-@doc """ n-mode matricization of tensor. """ ->
+function Base.show{T<:Number}(io::IO,X::ttensor{T})
+    display(X)
+end
+
+#Mode-n matricization of a ttensor. **Documentation in tensor.jl.
 tenmat{T<:Number}(X::ttensor{T},n::Integer)=tenmat(full(X),n)
 
-#@doc """ Tucker tensor times matrices (n-mode product). """ ->
-#Multiplies ttensor X with matrices from array M by modes; t='t' transposes matrices
+#ttensor times matrix (n-mode product). **Documentation in tensor.jl.
+#t='t' transposes matrices
 function ttm{T<:Number,D<:Integer}(X::ttensor{T},M::MatrixCell,modes::Vector{D},t='n')
   if t=='t'
 	 M=vec(M')
@@ -646,7 +868,8 @@ ttm{T1<:Number,T2<:Number}(X::ttensor{T1},M::Array{Matrix{T2}},t::Char)=ttm(X,Ma
 ttm{T1<:Number,T2<:Number}(X::ttensor{T1},M::Array{Matrix{T2}})=ttm(X,MatrixCell(M))
 ttm{T1<:Number,T2<:Number}(X::ttensor{T1},M::Array{Matrix{T2}},n::Integer,t='n')=ttm(X,MatrixCell(M),n,t)
 
-#@doc """ Tucker tensor times vectors (n-mode product). """ ->
+#ttensor times vector (n-mode product). **Documentation in tensor.jl.
+#t='t' transposes matrices
 function ttv{T<:Number,D<:Integer}(X::ttensor{T},V::VectorCell,modes::Vector{D})
   N=ndims(X)
   remmodes=setdiff(1:N,modes)
@@ -681,5 +904,29 @@ ttv{T1<:Number,T2<:Number,D<:Integer}(X::ttensor{T1},V::Array{Vector{T2}},modes:
 ttv{T1<:Number,T2<:Number}(X::ttensor{T1},V::Array{Vector{T2}})=ttv(X,VectorCell(V))
 ttv{T1<:Number,T2<:Number}(X::ttensor{T1},V::Array{Vector{T2}},n::Integer)=ttv(X,VectorCell(V),n)
 
+"""
+   uminus(X::ttensor)
+   uminus(X::ktensor)
+
+Unary minus. Same as: (-1)*X.
+"""
 uminus{T<:Number}(X::ttensor{T})=mtimes(-1,X)
 -{T<:Number}(X::ttensor{T})=uminus(X)
+
+#Frobenius norm of a ttensor. **Documentation in Base.
+function vecnorm{T<:Number}(X::ttensor{T})
+	if prod(size(X)) > prod(size(X.cten))
+		if X.isorth
+			vecnorm(X.cten)
+		else
+			R=MatrixCell(ndims(X))
+			for n=1:ndims(X)
+				#R[n]=qrfact(X.fmat[n])[:R]
+				R[n]=qr(X.fmat[n])[2];
+			end
+			vecnorm(ttm(X.cten,R))
+		end
+	else
+		vecnorm(full(X))
+	end
+end
