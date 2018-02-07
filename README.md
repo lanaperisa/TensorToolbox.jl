@@ -2,10 +2,9 @@
 
 [![Build Status](https://travis-ci.org/lanaperisa/TensorToolbox.jl.svg?branch=master)](https://travis-ci.org/lanaperisa/TensorToolbox.jl)
 
-Julia package for tensors. Includes functions for dense tensors and tensors in Tucker format. Follows the functionality of MATLAB [Tensor toolbox](http://www.sandia.gov/~tgkolda/TensorToolbox/index-2.6.html).
+Julia package for tensors. Includes functions for dense tensors, tensors in Tucker format and tensors in Kruckal format. Follows the functionality of MATLAB [Tensor toolbox](http://www.sandia.gov/~tgkolda/TensorToolbox/index-2.6.html).
 
 &#x1F536;&#x1F536; *Work in progress:* 
- - functions for tensors in Kruskal format (src/ktensor.jl)
  - functions for Hierarchical Tucker tensors (src/htensor.jl)
 ## Basics
 
@@ -75,10 +74,18 @@ mrank(X)
 The HOSVD:
 ```julia
 X=rand(5,4,3);
-hosvd(X) #same as T1=hosvd(X,eps_abs=1e-8)
+hosvd(X) #same as hosvd(X,eps_abs=1e-8)
 hosvd(X,eps_abs=1e-6) #discard singular values lower than 1e-5
 hosvd(X,eps_rel=1e-3) #discard singular values lower than 1e-3*sigma_{max}
 hosvd(X,reqrank=[2,2,2])
+```
+The CP decomposition:
+```julia
+X=rand(5,4,3);
+R=3; #number of components
+cp_als(X,R)  #same as cp_als(X,R,init="rand",dimorder=1:ndims(X))
+cp_als(X,R,init=[rand(5,3),rand(4,3),rand(3,3)]) #initialize factor matrices 
+cp_als(X,R,init="nvecs",dimorder=[2,1,3])
 ```
 
 ## Tensors in Tucker format
@@ -153,4 +160,92 @@ hosvd(X)  #same as hosvd(X,eps_abs=1e-8)
 hosvd(X,eps_abs=1e-6) #discard singular values lower than 1e-5
 hosvd(X,eps_rel=1e-3) #discard singular values lower than 1e-3*sigma_{max}
 hosvd(X,reqrank=[3,3,3]) #HOSVD with predefined multilinear rank
+```
+The CP decomposition:
+```julia
+X=randttensor([6,7,5],[4,4,4]);
+R=3; #number of components
+cp_als(X,R)  #same as cp_als(X,R,init="rand",dimorder=1:ndims(X))
+cp_als(X,R,init=[rand(5,3),rand(4,3),rand(3,3)]) #initialize factor matrices 
+cp_als(X,R,init="nvecs",dimorder=[2,1,3])
+```
+
+## Tensors in Kruskal format
+
+Define tensor in Kruskal format by its factor matrices (and vector of weights):
+```julia
+lambda=rand(3)
+A=[rand(5,3),rand(4,3),rand(3,3)];
+ktensor(A)
+ktensor(lambda,A)
+```
+Create random tensor in Kruskal format of size 5x4x3 and with 2 components: 
+```julia
+X=randktensor([5,4,3],2)
+```
+Basic functions:
+```julia
+size(X) 
+ndims(X)
+vecnorm(X)
+full(X)  #Creates full tensor out of Kruskal format
+permutedims(X,[2,1,3]) 
+ncomponents(X) #Number of components
+```
+*n-mode matricization* of a tensor in Kruskal format:
+```julia
+n=1;
+tenmat(X,n)
+```
+Basic operations:
+```julia
+X=randktensor([5,4,3],2);Y=randktensor([5,4,3],3);
+innerprod(X,Y)
+X+Y
+X-Y
+X==Y #same as isequal(X,Y)
+3*X #same as mtimes(3,X)
+```
+*n-mode product* of a tensor in Kruskal format and a matrix or an array of matrices:
+```julia
+X=randktensor([5,4,3],2);
+A=[rand(2,5),rand(2,4),rand(2,3)];
+ttm(X,A[1],1)  #X times A[1] by mode 1
+ttm(X,[A[1],A[2]],[1,2]) #X times A[1] by mode 1 and times A[2] by mode 2; same as ttm(X,A,-3)
+ttm(X,A) #X times matrices from A by each mode
+```
+*n-mode (vector) product* of a tensor in Kruskal format and a vector or an array of vectors:
+```julia
+X=randktensor([5,4,3],2);
+V=[rand(5),rand(4),rand(3)];
+ttv(X,V[1],1)  #X times V[1] by mode 1
+ttv(X,[V[1],V[2]],[1,2]) #X times V[1] by mode 1 and times V[2] by mode 2; same as ttm(X,V,-3)
+ttv(X,V) #X times vectors from V by each mode
+```
+Arrange the rank-1 components of a tensor in Kruskal format:
+```julia
+X=randktensor([6,5,4,3],3);
+arrange(X)
+arrange!(X)
+```
+Fix sign ambiguity of a tensor in Kruskal format:
+```julia
+X=randktensor([6,5,4,3,4],3);
+fixsigns(X)
+fixsigns!(X)
+```
+Distribute weights a tensor in Kruskal format to a specific mode:
+```julia
+X=randktensor([3,3,3],3);
+n=2;
+redistribute(X,n)
+redistribute!(X,n)
+```
+The CP decomposition:
+```julia
+X=randktensor([6,7,5],4);
+R=3; #number of components
+cp_als(X,R)  #same as cp_als(X,R,init="rand",dimorder=1:ndims(X))
+cp_als(X,R,init=[rand(5,3),rand(4,3),rand(3,3)]) #initialize factor matrices 
+cp_als(X,R,init="nvecs",dimorder=[2,1,3])
 ```
