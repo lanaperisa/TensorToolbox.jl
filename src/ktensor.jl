@@ -44,7 +44,7 @@ ktensor{T<:Number}(fmat::Vector{Matrix{T}})=ktensor(MatrixCell(fmat))
     randktensor(I::Vector,R::Integer)
     randktensor(I::Integer,R::Integer,N::Integer)
 
-Creates random Kruskal tensor of size I with R components, or of order N and size I × ⋯ × I.
+Create random Kruskal tensor of size I with R components, or of order N and size I × ⋯ × I.
 """
 function randktensor{D<:Integer}(I::Vector{D},R::Integer)
   fmat=Matrix[randn(I[n],R) for n=1:length(I)] #create random factor matrices
@@ -440,7 +440,8 @@ function nvecs{T<:Number}(X::ktensor{T},n::Integer,r=0;flipsign=false)
     for m in setdiff(1:ndims(X),n)
         M = M .* (X.fmat[m]' * X.fmat[m])
     end
-    V=eigs(Symmetric(X.fmat[n] * M * X.fmat[n]'),nev=r,which=:LM)[2]
+    #V=eigs(Symmetric(X.fmat[n] * M * X.fmat[n]'),nev=r,which=:LM)[2] #has bugs
+    V=eigfact(Symmetric(X.fmat[n] * M * X.fmat[n]'))[:vectors][:,end:-1:end-r+1]
     if flipsign
         maxind = findmax(abs.(V),1)[2]
         for i = 1:r

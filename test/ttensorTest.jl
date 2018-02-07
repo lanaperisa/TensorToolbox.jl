@@ -19,7 +19,7 @@ end
 
 err=vecnorm(full(T) - X)
 println("\n\n...Testing function full, i.e. n-mode multiplication (ttm): vecnorm(full(T)-X) = ", err)
-@test err ≈ 0 atol=1e-12
+@test err ≈ 0 atol=1e-10
 
 A=MatrixCell(ndims(T))
 for n=1:ndims(T)
@@ -54,7 +54,7 @@ println("\n...Testing mrank of ttensor T: ", mrank(T))
 println("\n...Testing functions matten and tenmat (by mode).")
 for n=1:ndims(T)
   Tn=tenmat(T,n)
-  @test vecnorm(Tn-tenmat(full(T),n)) ≈ 0 atol=1e-12
+  @test vecnorm(Tn-tenmat(full(T),n)) ≈ 0 atol=1e-10
 end
 
 R=[5,5,5];
@@ -124,12 +124,12 @@ println("After reorthogonalization: ", reorth!(S).isorth)
 println("\n\n...Testing vecnorm of ttensor T.")
 err=abs(vecnorm(T) - vecnorm(full(T)))
 println("|vecnorm(T) - vecnorm(full(T))| = ", err)
-@test err ≈ 0 atol=1e-12
+@test err ≈ 0 atol=1e-10
 
 println("\n\n...Testing scalar multiplication 3*T.")
 err=vecnorm(full(3*T) - 3*full(T))
 println("vecnorm(full(3*T) - 3*full(T)) = ", err )
-@test err ≈ 0 atol=1e-12
+@test err ≈ 0 atol=1e-10
 
 X=randttensor([6,8,2,5,4],[4,3,2,2,3]);
 Y=randttensor([6,8,2,5,4],[3,6,3,4,3]);
@@ -139,7 +139,7 @@ Z=X+Y;
 F=full(X)+full(Y);
 err=vecnorm(full(Z) - F)
 println("vecnorm(full(X+Y) - (full(X)+full(Y))) = ",err )
-@test err ≈ 0 atol=1e-12
+@test err ≈ 0 atol=1e-10
 
 println("\n\n...Testing inner product.")
 Z=innerprod(X,Y)
@@ -185,17 +185,17 @@ Z=mhadtv(X,Y,v,n,'n')
 Hn=tenmat(X.*Y,n)
 err = vecnorm(Z-Hn*v)
 println("Multiplication error: ",err)
-@test err ≈ 0 atol=1e-12
+@test err ≈ 0 atol=1e-10
 v=rand(5)
 Z=mhadtv(X,Y,v,n,'t')
 err = vecnorm(Z-Hn'*v)
 println("Multiplication error: ",err)
-@test err ≈ 0 atol=1e-12
+@test err ≈ 0 atol=1e-10
 v=rand(5)
 Z=mhadtv(X,Y,v,n,'b')
 err = vecnorm(Z-Hn*Hn'*v)
 println("Multiplication error: ",err)
-@test err ≈ 0 atol=1e-12
+@test err ≈ 0 atol=1e-10
 
 println("\n...Testing function mttkrp.")
 X=randttensor([5,4,3],[3,3,3])
@@ -208,4 +208,4 @@ println("Multiplying mode-$n matricized tensor X by Khatri-Rao product of matric
 Z=mttkrp(X,M,n)
 err = vecnorm(Z-tenmat(X,n)*khatrirao(M3,M2))
 println("Multiplication error: ",err)
-@test err ≈ 0 atol=1e-12
+@test err ≈ 0 atol=1e-10

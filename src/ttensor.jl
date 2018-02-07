@@ -41,7 +41,7 @@ ttensor{T,T1<:Number}(cten::Array{T},fmat::Array{Matrix{T1}})=ttensor{T}(cten,Ma
     randttensor(I::Vector,R::Vector)
     randttensor(I::Integer,R::Integer,N::Integer)
 
-Creates random Tucker tensor of size I and multilinear rank R, or of order N and size I × ⋯ × I and mulilinear rank (R,...,R).
+Create random Tucker tensor of size I and multilinear rank R, or of order N and size I × ⋯ × I and mulilinear rank (R,...,R).
 """
 function randttensor{D<:Integer}(I::Vector{D},R::Vector{D})
   @assert(size(I)==size(R),"Size and rank should be of same length.")
@@ -601,7 +601,8 @@ function nvecs{T<:Number}(X::ttensor{T},n::Integer,r=0;flipsign=false)
   H=ttm(X.cten,V)
   Hn=tenmat(H,n)
   Gn=tenmat(X.cten,n)
-  V=eigs(Symmetric(Hn*Gn'*X.fmat[n]'),nev=r,which=:LM)[2]
+  #V=eigs(Symmetric(Hn*Gn'*X.fmat[n]'),nev=r,which=:LM)[2] #has bugs
+  V=eigfact(Symmetric(Hn*Gn'*X.fmat[n]'))[:vectors][:,end:-1:end-r+1]
   if flipsign
       maxind = findmax(abs.(V),1)[2]
       for i = 1:r
