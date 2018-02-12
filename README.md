@@ -18,9 +18,10 @@ Define tensor as multidimensional array and calculate its norm:
 X=rand(4,3,2)
 vecnorm(X)
 ```
-Create identity tensor:
+Create identity and diagonal tensor:
 ```julia
 I=neye(2,2,2)
+D=diagt([1,2,3,4])
 ```
 For two tensors of same size calculate their inner product:
 ```julia
