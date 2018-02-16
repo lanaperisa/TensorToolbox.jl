@@ -18,9 +18,10 @@ Define tensor as multidimensional array and calculate its norm:
 X=rand(4,3,2)
 vecnorm(X)
 ```
-Create identity tensor:
+Create identity and diagonal tensor:
 ```julia
 I=neye(2,2,2)
+D=diagt([1,2,3,4])
 ```
 For two tensors of same size calculate their inner product:
 ```julia
@@ -166,7 +167,7 @@ The CP decomposition:
 X=randttensor([6,7,5],[4,4,4]);
 R=3; #number of components
 cp_als(X,R)  #same as cp_als(X,R,init="rand",dimorder=1:ndims(X))
-cp_als(X,R,init=[rand(5,3),rand(4,3),rand(3,3)]) #initialize factor matrices 
+cp_als(X,R,init=[rand(6,3),rand(7,3),rand(5,3)]) #initialize factor matrices 
 cp_als(X,R,init="nvecs",dimorder=[2,1,3])
 ```
 
@@ -246,6 +247,6 @@ The CP decomposition:
 X=randktensor([6,7,5],4);
 R=3; #number of components
 cp_als(X,R)  #same as cp_als(X,R,init="rand",dimorder=1:ndims(X))
-cp_als(X,R,init=[rand(5,3),rand(4,3),rand(3,3)]) #initialize factor matrices 
+cp_als(X,R,init=[rand(6,3),rand(7,3),rand(5,3)]) #initialize factor matrices 
 cp_als(X,R,init="nvecs",dimorder=[2,1,3])
 ```
