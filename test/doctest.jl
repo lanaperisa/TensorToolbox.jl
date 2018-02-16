@@ -1,23 +1,30 @@
-using TensorToolbox
+#using TensorToolbox
 
 #Define tensor as multidimensional arrays and calculate its norm:
 
 X=rand(4,3,2)
 vecnorm(X)
 
+#Create identity and diagonal tensor:
+
+I=neye(2,2,2)
+D=diagt([1,2,3,4])
+
 #For two tensors of same size calculate their inner product:
 
 X=rand(3,3,3,3);Y=rand(3,3,3,3);
 innerprod(X,Y)
 
-#n-mode matricization of a tensor:
+#Matricization of a tensor:
 
 X=rand(4,3,2);n=1;
 A=tenmat(X,n)
+B=tenmat(X,R=[2,1],C=3) #by row modes [2,1] and column mode 3
 
 #Fold matrix back to tensor:
 
 X=matten(A,n,[4,3,2])
+X=matten(B,[2,1],[3],[4,3,2]) # by row modes [2,1] and column mode 3
 
 #n-mode product of a tensor and a matrix or an array of matrices:
 
@@ -60,7 +67,15 @@ hosvd(X,eps_abs=1e-6) #discard singular values lower than 1e-5
 hosvd(X,eps_rel=1e-3) #discard singular values lower than 1e-3*sigma_{max}
 hosvd(X,reqrank=[2,2,2])
 
-#Tensors in Tucker format
+#The CP decomposition:
+
+X=rand(5,4,3);
+R=3; #number of components
+cp_als(X,R)  #same as cp_als(X,R,init="rand",dimorder=1:ndims(X))
+cp_als(X,R,init=[rand(5,3),rand(4,3),rand(3,3)]) #initialize factor matrices
+cp_als(X,R,init="nvecs",dimorder=[2,1,3])
+
+##Tensors in Tucker format
 
 #Define tensor in Tucker format by its core tensor and factor matrices:
 
@@ -132,3 +147,92 @@ hosvd(X)  #same as hosvd(X,eps_abs=1e-8)
 hosvd(X,eps_abs=1e-6) #discard singular values lower than 1e-5
 hosvd(X,eps_rel=1e-3) #discard singular values lower than 1e-3*sigma_{max}
 hosvd(X,reqrank=[3,3,3]) #HOSVD with predefined multilinear rank
+
+#The CP decomposition:
+
+X=randttensor([6,7,5],[4,4,4]);
+R=3; #number of components
+cp_als(X,R)  #same as cp_als(X,R,init="rand",dimorder=1:ndims(X))
+cp_als(X,R,init=[rand(6,3),rand(7,3),rand(5,3)]) #initialize factor matrices
+cp_als(X,R,init="nvecs",dimorder=[2,1,3])
+
+##Tensors in Kruskal format
+
+#Define tensor in Kruskal format by its factor matrices (and vector of weights):
+
+lambda=rand(3)
+A=[rand(5,3),rand(4,3),rand(3,3)];
+ktensor(A)
+ktensor(lambda,A)
+
+#Create random tensor in Kruskal format of size 5x4x3 and with 2 components:
+
+X=randktensor([5,4,3],2)
+
+#Basic functions:
+
+size(X)
+ndims(X)
+vecnorm(X)
+full(X)  #Creates full tensor out of Kruskal format
+permutedims(X,[2,1,3])
+ncomponents(X) #Number of components
+
+#n-mode matricization of a tensor in Kruskal format:
+
+n=1;
+tenmat(X,n)
+
+#Basic operations:
+
+X=randktensor([5,4,3],2);Y=randktensor([5,4,3],3);
+innerprod(X,Y)
+X+Y
+X-Y
+X==Y #same as isequal(X,Y)
+3*X #same as mtimes(3,X)
+
+#n-mode product of a tensor in Kruskal format and a matrix or an array of matrices:
+
+X=randktensor([5,4,3],2);
+A=[rand(2,5),rand(2,4),rand(2,3)];
+ttm(X,A[1],1)  #X times A[1] by mode 1
+ttm(X,[A[1],A[2]],[1,2]) #X times A[1] by mode 1 and times A[2] by mode 2; same as ttm(X,A,-3)
+ttm(X,A) #X times matrices from A by each mode
+
+#n-mode (vector) product of a tensor in Kruskal format and a vector or an array of vectors:
+
+X=randktensor([5,4,3],2);
+V=[rand(5),rand(4),rand(3)];
+ttv(X,V[1],1)  #X times V[1] by mode 1
+ttv(X,[V[1],V[2]],[1,2]) #X times V[1] by mode 1 and times V[2] by mode 2; same as ttm(X,V,-3)
+ttv(X,V) #X times vectors from V by each mode
+
+#Arrange the rank-1 components of a tensor in Kruskal format:
+
+X=randktensor([6,5,4,3],3);
+arrange(X)
+arrange!(X)
+
+#Fix sign ambiguity of a tensor in Kruskal format:
+
+X=randktensor([6,5,4,3,4],3);
+fixsigns(X)
+fixsigns!(X)
+
+#Distribute weights a tensor in Kruskal format to a specific mode:
+
+X=randktensor([3,3,3],3);
+n=2;
+redistribute(X,n)
+redistribute!(X,n)
+
+#The CP decomposition:
+
+X=randktensor([6,7,5],4);
+R=3; #number of components
+cp_als(X,R)  #same as cp_als(X,R,init="rand",dimorder=1:ndims(X))
+cp_als(X,R,init=[rand(6,3),rand(7,3),rand(5,3)]) #initialize factor matrices
+cp_als(X,R,init="nvecs",dimorder=[2,1,3]);
+
+println()
