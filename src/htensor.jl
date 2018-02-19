@@ -8,10 +8,10 @@ import Base: display, full, show
 @doc """Hierarchical Tucker tensor."""->
 type htensor#{T<:Number}
 	tree::dimtree
-	trten::Array{Array,1}
+	trten::TensorCell
   frames::MatrixCell
   isorth::Bool
-	function htensor(tree::dimtree,trten::Array{Array,1},frames::MatrixCell,isorth::Bool)# where T<:Number
+	function htensor(tree::dimtree,trten::TensorCell,frames::MatrixCell,isorth::Bool)# where T<:Number
     N=length(tree.leaves); #order of tensor = number of leaves in a tree
     i=size(tree.mat,1)-N; #number of internal nodes;
     @assert(length(frames)==N,"Dimension mismatch.")
@@ -24,11 +24,11 @@ type htensor#{T<:Number}
 		new(tree,trten,frames,isorth)
 	end
 end
-#htensor(tree::dimtree,trten::Array{Array,1},frames::MatrixCell,isorth::Bool)=htensor(tree,trten,frames,isorth)
-htensor(tree::dimtree,trten::Array{Array,1},frames::MatrixCell)=htensor(tree,trten,frames,true)
-htensor(tree::dimtree,trten::Array{Array,1},mat::Matrix)=htensor(tree,trten,collect(mat),true)
+#htensor(tree::dimtree,trten::TensorCell,frames::MatrixCell,isorth::Bool)=htensor(tree,trten,frames,isorth)
+htensor(tree::dimtree,trten::TensorCell,frames::MatrixCell)=htensor(tree,trten,frames,true)
+htensor(tree::dimtree,trten::TensorCell,mat::Matrix)=htensor(tree,trten,collect(mat),true)
 @doc """ Hierarchical Tucker tensor is defined by a dimensional tree, its transfer tensor and frames (matrices). """ ->
-function htensor(tree::dimtree,trten::Array{Array,1},mat...)
+function htensor(tree::dimtree,trten::TensorCell,mat...)
   frames=MatrixCell(0)
   for M in mat
 			push!(frames,M)
@@ -36,8 +36,8 @@ function htensor(tree::dimtree,trten::Array{Array,1},mat...)
 	htensor(tree,trten,frames,true)
 end
 #If array of matrices isn't defined as MatrixCell, but as M=[M1,M2,...,Mn]:
-htensor{T<:Number}(tree::dimtree,trten::Array{Array,1},frames::Array{Matrix{T}},isorth::Bool)=htensor(tree,trten,MatrixCell(frames),isorth)
-htensor{T<:Number}(tree::dimtree,trten::Array{Array,1},frames::Array{Matrix{T}})=htensor(tree,trten,MatrixCell(frames),true)
+htensor{T<:Number}(tree::dimtree,trten::TensorCell,frames::Array{Matrix{T}},isorth::Bool)=htensor(tree,trten,MatrixCell(frames),isorth)
+htensor{T<:Number}(tree::dimtree,trten::TensorCell,frames::Array{Matrix{T}})=htensor(tree,trten,MatrixCell(frames),true)
 
 @doc """Creates transfer tensor for a given tensor, node t and its left and right children tl and tr."""->
 function trtensor{T<:Number,N}(X::Array{T,N};t=collect(1:N),tl=collect(1:ceil(Int,N/2)),tr=[])
