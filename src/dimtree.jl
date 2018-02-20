@@ -83,41 +83,42 @@ function count_leaves(T::dimtree,node::Int)
 end
 
 """
-    create_dimtree(N,treetype="balanced")
+    create_dimtree(N[,treetype])
 
-Create a dimtree of type treetype for a tensor of order N.
+Create a dimtree of type treetype for a tensor of order N. Default: treetype="balanced".
 """
 function create_dimtree(N::Integer,treetype="balanced")
-    nmbr_nodes=2*N-1;
-    Tmat=zeros(Int,nmbr_nodes,2);
-    Tmat[1,:]=[2,3]
-    node_count=4;
-    parent=zeros(Int,nmbr_nodes);
-    parent[1]=0;parent[2]=1;parent[3]=1;
-    node_length=zeros(Int,nmbr_nodes);
-    node_length[1]=N;
-    for node=2:nmbr_nodes
-        if iseven(node)
-            node_length[node]=ceil(Int,node_length[parent[node]]/2);
-            if node_length[node] > 1
-                Tmat[node,:]=[node_count;node_count+1];
-                parent[node_count]=node;
-                parent[node_count+1]=node;
-                node_count+=2;
-            end
-        else
-            node_length[node]=floor(Int,node_length[parent[node]]/2);
-            if node_length[node] > 1
-                Tmat[node,:]=[node_count;node_count+1];
-                parent[node_count]=node;
-                parent[node_count+1]=node;
-                node_count+=2;
-            end
-        end
+  @assert(treetype=="balanced","Only balanced trees are supported.")
+  nmbr_nodes=2*N-1
+  Tmat=zeros(Int,nmbr_nodes,2)
+  Tmat[1,:]=[2,3]
+  node_count=4
+  parent=zeros(Int,nmbr_nodes)
+  parent[1]=0;parent[2]=1;parent[3]=1
+  node_length=zeros(Int,nmbr_nodes)
+  node_length[1]=N
+  for node=2:nmbr_nodes
+    if iseven(node)
+      node_length[node]=ceil(Int,node_length[parent[node]]/2)
+      if node_length[node] > 1
+        Tmat[node,:]=[node_count;node_count+1]
+        parent[node_count]=node
+        parent[node_count+1]=node
+        node_count+=2
+      end
+    else
+      node_length[node]=floor(Int,node_length[parent[node]]/2)
+      if node_length[node] > 1
+        Tmat[node,:]=[node_count;node_count+1]
+        parent[node_count]=node
+        parent[node_count+1]=node
+        node_count+=2
+      end
     end
-    dimtree(Tmat)
+  end
+  dimtree(Tmat)
 end
-create_dimtree{T<:Number,N}(X::Array{T,N},treetype="balanced")=balanced_dimtree(N,treetype=treetype)
+create_dimtree{T<:Number,N}(X::Array{T,N},treetype="balanced")=create_dimtree(N,treetype)
 
 """
     dims(T,node)
@@ -374,11 +375,10 @@ Sibling of a node in a dimtree T.
 function sibling(T::dimtree,node::Integer)
   C=children(T)
   i,j=findn(C.==node)
-  i=i[1];j=j[1]
-  if j==1
-      C[i,2]
+  if j==[1]
+      C[i...,2]
   else
-      C[i,1]
+      C[i...,1]
   end
 end
 

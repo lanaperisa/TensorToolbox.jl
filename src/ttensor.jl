@@ -125,9 +125,11 @@ end
 ---
 TensorToolbox:
 
-    display(X[,name])
+    display(X::ttensor[,name])
+    display(X::ktensor[,name])
+    display(X::htensor[,name])
 
-Displays a ttensor of a given name.
+Displays a tensor X of a given name.
 """
 function display{T<:Number}(X::ttensor{T},name="ttensor")
   print("Tucker tensor of size ",size(X)," with core tensor of size ",coresize(X))
@@ -147,9 +149,11 @@ end
 ---
 TensorToolbox:
 
-    full(X)
+    full(X::ttensor)
+    full(X::ktensor)
+    full(X::htensor)
 
-Make full tensor out of a ttensor.
+Make full tensor out of a decomposed tensor.
 """
 function full{T<:Number}(X::ttensor{T})
   ttm(X.cten,X.fmat)
