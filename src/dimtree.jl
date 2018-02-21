@@ -1,7 +1,5 @@
 export dimtree, children, count_leaves, create_dimtree, dims, display, height, isequal, ==, is_leaf, is_left, is_right
-export left_child_length, level, nodes_on_level, non, parent, positions, show, sibling, sort_leaves, structure, subnodes, subtree
-
-import Base: parent
+export left_child_length, lvl, nodes_on_lvl, non, parent, positions, show, sibling, sort_leaves, structure, subnodes, subtree
 
 """
     dimtree(leaves::Vector{Int},internal_nodes::Vector{Int})
@@ -17,8 +15,9 @@ type dimtree
   leaves::Vector{Int}
   internal_nodes::Vector{Int}
   function dimtree(leaves::Vector{Int},internal_nodes::Vector{Int})
+    @assert(length(leaves)==length(internal_nodes)+1,"Incorrect nodes.")
     nodes=sort([leaves;internal_nodes])
-    @assert(nodes==collect(1:maximum(nodes)),"Missing nodes in dimension tree.")
+    @assert(nodes==collect(1:maximum(nodes)),"Missing nodes.")
     new(leaves,internal_nodes)
   end
 end
@@ -147,53 +146,58 @@ end
 Display a dimtree T.
 """
 function display(T::dimtree)
-    t,tl,tr=structure(T)
-    h=height(T)
-    blank_len=h
-    initial_blank_len=4*blank_len
-    [print(" ") for i=1:initial_blank_len]; initial_blank_len-=2;
-    print(t[1]) #internal node 1
-    println()
-    [print(" ") for i=1:initial_blank_len]; initial_blank_len-=2;
-    print(tl[1])
-    [print(" ") for i=1:blank_len]
-    print(tr[1]) #children
-    println()
-    [print(" ") for i=1:initial_blank_len]; initial_blank_len-=2;
-    blank_len-=1
-    m=2
-    nodes=collect(1:non(T)) #nodes
-    nodepos=positions(T) #node position
-    nnmbr=4 #node counter
-    lvl_old=2
-    bingo=0
-    for p=4:2^h-1  #loop over all positions in a binary tree
-        if bingo == 1 || nnmbr>non(T)
-            bingo=0
-            continue
-        end
-        lvl=level(T,nodes[nnmbr])
-        if lvl!=lvl_old
-            println()
-            [print(" ") for i=1:initial_blank_len];  initial_blank_len-=2;
-            lvl_old=lvl;
-            lvl+=1
-            blank_len-=1
-        end
-        if nodepos[nnmbr]==p
-            print(tl[m])
-            [print(" ") for i=1:blank_len]
-            print(tr[m])
-            [print(" ") for i=1:blank_len+1]
-            m+=1
-            nnmbr+=2
-            bingo=1
-        else
-            #print(" ")
-            [print(" ") for i=1:blank_len]
-            print("")
-        end
+  t,tl,tr=structure(T)
+  h=height(T)
+  initial_blank_len=zeros(Int,h)
+  a=2
+  for l=2:h
+    initial_blank_len[l]=initial_blank_len[l-1]+a
+    a=a*2
+  end
+  blank_len=2*initial_blank_len[1:end-1]+1
+  l=h;k=h-1;
+  [print(" ") for i=1:initial_blank_len[l]]; l-=1
+  print(t[1][1],"-",t[1][end])
+  println()
+  [print(" ") for i=1:initial_blank_len[l]]; l-=1
+  length(tl[1]) == 1 ? print(" ",tl[1][1]," ") : print(tl[1][1],"-",tl[1][end])
+  [print(" ") for i=1:blank_len[k]]; k-=1
+  length(tr[1]) == 1 ? print(" ",tr[1][1]," ") : print(tr[1][1],"-",tr[1][end])
+  println()
+  [print(" ") for i=1:initial_blank_len[l]]; l-=1
+  m=2
+  nodes=collect(1:non(T)) #nodes
+  nodepos=positions(T) #node position
+  nnmbr=4 #node counter
+  level_old=2
+  bingo=0
+  for p=4:2^h-1  #loop over all positions in a binary tree
+    if bingo == 1 || nnmbr>non(T)
+      bingo=0
+      continue
     end
+    level=lvl(T,nodes[nnmbr])
+    if level!=level_old
+      println()
+      [print(" ") for i=1:initial_blank_len[l]];  l-=1
+      level_old=level;
+      level+=1
+      k-=1
+    end
+    if nodepos[nnmbr]==p
+      length(tl[m]) == 1 ? print(" ",tl[m][1]," ") : print(tl[m][1],"-",tl[m][end])
+      [print(" ") for i=1:blank_len[k]]
+      length(tr[m]) == 1 ? print(" ",tr[m][1]," ") : print(tr[m][1],"-",tr[m][end])
+      [print(" ") for i=1:blank_len[k]]
+      m+=1
+      nnmbr+=2
+      bingo=1
+    else
+      #print(" ")
+      [print(" ") for i=1:3+blank_len[k]]
+      #print("")
+    end
+  end
 end
 
 """
@@ -202,7 +206,7 @@ end
 Height of a dimtree T.
 """
 function height(T::dimtree)
-    maximum(level(T))+1
+    maximum(lvl(T))+1
 end
 
 """
@@ -271,11 +275,11 @@ end
 left_child_length(T::dimtree)=left_child_length(T,1)
 
 """
-    level(T[,node])
+    lvl(T[,node])
 
 Vector of levels for each node of a dimtree T.
 """
-function level(T::dimtree)
+function lvl(T::dimtree)
     nn=non(T)
     L=zeros(Int,nn)
     for n in collect(2:nn)
@@ -283,17 +287,17 @@ function level(T::dimtree)
     end
     L
 end
-function level(T::dimtree,node::Integer)
-    level(T)[node]
+function lvl(T::dimtree,node::Integer)
+    lvl(T)[node]
 end
 
 """
-    nodes_on_level(T,l)
+    nodes_on_lvl(T,l)
 
 Nodes on a level l in a dimtree T.
 """
-function nodes_on_level(T::dimtree,l::Integer)
-    findn(level(T).==l)
+function nodes_on_lvl(T::dimtree,l::Integer)
+    findn(lvl(T).==l)
 end
 
 """
@@ -337,7 +341,7 @@ function positions(T::dimtree)
     i=2;
     maxit=100;
     for l=1:h
-        nds=nodes_on_level(T,l)
+        nds=nodes_on_lvl(T,l)
         if length(nds)==2^l
             for n in nds
                 position[n]=i

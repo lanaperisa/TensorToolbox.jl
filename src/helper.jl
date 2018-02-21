@@ -1,7 +1,7 @@
 using Base.Cartesian
 
 #export indicesmat2vec, indicesmat, shiftsmat
-export khatrirao, krontkron, kron, krontv, krtv, tkrtv, lanczos, lanczos_tridiag, randsvd
+export colspace, khatrirao, krontkron, kron, krontv, krtv, tkrtv, lanczos, lanczos_tridiag, randsvd
 export VectorCell, MatrixCell, TensorCell
 
 """
@@ -39,6 +39,24 @@ function check_vector_input(input,dim::Integer,default_value::Number)
     input=repmat([default_value],dim)
   end
   input
+end
+
+function colspace{T<:Number}(X::Matrix{T};method="lapack",reqrank=0,atol=1e-8,rtol=0,p=10)
+  if method == "lapack"
+    U,S=LAPACK.gesvd!('A','N',X)
+  elseif method == "lanczos"
+    U,S=lanczos(X,tol=atol,reqrank=reqrank,p=p)
+  elseif method == "randsvd"
+    U,S=randsvd(X,tol=atol,reqrank=reqrank,p=p)
+  else
+    U,S,V=svd(X)
+  end
+  if reqrank!=0 && size(U,2)>reqrank
+    U=U[:,1:reqrank]
+  end
+  rtol != 0 ? tol=rtol*S[1] : tol=atol
+  I=find(x-> x>tol ? true : false,S)
+  U[:,I]
 end
 
 """

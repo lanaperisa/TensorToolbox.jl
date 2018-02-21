@@ -1,6 +1,6 @@
 #Tensors in Hierarchical Tucker format + functions
 
-export htensor, display, full, htdecomp, ndims, size, trtensor
+export htensor, display, full, hrank, htdecomp, ndims, size, trtensor
 export trten2mat, trten2ten
 
 """
@@ -21,10 +21,8 @@ type htensor#{T<:Number}
   frames::MatrixCell
   isorth::Bool
 	function htensor(tree::dimtree,trten::TensorCell,frames::MatrixCell,isorth::Bool)# where T<:Number
-    N=length(tree.leaves) #order of tensor = number of leaves in a tree
-    I=length(tree.internal_nodes) #number of internal nodes;
-    @assert(length(frames)==N,"Dimension mismatch.")
-    @assert(length(trten)==I,"Dimension mismatch.")
+    @assert(length(frames)==length(tree.leaves),"Dimension mismatch.") #order of a tensor
+    @assert(length(trten)==length(tree.internal_nodes),"Dimension mismatch.")
 		for U in frames
 			if norm(U'*U-eye(size(U,2)))>(size(U,1)^2)*eps()
 				isorth=false
@@ -51,7 +49,7 @@ htensor{T<:Number}(tree::dimtree,trten::TensorCell,frames::Array{Matrix{T}})=hte
 function display(X::htensor,name="htensor")
     println("Hierarchical Tucker tensor of size ",size(X),":\n")
     println("$name.tree: ")
-    show(STDOUT, "text/plain", X.tree)
+    show(STDOUT, "text/plain", display(X.tree))
     for n=1:length(X.trten)
         println("\n\n$name.trten[$n]:")
         show(STDOUT, "text/plain", X.trten[n])
@@ -88,21 +86,38 @@ function full(X::htensor)
 end
 
 """
+    hrank(X)
+
+Hierarchical ranks of a htensor.
+"""
+function hrank(X::htensor)
+  order=[X.tree.internal_nodes;X.tree.leaves]
+  r1=[size(B,3) for B in X.trten]
+  r2=[size(U,2) for U in X.frames]
+  [r1;r2][invperm(order)]
+end
+
+"""
     htdecomp(X[,tree])
 
 Decompose full tensor X into a htensor for a given tree. If tree not specified use balanced tree.
 """
-function htdecomp{T<:Number,N}(X::Array{T,N},tree::dimtree)
-    @assert(N==length(tree.leaves),"Dimension mismatch.");
-    I=length(tree.internal_nodes);
-    U=MatrixCell(N);
-    [U[n]=svdfact(tenmat(X,n))[:U] for n=1:N];
-    B=TensorCell(I);
-    t,tl,tr=structure(tree);
-    for i=1:I
-       B[i]=trtensor(X,t=t[i],tl=tl[i],tr=tr[i]);
-    end
-    htensor(tree,B,U)
+function htdecomp{T<:Number,N}(X::Array{T,N},tree::dimtree;method="lapack",max_rank=10,atol=1e-8,rtol=0)
+  @assert(N==length(tree.leaves),"Dimension mismatch.")
+  I=length(tree.internal_nodes)
+  U=MatrixCell(N)
+  #[U[n]=svdfact(tenmat(X,n))[:U] for n=1:N]
+	for n=1:N
+    Xn=float(tenmat(X,n))
+    U[n]=colspace(Xn,method=method,reqrank=max_rank,atol=atol,rtol=rtol)
+    println("size U[$n] = ",size(U[n]))
+	end
+  B=TensorCell(I)
+  t,tl,tr=structure(tree);
+  for i=1:I
+     B[i]=trtensor(X,t=t[i],tl=tl[i],tr=tr[i],method=method,max_rank=max_rank,atol=atol,rtol=rtol);
+  end
+  htensor(tree,B,U)
 end
 htdecomp{T<:Number,N}(X::Array{T,N})=htdecomp(X,create_dimtree(X))
 
@@ -129,7 +144,7 @@ end
 
 Create transfer tensor for a given tensor, node representation t and its left and right children representations tl and tr.
 """
-function trtensor{T<:Number,N}(X::Array{T,N};t=collect(1:N),tl=collect(1:ceil(Int,N/2)),tr=[])
+function trtensor{T<:Number,N}(X::Array{T,N};t=collect(1:N),tl=collect(1:ceil(Int,N/2)),tr=[],method="lapack",max_rank=10,atol=1e-8,rtol=0)
   if isa(tl,Number)
     tl=[tl]
   end
@@ -146,23 +161,28 @@ function trtensor{T<:Number,N}(X::Array{T,N};t=collect(1:N),tl=collect(1:ceil(In
     Ut=vec(X)
   else
     Xt=tenmat(X,R=t)
-    Ut=svdfact(Xt)[:U]
+    #Ut=svdfact(Xt)[:U]
+    Ut=colspace(Xt,method=method,reqrank=max_rank,atol=atol,rtol=rtol)
   end
   Xl=tenmat(X,R=tl)
   Xr=tenmat(X,R=tr)
-  Ul=svdfact(Xl)[:U]
-  Ur=svdfact(Xr)[:U]
+  #Ul=svdfact(Xl)[:U]
+  Ul=colspace(Xl,method=method,reqrank=max_rank,atol=atol,rtol=rtol)
+  #Ur=svdfact(Xr)[:U]
+  Ur=colspace(Xr,method=method,reqrank=max_rank,atol=atol,rtol=rtol)
   B=kron(Ur',Ul')*Ut
   #B=krontv(Ur',Ul',Ut)
   #reshape(B,(size(Ur,2),size(Ul,2),size(Ut,2)))
   trten2ten(B,size(Ur,2),size(Ul,2))
+
+
 end
 
 """
     trten2mat(B::Array)
     trten2mat(B::TensorCell)
 
-Transfer tensor to matrix.
+Transfer tensor to matrix. If transfer tensor is given as a tensor of order 3 and size `(r1,r2,r3)`, reshape it into a matrix of size `(r1r2,r3)`.
 """
 function trten2mat{T<:Number}(B::Array{T,3})
   (r1,r2,r3)=size(B)

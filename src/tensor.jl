@@ -113,9 +113,9 @@ Higher-order singular value decomposition.
 function hosvd{T<:Number,N}(X::Array{T,N};method="lapack",reqrank=[],eps_abs=[],eps_rel=[],p=10)
 	fmat=MatrixCell(N)
 
-  reqrank=check_vector_input(reqrank,N,0);
-  eps_abs=check_vector_input(eps_abs,N,1e-8);
-  eps_rel=check_vector_input(eps_rel,N,0);
+  reqrank=check_vector_input(reqrank,N,0)
+  eps_abs=check_vector_input(eps_abs,N,1e-8)
+  eps_rel=check_vector_input(eps_rel,N,0)
 
 	for n=1:N
     Xn=float(tenmat(X,n))
@@ -129,9 +129,9 @@ function hosvd{T<:Number,N}(X::Array{T,N};method="lapack",reqrank=[],eps_abs=[],
       fmat[n],S,V=svd(Xn)
     end
     if reqrank[n]!=0 && size(fmat[n],2)>reqrank[n]
-      fmat[n]=fmat[n][:,1:reqrank[n]];
+      fmat[n]=fmat[n][:,1:reqrank[n]]
     else
-      eps_rel[n] != 0 ? tol=eps_rel[n]*S[1] : tol=eps_abs[n];
+      eps_rel[n] != 0 ? tol=eps_rel[n]*S[1] : tol=eps_abs[n]
       I=find(x-> x>tol ? true : false,S)
       fmat[n]=fmat[n][:,I]
     end

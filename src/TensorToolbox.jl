@@ -3,7 +3,7 @@ module TensorToolbox
 
 #Tensors in Tucker format + functions
 
-import Base: +, -, *, .*, ==, display, full, isequal, kron, ndims, normalize, normalize!, permutedims, show, size, vecnorm
+import Base: +, -, *, .*, ==, display, full, isequal, kron, ndims, normalize, normalize!, parent, permutedims, show, size, vecnorm
 
 include("helper.jl")
 include("tensor.jl")
