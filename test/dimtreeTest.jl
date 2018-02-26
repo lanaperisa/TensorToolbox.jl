@@ -47,11 +47,11 @@ l=count_leaves(T2,5)
 println(" - dims")
 @test dims(T1,4)==[1,2]
 @test dims(T2,3)==[2,3,4,5]
-println(" - level")
-@test level(T1,9)==3
-@test level(T2,5)==2
-println(" - nodes_on_level")
-@test nodes_on_level(T1,2)==[4,5,6,7]
-@test nodes_on_level(T2,3)==[6,7]
+println(" - lvl")
+@test lvl(T1,9)==3
+@test lvl(T2,5)==2
+println(" - nodes_on_lvl")
+@test nodes_on_lvl(T1,2)==[4,5,6,7]
+@test nodes_on_lvl(T2,3)==[6,7]
 println(" - subnodes")
 @test subnodes(T2,5)==[5,6,7,8,9]
