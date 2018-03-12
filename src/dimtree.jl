@@ -1,5 +1,5 @@
 export dimtree, children, count_leaves, create_dimtree, dims, display, height, isequal, ==, is_leaf, is_left, is_right
-export left_child_length, lvl, nodes_on_lvl, non, parent, positions, show, sibling, sort_leaves, structure, subnodes, subtree
+export left_child_length, lvl, nodes_on_lvl, node2ind, non, parent, positions, show, sibling, sort_leaves, structure, subnodes, subtree
 
 """
     dimtree(leaves::Vector{Int},internal_nodes::Vector{Int})
@@ -177,13 +177,14 @@ function display(T::dimtree)
       continue
     end
     level=lvl(T,nodes[nnmbr])
-    if level!=level_old
-      println()
-      [print(" ") for i=1:initial_blank_len[l]];  l-=1
-      level_old=level;
-      level+=1
-      k-=1
-    end
+     if level!=level_old && p==2^level
+       println()
+       [print(" ") for i=1:initial_blank_len[l]];  l-=1
+       level_old=level;
+       level+=1
+       k-=1
+     end
+    #println("p = $p, nodepos[$nnmbr] = $(nodepos[nnmbr])")
     if nodepos[nnmbr]==p
       length(tl[m]) == 1 ? print(" ",tl[m][1]," ") : print(tl[m][1],"-",tl[m][end])
       [print(" ") for i=1:blank_len[k]]
@@ -198,6 +199,7 @@ function display(T::dimtree)
       #print("")
     end
   end
+  println()
 end
 
 """
@@ -299,6 +301,27 @@ Nodes on a level l in a dimtree T.
 function nodes_on_lvl(T::dimtree,l::Integer)
     findn(lvl(T).==l)
 end
+
+"""
+    node2ind(T,nodes)
+
+Convert node numbers to transfer tensor or frames indices ina dimtree T.
+"""
+function node2ind(T::dimtree,nodes::Vector{Int})
+    ind=zeros(Int,length(nodes))
+    k=1;
+    for n in nodes
+        if is_leaf(T,n)
+            ind[k]=findin(T.leaves,n)[1]
+        else
+            ind[k]=findin(T.internal_nodes,n)[1]
+        end
+        k+=1
+    end
+    ind
+end
+node2ind(T::dimtree,nodes::Integer)=node2ind(T,[nodes])[1]
+node2ind(T::dimtree)=node2ind(T,collect(1:non(T)))
 
 """
     non(T)

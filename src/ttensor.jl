@@ -41,7 +41,7 @@ ttensor{T,T1<:Number}(cten::Array{T},fmat::Array{Matrix{T1}})=ttensor{T}(cten,Ma
     randttensor(I::Vector,R::Vector)
     randttensor(I::Integer,R::Integer,N::Integer)
 
-Create random Tucker tensor of size I and multilinear rank R, or of order N and size I × ⋯ × I and mulilinear rank (R,...,R).
+Create random ttensor of size I and multilinear rank R, or of order N and size I × ⋯ × I and mulilinear rank (R,...,R).
 """
 function randttensor{D<:Integer}(I::Vector{D},R::Vector{D})
   @assert(size(I)==size(R),"Size and rank should be of same length.")
@@ -344,6 +344,7 @@ end
 """
     isequal(X::ttensor,Y::ttensor)
     isequal(X::ktensor,Y::ktensor)
+    isequal(X::ktensor,Y::htensor)
 
 Two tensors in decomposed format are equal if they have equal components. Same as: X==Y.
 """
@@ -523,6 +524,7 @@ end
 """
     minus(X::ttensor,Y::ttensor)
     minus(X::ktensor,Y::ktensor)
+    minus(X::htensor,Y::htensor)
 
 Subtraction of two tensors. Same as: X-Y.
 """
@@ -628,8 +630,9 @@ function permutedims{T<:Number,D<:Integer}(X::ttensor{T},perm::Vector{D})
 end
 
 """
-    minus(X::ttensor,Y::ttensor)
-    minus(X::ktensor,Y::ktensor)
+    plus(X::ttensor,Y::ttensor)
+    plus(X::ktensor,Y::ktensor)
+    plus(X::htensor,Y::htensor)
 
 Addition of two tensors. Same as: X+Y.
 """
@@ -782,9 +785,10 @@ function randsvd{T1<:Number,T2<:Number}(X1::ttensor{T1},X2::ttensor{T2},mode::In
 end
 
 """
-      reorth(X)
+      reorth(X::ttensor)
+      reorth(X::htensor)
 
-Orthogonalize factor matrices of a ttensor.
+Orthogonalize factor matrices of a tensor.
 """
 function reorth{T<:Number}(X::ttensor{T})
   N=ndims(X)
@@ -805,9 +809,10 @@ function reorth{T<:Number}(X::ttensor{T})
 end
 
 """
-    reorth!(X)
+    reorth!(X::ttensor)
+    reorth!(X::htensor)
 
-Orthogonalize factor matrices of a ttensor. Rewrite ttensor.
+Orthogonalize factor matrices of a tensor. Rewrite ttensor.
 """
 function reorth!{T<:Number}(X::ttensor{T})
 	if X.isorth != true

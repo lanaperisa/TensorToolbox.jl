@@ -53,6 +53,9 @@ function colspace{T<:Number}(X::Matrix{T};method="lapack",reqrank=0,atol=1e-8,rt
   end
   if reqrank!=0 && size(U,2)>reqrank
     U=U[:,1:reqrank]
+    if reqrank<length(S)
+      S=S[1:reqrank]
+    end
   end
   rtol != 0 ? tol=rtol*S[1] : tol=atol
   I=find(x-> x>tol ? true : false,S)

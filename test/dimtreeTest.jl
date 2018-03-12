@@ -53,5 +53,8 @@ println(" - lvl")
 println(" - nodes_on_lvl")
 @test nodes_on_lvl(T1,2)==[4,5,6,7]
 @test nodes_on_lvl(T2,3)==[6,7]
+println(" - node2ind")
+@test node2ind(T1,6)==4
+@test node2ind(T2,[3,5])==[2,3]
 println(" - subnodes")
 @test subnodes(T2,5)==[5,6,7,8,9]
