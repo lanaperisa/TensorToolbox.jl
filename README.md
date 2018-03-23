@@ -257,3 +257,67 @@ cp_als(X,R)  #same as cp_als(X,R,init="rand",dimorder=1:ndims(X))
 cp_als(X,R,init=[rand(6,3),rand(7,3),rand(5,3)]) #initialize factor matrices 
 cp_als(X,R,init="nvecs",dimorder=[2,1,3])
 ```
+## Tensors in Hierarchical Tucker format
+
+Define tensor in Hierarchical Tucker format by dimensional tree T, its transfer tensors and factor matrices:
+```julia
+T=dimtree(3)
+B=[rand(2,3,1),rand(4,3,2)]
+A=[rand(5,4),rand(4,3),rand(3,3)]
+htensor(T,B,A)
+```
+Define tensor in Hierarchical Tucker format by dimensional tree T, its transfer tensors and factor matrices:
+```julia
+T=dimtree(3)
+B=[rand(2,3,1),rand(4,3,2)]
+A=[rand(5,4),rand(4,3),rand(3,3)]
+htensor(T,B,A)
+```
+Get Tucker format of a tensor by using htrunc:
+```julia
+X=rand(8,9,7);
+htrunc(X)
+htrunc(X,maxrank=3) #hrunc with defined maximal rank
+```
+Create random tensor in Hierarchical Tucker format of size 5x4x3:
+```julia
+X=randhtensor([5,4,3])
+```
+Basic functions:
+```julia
+size(X)
+ndims(X)
+vecnorm(X)
+full(X)  #Creates full tensor out of Hierarchial Tucker format
+reorth(X) #Orthogonalize factor matrices
+```
+Basic operations:
+```julia
+X=randhtensor([5,4,3]);Y=randhtensor([5,4,3]);
+innerprod(X,Y)
+X+Y
+X-Y
+X==Y #same as isequal(X,Y)
+3*X #same as mtimes(3,X)
+```
+*n-mode product* of a tensor in Hierarchical Tucker format and a matrix or an array of matrices:
+```julia
+X=randhtensor([5,4,3]);
+A=[rand(2,5),rand(2,4),rand(2,3)];
+ttm(X,A[1],1)  #X times A[1] by mode 1
+ttm(X,[A[1],A[2]],[1,2]) #X times A[1] by mode 1 and times A[2] by mode 2; same as ttm(X,A,-3)
+ttm(X,A) #X times matrices from A by each mode
+```
+*n-mode (vector) product* of a tensor in Hierarchical Tucker format and a vector or an array of vectors:
+```julia
+X=randhtensor([5,4,3]);
+V=[rand(5),rand(4),rand(3)];
+ttv(X,V[1],1)  #X times V[1] by mode 1
+ttv(X,[V[1],V[2]],[1,2]) #X times V[1] by mode 1 and times V[2] by mode 2; same as ttm(X,V,-3)
+ttv(X,V) #X times vectors from V by each mode
+```
+The *h-rank* of a tensor in Hierarchical Tucker format:
+```julia
+X=htrunc(rand(9,8,7),maxrank=X=htrunc(rand(9,8,7),maxrank=2)
+hrank(X)
+```
