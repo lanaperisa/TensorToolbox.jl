@@ -41,9 +41,9 @@ function htensor(tree::dimtree,trten::TensorCell,mat...)
 	end
 	htensor(tree,trten,fmat,true)
 end
-#If array of matrices isn't defined as MatrixCell, but as M=[M1,M2,...,Mn]:
-htensor{T<:Number}(tree::dimtree,trten::TensorCell,fmat::Array{Matrix{T}},isorth::Bool)=htensor(tree,trten,MatrixCell(fmat),isorth)
-htensor{T<:Number}(tree::dimtree,trten::TensorCell,fmat::Array{Matrix{T}})=htensor(tree,trten,MatrixCell(fmat),true)
+#If array of matrices and tensors aren't defined as TensorCell and MatrixCell, but as M=[M1,M2,...,Mn]:
+htensor{T1<:Number,T2<:Number}(tree::dimtree,trten::Array{Array{T1,3}},fmat::Array{Matrix{T2}},isorth::Bool)=htensor(tree,TensorCell(trten),MatrixCell(fmat),isorth)
+htensor{T1<:Number,T2<:Number}(tree::dimtree,trten::Array{Array{T1,3}},fmat::Array{Matrix{T2}})=htensor(tree,TensorCell(trten),MatrixCell(fmat),true)
 
 """
     randhtensor(I::Vector,R::Vector)
@@ -542,7 +542,6 @@ ttm{T<:Number}(X::htensor,M::Array{Matrix{T}},n::Integer,t='n')=ttm(X,MatrixCell
 #t='t' transposes matrices
 function ttv{D<:Integer}(X::htensor,V::VectorCell,modes::Vector{D})
   N=ndims(X)
-  sz=[size(X)...]
   remmodes=setdiff(1:N,modes)
   U=deepcopy(X.fmat)
   if length(modes) < length(V)
@@ -550,7 +549,6 @@ function ttv{D<:Integer}(X::htensor,V::VectorCell,modes::Vector{D})
   end
   for n=1:length(modes)
     U[modes[n]]=V[n]'*X.fmat[modes[n]]
-    deleteat!(sz,modes[n])
   end
   #reshape(htensor(X.tree,X.trten,U),tuple(sz))
   htensor(X.tree,X.trten,U)
@@ -569,7 +567,7 @@ end
 #If array of vectors isn't defined as VectorCell, but as V=[v1,v2,...,vn]:
 ttv{T<:Number,D<:Integer}(X::htensor,V::Array{Vector{T}},modes::Vector{D})=ttv(X,VectorCell(V),modes)
 ttv{T<:Number,D<:Integer}(X::htensor,V::Array{Vector{T}},modes::Range{D})=ttv(X,VectorCell(V),modes)
-ttv{T<:Number}(X::htensor,V::Array{Vector{T}})=ttv(X,VectorCell(V))
+ttv{T<:Number}(X::htensor,V::Array{Vector{T}})=ttv(X,VectorCell(V),1:length(V))
 ttv{T<:Number}(X::htensor,V::Array{Vector{T}},n::Integer)=ttv(X,VectorCell(V),n)
 
 #**Documentation in ttensor.jl.

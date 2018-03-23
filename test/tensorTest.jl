@@ -103,4 +103,4 @@ println("Multiplication error: ",err)
 println("\n...Testing function squeeze.")
 X=rand(5,4,1,3,6,1);
 Xsq=squeeze(X);
-println("Tensor X of size :",size(X)," squeezed to size :",size(Xsq)".")
+println("Tensor X of size :",size(X)," squeezed to size :",size(Xsq),".")
