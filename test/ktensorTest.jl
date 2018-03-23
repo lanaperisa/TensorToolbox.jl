@@ -1,10 +1,29 @@
+using TensorToolbox
+using Base.Test
+
 println("\n\n****Testing ktensor.jl")
 
-Ax = rand(4,2)
-Bx = rand(3,2)
-Cx = rand(2,2)
-Xlambda=[0.5,2]
-X = ktensor(Xlambda,[Ax,Bx,Cx])
+I=5;J=4;K=3;
+a=rand(I);
+b=rand(J);
+c=rand(K);
+X=zeros(I,J,K);
+for i=1:I,j=1:J,k=1:K
+    X[i,j,k]=a[i]*b[j]*c[k];
+end
+println("\n**Test rank-1 tensor X of size: ", size(X))
+println("...Testing cp_als.")
+Z=cp_als(X,1)
+err=vecnorm(full(Z)-X)
+println("vecnorm(full(Xcp)-X) = ",err)
+@test err ≈ 0 atol=1e-10
+
+#Ax = rand(4,2)
+#Bx = rand(3,2)
+#Cx = rand(2,2)
+#Xlambda=[0.5,2]
+#X = ktensor(Xlambda,[Ax,Bx,Cx])
+X=randktensor([4,3,2],2)
 Ay = rand(4,3)
 By = rand(3,3)
 Cy = rand(2,3)
@@ -14,10 +33,10 @@ Y=ktensor(Ylambda,[Ay,By,Cy])
 println("\n**Test ktensors X and Y of size: ", size(X))
 println()
 
-println("\n...Testing function ndims.")
+println("...Testing function ndims.")
 println("X is of order: ",ndims(X))
 
-println("\n...Testing function ttensor and full.")
+println("...Testing function ttensor and full.")
 T=ttensor(X)
 @test vecnorm(full(T)-full(X)) ≈ 0 atol=1e-10
 
@@ -110,7 +129,7 @@ err=vecnorm(full(X)-full(Z))
 println("vecnorm(full(X)-full(Z)) = ",err)
 @test err ≈ 0 atol=1e-10
 fixsigns!(X)
-@test X==Xcopy #≈ 0 atol=1e-10
+@test vecnorm(X-Xcopy) ≈ 0 atol=1e-10
 
 println("...Testing functions ttm and ttv.")
 M=MatrixCell(2)

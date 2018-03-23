@@ -1,3 +1,6 @@
+using TensorToolbox
+using Base.Test
+
 println("\n\n****Testing ttensor.jl")
 
 X=rand(20,10,50,5)
@@ -208,4 +211,20 @@ println("Multiplying mode-$n matricized tensor X by Khatri-Rao product of matric
 Z=mttkrp(X,M,n)
 err = vecnorm(Z-tenmat(X,n)*khatrirao(M3,M2))
 println("Multiplication error: ",err)
+@test err ≈ 0 atol=1e-10
+
+println("\n...Testing cp_als on ttensor.")
+I=5;J=4;K=3;
+a=rand(I);
+b=rand(J);
+c=rand(K);
+X=zeros(I,J,K);
+for i=1:I,j=1:J,k=1:K
+    X[i,j,k]=a[i]*b[j]*c[k];
+end
+T=hosvd(X)
+println("Test rank-1 ttensor T of size: ", size(T))
+Z=cp_als(T,1)
+err=vecnorm(full(Z)-full(T))
+println("vecnorm(full(Tcp)-T) = ",err)
 @test err ≈ 0 atol=1e-10

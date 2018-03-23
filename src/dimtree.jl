@@ -1,15 +1,13 @@
-export dimtree, children, count_leaves, create_dimtree, dims, display, height, isequal, ==, is_leaf, is_left, is_right
-export left_child_length, lvl, nodes_on_lvl, node2ind, non, parent, positions, show, sibling, sort_leaves, structure, subnodes, subtree
+export dimtree, children, count_leaves, dims, display, height, isequal, ==, is_leaf, is_left, is_right
+export left_child_length, lvl, nodes_on_lvl, node2ind, non, parent, positions, show, sibling, structure, subnodes, subtree
 
 """
-    dimtree(leaves::Vector{Int},internal_nodes::Vector{Int})
-    dimtree(children::Matrix{Int})
-    create_tree(N;leaves=[],internal_nodes=[])
+    dimtree(leaves::Vector{Int}[,internal_nodes::Vector{Int}])
+    dimtree(N[,treetype])
 
-Dimension tree. Create by:
-- vectors of leaves and internal nodes,
-- matrix of children,
-- order of a tensor and one of leaves or internal_nodes.
+Dimension tree. Create from:
+- a vector of leaves (and a vector of internal nodes),
+- an order of a tensor N and a type treetype of a dimtree. Default: treetype="balanced".
 """
 type dimtree
   leaves::Vector{Int}
@@ -21,26 +19,41 @@ type dimtree
     new(leaves,internal_nodes)
   end
 end
-function dimtree(children::Matrix{Int})
-  @assert(size(children,2)==2,"Incorrect children matrix.")
-  @assert(!any([(children[i,1]==0 && children[i,2]!=0) || (children[i,1]!=0 && children[i,2]==0) for i=1:size(children,1)]),"Incorrect children matrix.")
-  leaves=findn(children[:,1].==0)
-  internal_nodes=findn(children[:,1].!=0)
-  sort_leaves(dimtree(leaves,internal_nodes))
+
+function dimtree(leaves::Vector{Int})
+  N=length(leaves)
+  nn=2*N-1
+  internal_nodes=setdiff(collect(1:nn),leaves)
+  @assert(sort([leaves;internal_nodes])==collect(1:nn),"Wrong input.")
+  dimtree(leaves,internal_nodes)
 end
 
-
-function dimtree(N::Integer;leaves=[],internal_nodes=[])
-    @assert(length(leaves)>0 || length(internal_nodes)>0,"Too few input arguments.")
-    nn=2*N-1
-    if length(leaves)>0
-        internal_nodes=setdiff(collect(1:nn),leaves)
+function dimtree(N::Integer,treetype="balanced")
+  @assert(treetype=="balanced","Only balanced trees are supported.")
+  C=zeros(Int,2*N-1,2);
+  dims=Array{Any}(2*N-1);
+  dims[1]=collect(1:N)
+  nn=1;
+  i=1
+  while i<=nn
+    if length(dims[i]) == 1
+      C[i,:]=[0 0];
     else
-        leaves=setdiff(collect(1:nn),internal_nodes)
+      ind_left=nn+1;
+      ind_right=nn+2;
+      nn+=2
+      C[i,:]=[ind_left,ind_right]
+      dims[ind_left]=dims[i][1:ceil(Int,end/2)]
+      dims[ind_right]=dims[i][ceil(Int,end/2)+1:end]
     end
-    @assert(sort([leaves;internal_nodes])==collect(1:nn),"Wrong input.")
-    sort_leaves(dimtree(leaves,internal_nodes))
+    i+=1
+  end
+  L=findin(C[:,1],[0,0])
+  leaves=zeros(Int,N)
+  leaves[dims[L]]=L;
+  dimtree(leaves)
 end
+
 
 """
     children(T[,node])
@@ -48,17 +61,17 @@ end
 Matrix of children for each node of a dimtree T.
 """
 function children(T::dimtree)
-    l=length(T.leaves)+length(T.internal_nodes)
-    C=zeros(Int,l,2)
-    C[1,:]=[2 3]
-    next_node=4
-    for n=2:l
-        if n in T.internal_nodes
-            C[n,:]=[next_node next_node+1]
-            next_node+=2
-        end
+  l=length(T.leaves)+length(T.internal_nodes)
+  C=zeros(Int,l,2)
+  C[1,:]=[2 3]
+  next_node=4
+  for n=2:l
+    if n in T.internal_nodes
+      C[n,:]=[next_node next_node+1]
+      next_node+=2
     end
-    C
+  end
+  C
 end
 function children(T::dimtree,node::Integer)
     children(T)[node,:]
@@ -82,63 +95,20 @@ function count_leaves(T::dimtree,node::Int)
 end
 
 """
-    create_dimtree(N[,treetype])
-
-Create a dimtree of type treetype for a tensor of order N. Default: treetype="balanced".
-"""
-function create_dimtree(N::Integer,treetype="balanced")
-  @assert(treetype=="balanced","Only balanced trees are supported.")
-  nmbr_nodes=2*N-1
-  Tmat=zeros(Int,nmbr_nodes,2)
-  Tmat[1,:]=[2,3]
-  node_count=4
-  parent=zeros(Int,nmbr_nodes)
-  parent[1]=0;parent[2]=1;parent[3]=1
-  node_length=zeros(Int,nmbr_nodes)
-  node_length[1]=N
-  for node=2:nmbr_nodes
-    if iseven(node)
-      node_length[node]=ceil(Int,node_length[parent[node]]/2)
-      if node_length[node] > 1
-        Tmat[node,:]=[node_count;node_count+1]
-        parent[node_count]=node
-        parent[node_count+1]=node
-        node_count+=2
-      end
-    else
-      node_length[node]=floor(Int,node_length[parent[node]]/2)
-      if node_length[node] > 1
-        Tmat[node,:]=[node_count;node_count+1]
-        parent[node_count]=node
-        parent[node_count+1]=node
-        node_count+=2
-      end
-    end
-  end
-  dimtree(Tmat)
-end
-create_dimtree{T<:Number,N}(X::Array{T,N},treetype="balanced")=create_dimtree(N,treetype)
-
-"""
     dims(T,node)
 
 Content of a node of a dimtree T.
 """
-function dims(T::dimtree,node::Integer)
-    t,tl,tr=structure(T)
-    internal_ind=findin(T.internal_nodes,node)
-    if length(internal_ind)>0
-        t[internal_ind[1]]
-    else
-        p=parent(T,node)
-        internal_ind=findin(T.internal_nodes,p)
-        if is_left(T,node)
-            tl[internal_ind[1]]
-        else
-            tr[internal_ind[1]]
-        end
+function dims(T::dimtree)
+    dims_mat=Array{Vector}(non(T))
+    [dims_mat[T.leaves[n]]=[n] for n=1:length(T.leaves)]
+    for n in reverse(T.internal_nodes)
+        c=children(T,n)
+        dims_mat[n]=[dims_mat[c[1]]...,dims_mat[c[2]]...]
     end
+    dims_mat
 end
+dims(T::dimtree,node::Integer)=dims(T)[node]
 
 """
     display(T)
@@ -146,6 +116,11 @@ end
 Display a dimtree T.
 """
 function display(T::dimtree)
+  println("Dimensional tree:" )
+  if T.leaves==[1]
+    println("   1   ")
+    return
+  end
   t,tl,tr=structure(T)
   h=height(T)
   initial_blank_len=zeros(Int,h)
@@ -157,13 +132,14 @@ function display(T::dimtree)
   blank_len=2*initial_blank_len[1:end-1]+1
   l=h;k=h-1;
   [print(" ") for i=1:initial_blank_len[l]]; l-=1
-  print(t[1][1],"-",t[1][end])
+  print(minimum(t[1]),"-",maximum(t[1]))
   println()
   [print(" ") for i=1:initial_blank_len[l]]; l-=1
-  length(tl[1]) == 1 ? print(" ",tl[1][1]," ") : print(tl[1][1],"-",tl[1][end])
+  length(tl[1]) == 1 ? print(" ",minimum(tl[1])," ") : print(minimum(tl[1]),"-",maximum(tl[1]))
   [print(" ") for i=1:blank_len[k]]; k-=1
-  length(tr[1]) == 1 ? print(" ",tr[1][1]," ") : print(tr[1][1],"-",tr[1][end])
+  length(tr[1]) == 1 ? print(" ",minimum(tr[1])," ") : print(minimum(tr[1]),"-",maximum(tr[1]))
   println()
+  if l>0
   [print(" ") for i=1:initial_blank_len[l]]; l-=1
   m=2
   nodes=collect(1:non(T)) #nodes
@@ -186,9 +162,9 @@ function display(T::dimtree)
      end
     #println("p = $p, nodepos[$nnmbr] = $(nodepos[nnmbr])")
     if nodepos[nnmbr]==p
-      length(tl[m]) == 1 ? print(" ",tl[m][1]," ") : print(tl[m][1],"-",tl[m][end])
+      length(tl[m]) == 1 ? print(" ",tl[m][1]," ") : print(tl[m][1],"-",maximum(tl[m]))
       [print(" ") for i=1:blank_len[k]]
-      length(tr[m]) == 1 ? print(" ",tr[m][1]," ") : print(tr[m][1],"-",tr[m][end])
+      length(tr[m]) == 1 ? print(" ",tr[m][1]," ") : print(tr[m][1],"-",maximum(tr[m]))
       [print(" ") for i=1:blank_len[k]]
       m+=1
       nnmbr+=2
@@ -198,6 +174,7 @@ function display(T::dimtree)
       [print(" ") for i=1:3+blank_len[k]]
       #print("")
     end
+  end
   end
   println()
 end
@@ -217,7 +194,7 @@ end
 True if two dimensional trees are equal, false otherwise.
 """
 function isequal(T1::dimtree,T2::dimtree)
-  if children(T1)==children(T2)
+  if T1.leaves==T2.leaves
     return true
   else
     return false
@@ -289,8 +266,9 @@ function lvl(T::dimtree)
     end
     L
 end
-function lvl(T::dimtree,node::Integer)
-    lvl(T)[node]
+lvl(T::dimtree,node::Integer)=lvl(T)[node]
+function lvl(T::dimtree,nodes::Vector{Int})
+    [lvl(T)[n] for n in nodes]
 end
 
 """
@@ -305,7 +283,7 @@ end
 """
     node2ind(T,nodes)
 
-Convert node numbers to transfer tensor or frames indices ina dimtree T.
+Convert node numbers to transfer tensor or frames indices in a dimtree T.
 """
 function node2ind(T::dimtree,nodes::Vector{Int})
     ind=zeros(Int,length(nodes))
@@ -343,13 +321,12 @@ function parent(T::dimtree)
   P=zeros(Int,nn) #parent[node]
   P[1]=0
   for n=2:nn
-    P[n]=ind2sub(C,find(x->x==n,C))[1][1];
+    P[n]=ind2sub(C,find(x->x==n,C))[1][1]
   end
   P
 end
-function parent(T::dimtree,node::Integer)
-    parent(T)[node]
-end
+parent(T::dimtree,node::Integer)=parent(T)[node]
+parent(T::dimtree,nodes::Vector{Int})=[parent(T)[n] for n in nodes]
 
 """
     positions(T)
@@ -410,45 +387,14 @@ function sibling(T::dimtree,node::Integer)
 end
 
 """
-    sort_leaves(T)
-
-Sort leaves such that leaves[m] represents mode m.
-"""
-function sort_leaves(T::dimtree)
-  L=[]
-  for l in T.leaves
-    L=[L;dims(T,l)[1]]
-  end
-  leaves=T.leaves[sortperm(L)]
-  dimtree(leaves,T.internal_nodes)
-end
-
-"""
     structure(T)
 
 For each internal node of a given dimtree, returns its representation t, its left child and right child representations tl and tr.
 """
 function structure(T::dimtree)
-  llen=length(T.leaves)
-  inlen=length(T.internal_nodes)
-  t=VectorCell(inlen)
-  tl=VectorCell(inlen)
-  tr=VectorCell(inlen)
-  t[1]=collect(1:llen)
-  i=2;
-  for n=1:inlen
-    l=left_child_length(T,T.internal_nodes[n])
-    tl[n]=collect(t[n][1]:t[n][1]+l-1)
-    tr[n]=collect(t[n][1]+l:t[n][1]+length(t[n])-1)
-    if length(tl[n])>1
-        t[i]=tl[n]
-        i+=1
-    end
-     if length(tr[n])>1
-        t[i]=tr[n]
-        i+=1
-    end
-  end
+  t=dims(T)[T.internal_nodes]
+  tl=dims(T)[children(T)[T.internal_nodes,1]]
+  tr=dims(T)[children(T)[T.internal_nodes,2]]
   t,tl,tr
 end
 
@@ -474,24 +420,14 @@ end
 """
     subtree(T,node)
 
-Dimensional tree with the same structure as a subtree of a node in a dimtree T.
+Dimensional tree with the same structure as a subtree of a node in a dimtree T. See also: subnodes.
 """
 function subtree(T::dimtree,node::Integer)
-    if is_leaf(T,node)
-        return [0 0]
-    end
-    nodes=subnodes(T,node)
-    nodes_nmbr=length(nodes)
-    C=zeros(Int,nodes_nmbr,2)
-    C[1,:]=[2 3]
-    i=4
-    for n=2:nodes_nmbr
-        if is_leaf(T,nodes[n])
-            C[n,:]=[0 0]
-        else
-            C[n,:]=[i i+1]
-            i+=2
-        end
-    end
-  dimtree(C)
+  if is_leaf(T,node)
+    return dimtree([1],Int[])
+  end
+  nodes=subnodes(T,node)
+  L=T.leaves[findin(T.leaves,nodes)]
+  I=T.internal_nodes[findin(T.internal_nodes,nodes)]
+  dimtree(sortperm(L).+length(I))
 end

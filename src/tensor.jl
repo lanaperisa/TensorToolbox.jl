@@ -1,4 +1,22 @@
-export cp_als, diagt, hosvd, innerprod, krontm, matten, mkrontm, mkrontv, mrank, mttkrp, neye, nrank, nvecs, sthosvd, tenmat, tkron, ttm, ttt, ttv
+export blockdiag, cp_als, diagt, hosvd, innerprod, krontm, matten, mkrontm, mkrontv, mrank, mttkrp, neye, nrank, nvecs
+export squeeze, sthosvd, tenmat, tkron, ttm, ttt, ttv
+
+"""
+   blockdiag(X,Y)
+
+Create block diagonal tensor where tensors X and Y are block elements. If X and Y are matrices, equal to blkdiag for sparse matrices.
+"""
+function blockdiag{T1<:Number,T2<:Number}(X1::Array{T1},X2::Array{T2})
+  sz=tuple([size(X1)...]+[size(X2)...]...)
+  Xd=zeros(sz) #initialize core tensor
+  I1=indicesmat(X1,zeros([size(X1)...]))
+  I2=indicesmat(X2,[size(X1)...])
+  idx1=indicesmat2vec(I1,size(Xd))
+  idx2=indicesmat2vec(I2,size(Xd))
+  Xd[idx1]=vec(X1) #first diagonal block
+  Xd[idx2]=vec(X2) #second diagonal block
+  Xd
+end
 
 """
     cp_als(X,R;init,tol,maxit,dimorder)
@@ -6,7 +24,7 @@ export cp_als, diagt, hosvd, innerprod, krontm, matten, mkrontm, mkrontv, mrank,
 Compute a CP decomposition with R components of a tensor X .
 
 ## Arguments:
-- `init` ∈ {MatricCell,"rand","nvecs","eigs"}. Initial guess for factor matrices. If init="nvecs" (same as "eigs") initialize matrices with function nvecs.
+- `init` ∈ {MatrixCell,"rand","nvecs","eigs"}. Initial guess for factor matrices. If init="nvecs" (same as "eigs") initialize matrices with function nvecs.
 - `tol`: Tolerance. Defualt: 1e-4.
 - `maxit`: Maximal number of iterations. Default: 1000.
 - `dimorder': Order of dimensions. Default: 1:ndims(A).
@@ -33,7 +51,11 @@ function cp_als{T<:Number}(X::Array{T},R::Integer;init="rand",tol=1e-4,maxit=100
         error("Initialization method wrong.")
     end
     G = zeros(R,R,N); #initalize gramians
-    [G[:,:,n]=fmat[n]'*fmat[n] for n in dimorder[2:end]]
+    for n in dimorder[2:end]
+      if !isempty(fmat[n])
+        G[:,:,n]=fmat[n]'*fmat[n]
+      end
+    end
     fit=0
     for k=1:maxit
         fitold=fit
@@ -54,7 +76,7 @@ function cp_als{T<:Number}(X::Array{T},R::Integer;init="rand",tol=1e-4,maxit=100
         if nr==0
             fit=vecnorm(K)^2-2*innerprod(X,K)
         else
-            nr_res=sqrt.(nr^2+vecnorm(K)^2-2*innerprod(X,K))
+            nr_res=sqrt.(abs.(nr^2+vecnorm(K)^2-2*innerprod(X,K)))
             fir=1-nr_res/nr
         end
         fitchange=abs.(fitold-fit)
@@ -106,7 +128,7 @@ Higher-order singular value decomposition.
 - `X`: Tensor (multidimensional array) or ttensor.
 - `method` ∈ {"lapack","lanczos","randsvd"} Method for SVD. Default: "lapack".
 - `reqrank::Vector`: Requested mutlilinear rank. Optional.
-- `eps_abs::Number/Vector`: Drop singular values (of mode-n matricization) below eps_abs. Optional.
+- `eps_abs::Number/Vector`: Drop singular values (of mode-n matricization) below eps_abs. Default: 1e-8.
 - `eps_rel::Number/Vector`: Drop singular values (of mode-n matricization) below eps_rel*sigma_1. Optional.
 - `p::Integer`: Oversampling parameter. Defaul p=10.
 """
@@ -413,6 +435,13 @@ function nvecs{T<:Number}(X::Array{T},n::Integer,r=0;flipsign=false,svds=false)
       end
   end
   U
+end
+
+#Squeeze all singleton dimensions. **Documentation in Base.jl.
+function squeeze{T<:Number}(A::Array{T})
+  sz=size(A)
+  sdims=find(sz.==1) #singleton dimensions
+  squeeze(A,tuple(sdims...))
 end
 
 """

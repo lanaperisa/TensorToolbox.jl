@@ -1,7 +1,7 @@
 #Tensors in Tucker format + functions
 
 export ttensor, randttensor
-export coresize, cp_als, display, full, had, hadcten, hosvd, hosvd1, hosvd2, hosvd3, hosvd4, innerprod, isequal, lanczos, mhadtv, minus, mrank
+export coresize, cp_als, display, full, had, hadcten, hosvd, hosvd1, hosvd2, hosvd3, hosvd4, innerprod, isequal, lanczos, lanczos_tridiag, mhadtv, minus, mrank
 export msvdvals, mtimes, mttkrp, ndims, nrank, nvecs, permutedims, plus, randrange, randsvd, reorth, reorth!, size, tenmat, ttm, ttv, uminus, vecnorm
 
 """
@@ -108,7 +108,7 @@ function cp_als{T<:Number}(X::ttensor{T},R::Integer;init="rand",tol=1e-4,maxit=1
         if nr==0
             fit=vecnorm(K)^2-2*innerprod(X,K)
         else
-            nr_res=sqrt.(nr^2+vecnorm(K)^2-2*innerprod(X,K))
+            nr_res=sqrt.(abs.(nr^2+vecnorm(K)^2-2*innerprod(X,K)))
             fir=1-nr_res/nr
         end
         fitchange=abs.(fitold-fit)
@@ -639,14 +639,7 @@ Addition of two tensors. Same as: X+Y.
 function plus{T1<:Number,T2<:Number}(X1::ttensor{T1},X2::ttensor{T2})
 	@assert(size(X1) == size(X2),"Dimension mismatch.")
 	fmat=Matrix[[X1.fmat[n] X2.fmat[n]] for n=1:ndims(X1)] #concatenate factor matrices
-	coresize=tuple([size(X1.cten)...]+[size(X2.cten)...]...)
-	cten=zeros(coresize) #initialize core tensor
-	I1=indicesmat(X1.cten,zeros([size(X1.cten)...]))
-	I2=indicesmat(X2.cten,[size(X1.cten)...])
-	idx1=indicesmat2vec(I1,size(cten))
-	idx2=indicesmat2vec(I2,size(cten))
-	cten[idx1]=vec(X1.cten) #first diagonal block
-	cten[idx2]=vec(X2.cten) #second diagonal block
+  cten=blockdiag(X1.cten,X2.cten)
 	ttensor(cten,fmat)
 end
 +{T1<:Number,T2<:Number}(X1::ttensor{T1},X2::ttensor{T2})=plus(X1,X2)
@@ -917,6 +910,7 @@ ttv{T1<:Number,T2<:Number}(X::ttensor{T1},V::Array{Vector{T2}},n::Integer)=ttv(X
 """
    uminus(X::ttensor)
    uminus(X::ktensor)
+   uminus(X::htensor)
 
 Unary minus. Same as: (-1)*X.
 """

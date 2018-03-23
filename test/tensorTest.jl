@@ -1,3 +1,6 @@
+using TensorToolbox
+using Base.Test
+
 println("\n\n**** Testing tensor.jl")
 
 X=rand(20,10,50,5)
@@ -96,3 +99,8 @@ Z=mttkrp(X,A,n)
 err = vecnorm(Z-tenmat(X,n)*khatrirao(A3,A2))
 println("Multiplication error: ",err)
 @test err ≈ 0 atol=1e-10
+
+println("\n...Testing function squeeze.")
+X=rand(5,4,1,3,6,1);
+Xsq=squeeze(X);
+println("Tensor X of size :",size(X)," squeezed to size :",size(Xsq)".")

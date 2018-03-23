@@ -1,6 +1,6 @@
 #Tensors in Kruskal (CP) format + functions
 
-export ktensor, randktensor, arrange, arrange!, cp_als, display, extract, innerprod, isequal, fixsigns, fixsigns!, full, minus, mtimes, mttkrp, ncomponents, ndims
+export ktensor, randktensor, arrange, arrange!, cp_als, display, extract, fixsigns, fixsigns!, full, innerprod, isequal, minus, mtimes, mttkrp, ncomponents, ndims
 export normalize, normalize!, nvecs, permutedims, plus, redistribute, redistribute!, size, tenmat, tocell, ttensor, ttm, ttv, uminus, vecnorm
 
 """

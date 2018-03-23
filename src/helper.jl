@@ -1,6 +1,6 @@
 using Base.Cartesian
 
-#export indicesmat2vec, indicesmat, shiftsmat
+#export check_vector_input, indicesmat2vec, indicesmat, shiftsmat
 export colspace, khatrirao, krontkron, kron, krontv, krtv, tkrtv, lanczos, lanczos_tridiag, randsvd
 export VectorCell, MatrixCell, TensorCell
 
@@ -41,20 +41,33 @@ function check_vector_input(input,dim::Integer,default_value::Number)
   input
 end
 
-function colspace{T<:Number}(X::Matrix{T};method="lapack",reqrank=0,atol=1e-8,rtol=0,p=10)
+"""
+
+    colspace(X; <keyword arguments>)
+
+Column space basis.
+## Arguments:
+- `X`: Matrix.
+- `method` ∈ {"lapack","lanczos","randsvd"} Method for SVD. Default: "lapack".
+- `maxrank::Integer`: Maximal rank. Optional.
+- `atol::Number`: Drop singular values below atol.  Default: 1e-8.
+- `rtol::Number`: Drop singular values below rtol*sigma_1. Optional.
+- `p::Integer`: Oversampling parameter used by lanczos and randsvd methods. Defaul p=10.
+"""
+function colspace{T<:Number}(X::Matrix{T};method="lapack",maxrank=0,atol=1e-8,rtol=0,p=10)
   if method == "lapack"
     U,S=LAPACK.gesvd!('A','N',X)
   elseif method == "lanczos"
-    U,S=lanczos(X,tol=atol,reqrank=reqrank,p=p)
+    U,S=lanczos(X,tol=atol,maxrank=maxrank,p=p)
   elseif method == "randsvd"
-    U,S=randsvd(X,tol=atol,reqrank=reqrank,p=p)
+    U,S=randsvd(X,tol=atol,maxrank=maxrank,p=p)
   else
     U,S,V=svd(X)
   end
-  if reqrank!=0 && size(U,2)>reqrank
-    U=U[:,1:reqrank]
-    if reqrank<length(S)
-      S=S[1:reqrank]
+  if maxrank!=0 && size(U,2)>maxrank
+    U=U[:,1:maxrank]
+    if maxrank<length(S)
+      S=S[1:maxrank]
     end
   end
   rtol != 0 ? tol=rtol*S[1] : tol=atol
@@ -155,16 +168,16 @@ khatrirao{T<:Number}(M::Array{Matrix{T}},n::Integer,t='n')=khatrirao(MatrixCell(
 
 
 #Extension of Base.kron to work with MatrixCell
-function kron(M::MatrixCell)
+function kron(M::MatrixCell,t='n')
   N=length(M)
-  K=M[1]
+  t=='n' ? K=M[1] : K=M[1]'
   for n=2:N
-      K=kron(K,M[n])
+      t=='n' ? K=kron(K,M[n]) : K=kron(K,M[n]')
   end
   K
 end
 #If array of matrices isn't defined as MatrixCell, but as M=[M1,M2,...,Mn]:
-kron{T<:Number}(M::Array{Matrix{T}})=kron(MatrixCell(M))
+kron{T<:Number}(M::Array{Matrix{T}},t='n')=kron(MatrixCell(M),t)
 
 """
     krontkron(A,v,t='n')
@@ -412,3 +425,4 @@ function randsvd{N<:Number}(A::Matrix{N};tol=1e-8,maxit=1000,reqrank=0,r=10,p=10
   end
   U,S
 end
+

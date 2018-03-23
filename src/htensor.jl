@@ -1,7 +1,7 @@
 #Tensors in Hierarchical Tucker format + functions
 
-export htensor, randhtensor, display, full, hrank, htdecomp, innerprod, isequal, minus, mtimes, ndims, plus, reorth, reorth!
-export size, squeeze, trten2mat, trten2ten, trtensor, ttm, ttv, vecnorm
+export htensor, randhtensor, cat, display, full, hrank, htrunc, innerprod, isequal, minus, mtimes, ndims, plus, reorth, reorth!
+export size, squeeze, trten2mat, trten2ten, ttm, ttv, uminus, vecnorm
 
 """
     htensor(tree,trten,fmat)
@@ -56,18 +56,72 @@ function randhtensor{D<:Integer}(sz::Vector{D},rnk::Vector{D},T::dimtree)
   @assert(length(rnk)==non(T),"Size and rank dimension mismatch.")
   I=length(T.internal_nodes) #number of internal nodes
   cmps=TensorCell(N+I)
-  [cmps[T.leaves[n]]=rand(sz[n],rnk[I+n]) for n=1:N];
-  for n in T.internal_nodes[end:-1:1]
+  [cmps[T.leaves[n]]=rand(sz[n],rnk[T.leaves[n]]) for n=1:N];
+  for n in reverse(T.internal_nodes)
     c=children(T,n)
-    lsz=size(cmps[c[1]],2)
-    rsz=size(cmps[c[2]],2)
+    is_leaf(T,c[1]) ? lsz=size(cmps[c[1]],2) : lsz=size(cmps[c[1]],3)
+    is_leaf(T,c[2]) ? rsz=size(cmps[c[2]],2) : rsz=size(cmps[c[2]],3)
     cmps[n]=rand(lsz,rsz,rnk[n])
   end
   htensor(T,cmps[T.internal_nodes],MatrixCell(cmps[T.leaves]))
 end
 function randhtensor{D<:Integer}(sz::Vector{D},rnk::Vector{D})
-    T=create_dimtree(length(sz))
+    T=dimtree(length(sz))
     randhtensor(sz,rnk,T)
+end
+function randhtensor{D<:Integer}(sz::Vector{D},T::dimtree)
+  N=length(sz)
+  rnk=ones(Int,non(T))
+  for l in T.leaves
+    rnk[l]=sz[node2ind(T,l)]
+  end
+  for n in reverse(T.internal_nodes)[1:end-1]
+    c=children(T,n)
+    ind=setdiff(1:N,node2ind(T,c))
+    rnk[n]=prod(sz[ind])
+  end
+  randhtensor(sz,rnk)
+end
+function randhtensor{D<:Integer}(sz::Vector{D})
+  T=dimtree(length(sz))
+  randhtensor(sz,T)
+end
+
+"""
+    cat(X,Y,n)
+
+Concatente htensors X and Y by mode n.
+"""
+function cat(X1::htensor,X2::htensor,n::Integer)
+    @assert(X1.tree == X2.tree, "htensors must have equal dimension trees.")
+    @assert(0<n<=ndims(X1),"Invalid concatenation mode.")
+    eqm=setdiff(1:ndims(X1),n) #equal modes
+    @assert(size(X1)[eqm] == size(X2)[eqm],"Dimensions mismatch.")
+    Xc=deepcopy(X1)
+    rnk1=hrank(X1)
+    rnk2=hrank(X2)
+    rnk=rnk1+rnk2
+    rnk[1]=1
+    for l=1:ndims(X1)
+        if l!=n
+            Xc.fmat[l]=[X1.fmat[l] X2.fmat[l]]
+        else
+            Xc.fmat[l]=blockdiag(X1.fmat[l],X2.fmat[l])
+        end
+    end
+    for i in X1.tree.internal_nodes
+        ind=node2ind(X1.tree,i)
+        c=children(X1.tree,i)
+        Xc.trten[ind]=zeros(rnk[c[1]],rnk[c[2]],rnk[i])
+        if i!=1
+            Xc.trten[ind][1:rnk1[c[1]],1:rnk1[c[2]],1:rnk1[i]]=X1.trten[ind]
+            Xc.trten[ind][rnk1[c[1]]+1:end,rnk1[c[2]]+1:end,rnk1[i]+1:end]=X2.trten[ind]
+        else
+            Xc.trten[ind][1:rnk1[c[1]],1:rnk1[c[2]]]=X1.trten[ind]
+            Xc.trten[ind][rnk1[c[1]]+1:end,rnk1[c[2]]+1:end]=X2.trten[ind]
+        end
+    end
+    Xc
 end
 
 #Display a htensor. **Documentation in ttensor.jl
@@ -124,28 +178,40 @@ function hrank(X::htensor)
 end
 
 """
-    htdecomp(X[,tree])
+    htrunc(X[,tree])
 
-Decompose full tensor X into a htensor for a given tree. If tree not specified use balanced tree.
+Truncate full tensor X into a htensor for a given tree. If tree not specified use balanced tree.
 """
-function htdecomp{T<:Number,N}(X::Array{T,N},tree::dimtree;method="lapack",maxrank=10,atol=1e-8,rtol=0)
+function htrunc{T<:Number,N}(X::Array{T,N},tree::dimtree;method="lapack",maxrank=[],atol=1e-8,rtol=0)
   @assert(N==length(tree.leaves),"Dimension mismatch.")
+  maxrank=check_vector_input(maxrank,2*N-1,10);
   I=length(tree.internal_nodes)
   U=MatrixCell(N)
-  #[U[n]=svdfact(tenmat(X,n))[:U] for n=1:N]
 	for n=1:N
     Xn=float(tenmat(X,n))
-    U[n]=colspace(Xn,method=method,reqrank=maxrank,atol=atol,rtol=rtol)
-    #println("size U[$n] = ",size(U[n]))
+    U[n]=colspace(Xn,method=method,maxrank=maxrank[tree.leaves[n]],atol=atol,rtol=rtol) #[U[n]=svdfact(tenmat(X,n))[:U][1:maxrank[tree.leaves[n]]] for n=1:N]
 	end
   B=TensorCell(I)
-  t,tl,tr=structure(tree);
-  for i=1:I
-     B[i]=trtensor(X,t=t[i],tl=tl[i],tr=tr[i],method=method,maxrank=maxrank,atol=atol,rtol=rtol);
+  t,tl,tr=structure(tree)
+  for i in reverse(tree.internal_nodes)
+    ind=node2ind(tree,i)
+    if i!=1
+      Xt=tenmat(X,R=t[ind])
+      Ut=colspace(Xt,method=method,maxrank=maxrank[ind],atol=atol,rtol=rtol) #Ut=svdfact(Xt)[:U][1:maxrank[ind]]
+    else
+      Ut=vec(X)
+    end
+    Xl=tenmat(X,R=tl[ind])
+    Xr=tenmat(X,R=tr[ind])
+    Ul=colspace(Xl,method=method,maxrank=maxrank[ind],atol=atol,rtol=rtol) #Ul=svdfact(Xl)[:U][1:maxrank[ind]]
+    Ur=colspace(Xr,method=method,maxrank=maxrank[ind],atol=atol,rtol=rtol) #Ur=svdfact(Xr)[:U][1:maxrank[ind]]
+    #B=krontv(Ur',Ul',Ut)
+    #B[ind]=trten2ten(kron(Ur',Ul')*Ut,size(Ul,2),size(Ur,2))
+    B[ind]=trten2ten(krontv(Ur',Ul',Ut),size(Ul,2),size(Ur,2))
   end
   htensor(tree,B,U)
 end
-htdecomp{T<:Number,N}(X::Array{T,N})=htdecomp(X,create_dimtree(X))
+htrunc{T<:Number,N}(X::Array{T,N};method="lapack",maxrank=[],atol=1e-8,rtol=0)=htrunc(X,dimtree(ndims(X)),method=method,maxrank=maxrank,atol=atol,rtol=rtol)
 
 #Inner product of two htensors. **Documentation in tensor.jl.
 function innerprod(X1::htensor,X2::htensor)
@@ -155,11 +221,11 @@ function innerprod(X1::htensor,X2::htensor)
   I=length(X1.tree.internal_nodes) #number of internal nodes
   M=MatrixCell(N+I)
   [M[X1.tree.leaves[n]]=X1.fmat[n]'*X2.fmat[n] for n=1:N]
-  for n in X1.tree.internal_nodes[end:-1:1]
+  for n in reverse(X1.tree.internal_nodes)
     c=children(X1.tree,n)
     M[n]=trten2mat(X1.trten[node2ind(X1.tree,n)])'*kron(M[c[2]],M[c[1]])*trten2mat(X2.trten[node2ind(X2.tree,n)])
   end
-  M[1][:]
+  M[1][1]
 end
 
 #True if htensors have equal components. **Documentation in ttensor.jl.
@@ -192,6 +258,28 @@ function ndims(X::htensor)
 	length(X.fmat)
 end
 
+#Used by squeeze
+function next_single_node(T::dimtree,dims::Vector{Int})
+    #println("dims = $dims")
+    nodes=T.leaves[dims]
+    #println("nodes = $nodes")
+    if isempty(nodes)
+        return -1
+    end
+    parents=parent(T,nodes)
+    #println("parents = $parents")
+    if allunique(parents)
+       return nodes[1]
+    end
+    for p in parents
+        inds=find(parents.==p)
+        if length(inds)>1
+            return nodes[inds[1]]
+        end
+    end
+end
+next_single_node(T::dimtree,dims::Integer)=next_single_node(X,[dims])
+
 #Addition of two htensors. **Documentation in ttensor.jl
 function plus(X1::htensor,X2::htensor)
 	@assert(X1.tree == X2.tree,"Input mismatch.")
@@ -200,14 +288,7 @@ function plus(X1::htensor,X2::htensor)
   tmp=[squeeze(X1.trten[1],3) zeros(size(X1.trten[1],1),size(X2.trten[1],2)); zeros(size(X1.trten[1],2),size(X2.trten[1],1)) squeeze(X2.trten[1],3)]
   trten[1]=reshape(tmp,size(tmp,1),size(tmp,2),1)
   for i=2:length(X1.tree.internal_nodes)
-    sz=tuple([size(X1.trten[i])...]+[size(X2.trten[i])...]...)
-    trten[i]=zeros(sz) #initialize core tensor
-	  I1=indicesmat(X1.trten[i],zeros([size(X1.trten[i])...]))
-	  I2=indicesmat(X2.trten[i],[size(X1.trten[i])...])
-    idx1=indicesmat2vec(I1,size(trten[i]))
-	  idx2=indicesmat2vec(I2,size(trten[i]))
-	  trten[i][idx1]=vec(X1.trten[i]) #first diagonal block
-	  trten[i][idx2]=vec(X2.trten[i]) #second diagonal block
+    trten[i]=blockdiag(X1.trten[i],X2.trten[i])
   end
   htensor(X1.tree,trten,fmat)
 end
@@ -228,7 +309,7 @@ function reorth(X::htensor)
 		fmat[n],R[X.tree.leaves[n]]=qr(U)
     n+=1
 	end
-  for n in X.tree.internal_nodes[end:-1:1]
+  for n in reverse(X.tree.internal_nodes)
     c=children(X.tree,n)
     Rl=R[c[1]]
     Rr=R[c[2]]
@@ -255,7 +336,7 @@ function reorth!(X::htensor)
     X.fmat[n],R[X.tree.leaves[n]]=qr(U)
     n+=1
   end
-  for n in X.tree.internal_nodes[end:-1:1]
+  for n in reverse(X.tree.internal_nodes)
     c=children(X.tree,n)
     Rl=R[c[1]]
     Rr=R[c[2]]
@@ -284,6 +365,8 @@ function size(X::htensor,n::Integer)
 end
 
 """
+TensorToolbox:
+
     squeeze(X)
 
 Remove singleton dimensions from htensor.
@@ -291,82 +374,85 @@ Remove singleton dimensions from htensor.
 function squeeze(X::htensor)
   B=deepcopy(X.trten)
   U=deepcopy(X.fmat)
+  T=deepcopy(X.tree)
   I=copy(X.tree.internal_nodes)
+  L=copy(X.tree.leaves)
   sz=[size(X)...]
   sdims=find(sz.==1) #singleton dimensions
-  for d in sdims
-    node=X.tree.leaves[d]
-    sibling_node=sibling(X.tree,node)
-    parent_node=parent(X.tree,node)
-    prnt=I[parent_node]
-    sblng=node2ind(X.tree,sibling_node)
-    if is_left(X.tree,node)
-      tmp=ttm(B[prnt],U[d],1)
+  while length(find(sz.!=-1)) >2
+    node=next_single_node(T,sdims)
+    if node == -1
+        break
+    end
+    sibling_node=sibling(T,node)
+    parent_node=parent(T,node)
+    ind=node2ind(T,node)
+    inds=node2ind(T,sibling_node)
+    indp=node2ind(T,parent_node)
+    if is_left(T,node)
+      tmp=ttm(B[indp],U[ind],1)
       tmp=reshape(tmp,size(tmp,2),size(tmp,3))
       lft=1
     else
-      tmp=ttm(B[prnt],U[d],2)
+      tmp=ttm(B[indp],U[ind],2)
       tmp=reshape(tmp,size(tmp,1),size(tmp,3))
       lft=0
     end
-    if is_leaf(X.tree,sibling_node)
+    if is_leaf(T,sibling_node)
+      v=setdiff(find(L.>L[inds]),ind)
+      L[v]-=2
+      L[inds]=parent_node
+      #deleteat!(sdims,find(sdims.==inds))
+      sz[ind]=-1
       if lft==1
-        U[d]=U[d+1]*tmp
-        deleteat!(U,d+1)
+        U[ind]=U[ind+1]*tmp
+        deleteat!(U,ind+1)
       else
-        U[d-1]=U[d-1]*tmp
-        deleteat!(U,d)
+        U[ind-1]=U[ind-1]*tmp
+        deleteat!(U,ind)
       end
-      deleteat!(B,prnt)
-      deleteat!(I,prnt)
+      deleteat!(B,indp)
+      deleteat!(I,indp)
     else
-      B[prnt]=ttm(B[sblng],tmp',3)
-      deleteat!(B,sblng)
-      deleteat!(I,sblng)
-      deleteat!(U,d)
+      sibling_subnodes=subnodes(T,sibling_node)
+      len=length(nodes_on_lvl(T,lvl(T,node)))
+      h=height(subtree(T,parent_node))
+      hsib=height(subtree(T,sibling(T,parent_node)))
+      for n in sibling_subnodes[2:end]
+        if lvl(T,n)>hsib+1 && is_left(T,node)
+           break
+        end
+        if is_leaf(T,n)
+           L[node2ind(T,n)]-=len;
+        else
+           I[node2ind(T,n)]-=len;
+        end
+      end
+      if h<=hsib && is_left(T,node)
+        len=length(nodes_on_lvl(subtree(T,parent_node),h-1))
+        for level=lvl(T,parent_node)+h-1:height(T)-1
+          lvl_nodes=nodes_on_lvl(T,level)
+           for n in lvl_nodes[findin(lvl_nodes,subnodes(T,sibling(T,parent_node)))]
+             if is_leaf(T,n)
+                L[node2ind(T,n)]-=len
+              else
+                I[node2ind(T,n)]-=len
+              end
+           end
+        end
+      end
+      B[indp]=ttm(B[inds],tmp',3)
+      deleteat!(B,inds)
+      deleteat!(I,inds)
+      deleteat!(U,ind)
     end
+    deleteat!(L,ind)
+    deleteat!(sdims,find(sdims.==ind))
+    sdims[find(sdims.>ind)].-=1
+    T=dimtree(copy(L))
+    #display(T)
   end
-  T=dimtree(ndims(X)-length(sdims),internal_nodes=I)
-  htensor(T,B,U)
-end
-
-"""
-    trtensor
-
-Create transfer tensor for a given tensor, node representation t and its left and right children representations tl and tr.
-"""
-function trtensor{T<:Number,N}(X::Array{T,N};t=collect(1:N),tl=collect(1:ceil(Int,N/2)),tr=[],method="lapack",maxrank=10,atol=1e-8,rtol=0)
-  if isa(tl,Number)
-    tl=[tl]
-  end
-  if isa(tr,Number)
-    tr=[tr]
-  end
-  @assert(!(length(tl)==0 && length(tr)==0),"Left or right child needs to be specified.")
-  if length(tl)==0
-    tl=t[1:length(t)-length(tr)]
-  elseif length(tr)==0
-    tr=t[length(tl)+1:end]
-  end
-  if t==collect(1:N)
-    Ut=vec(X)
-  else
-    Xt=tenmat(X,R=t)
-    #Ut=svdfact(Xt)[:U]
-    Ut=colspace(Xt,method=method,reqrank=maxrank,atol=atol,rtol=rtol)
-  end
-  Xl=tenmat(X,R=tl)
-  Xr=tenmat(X,R=tr)
-  #Ul=svdfact(Xl)[:U]
-  Ul=colspace(Xl,method=method,reqrank=maxrank,atol=atol,rtol=rtol)
-  #Ur=svdfact(Xr)[:U]
-  Ur=colspace(Xr,method=method,reqrank=maxrank,atol=atol,rtol=rtol)
-  B=kron(Ur',Ul')*Ut
-  #B=krontv(Ur',Ul',Ut)
-  #reshape(B,(size(Ur,2),size(Ul,2),size(Ut,2)))
-  trten2ten(B,size(Ul,2),size(Ur,2))
-
-
+  H=htensor(T,B,U)
 end
 
 """
@@ -381,7 +467,7 @@ function trten2mat{T<:Number}(B::Array{T,3})
 end
 function trten2mat(B::TensorCell)
   I=length(B)
-  @assert([ndims(B[i])==3 for i=1:I],"Transfer tensors should be tensors of order 3.")
+  @assert(any([ndims(B[i])==3 for i=1:I]),"Transfer tensors should be tensors of order 3.")
   Bmat=MatrixCell(I)
   for i=1:I
     (r1,r2,r3)=size(B[i])
@@ -411,6 +497,9 @@ function trten2ten(B::MatrixCell,r1::Vector{Int},r2::Vector{Int})
     Bten[i]=reshape(B[i],r1[i],r2[i],r3)
   end
   Bten
+end
+function trten2ten{T<:Number}(B::Matrix{T})
+  reshape(B,size(B,1),size(B,2),1)
 end
 
 #htensor times matrix (n-mode product). **Documentation in tensor.jl.
@@ -482,6 +571,10 @@ ttv{T<:Number,D<:Integer}(X::htensor,V::Array{Vector{T}},modes::Vector{D})=ttv(X
 ttv{T<:Number,D<:Integer}(X::htensor,V::Array{Vector{T}},modes::Range{D})=ttv(X,VectorCell(V),modes)
 ttv{T<:Number}(X::htensor,V::Array{Vector{T}})=ttv(X,VectorCell(V))
 ttv{T<:Number}(X::htensor,V::Array{Vector{T}},n::Integer)=ttv(X,VectorCell(V),n)
+
+#**Documentation in ttensor.jl.
+uminus(X::htensor)=mtimes(-1,X)
+-(X::htensor)=uminus(X)
 
 #Frobenius norm of a htensor. **Documentation in Base.
 function vecnorm(X::htensor;orth=true)
