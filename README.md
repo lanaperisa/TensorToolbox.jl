@@ -10,7 +10,7 @@ Julia package for tensors. Includes functionality for
 
 Follows the functionality of MATLAB [Tensor toolbox](http://www.sandia.gov/~tgkolda/TensorToolbox/index-2.6.html) and [Hierarchical Tucker Toolbox](https://anchp.epfl.ch/htucker).
 
-Additionally it contains algorithms from the paper [Recompression of Hadamard Products
+Additionally, it contains algorithms from the paper [Recompression of Hadamard Products
 of Tensors in Tucker Format](http://sma.epfl.ch/~anchpcommon/publications/ttensors_pp.pdf) by D. Kressner and L. Periša.
 
 ## Basics
