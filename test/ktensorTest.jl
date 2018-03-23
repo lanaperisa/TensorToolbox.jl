@@ -129,7 +129,7 @@ err=vecnorm(full(X)-full(Z))
 println("vecnorm(full(X)-full(Z)) = ",err)
 @test err ≈ 0 atol=1e-10
 fixsigns!(X)
-@test vecnorm(X-Xcopy) ≈ 0 atol=1e-10
+@test vecnorm(X-Xcopy) ≈ 0 atol=1e-8
 
 println("...Testing functions ttm and ttv.")
 M=MatrixCell(2)
