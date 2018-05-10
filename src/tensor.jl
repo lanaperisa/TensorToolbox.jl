@@ -6,15 +6,18 @@ export squeeze, sthosvd, tenmat, tkron, ttm, ttt, ttv
 
 Create block diagonal tensor where tensors X and Y are block elements. If X and Y are matrices, equal to blkdiag for sparse matrices.
 """
-function blockdiag{T1<:Number,T2<:Number}(X1::Array{T1},X2::Array{T2})
+function blockdiag{T1<:Number,T2<:Number,N}(X1::Array{T1,N},X2::Array{T2,N})
   sz=tuple([size(X1)...]+[size(X2)...]...)
-  Xd=zeros(sz) #initialize core tensor
-  I1=indicesmat(X1,zeros([size(X1)...]))
-  I2=indicesmat(X2,[size(X1)...])
-  idx1=indicesmat2vec(I1,size(Xd))
-  idx2=indicesmat2vec(I2,size(Xd))
-  Xd[idx1]=vec(X1) #first diagonal block
-  Xd[idx2]=vec(X2) #second diagonal block
+  Xd=zeros(sz)
+  R1=CartesianRange(size(X1))
+  I1=last(R1)
+  R2=CartesianRange(size(X2))
+  for I in R1
+    Xd[I]=X1[I]
+  end
+  for I in R2
+    Xd[I1+I]=X2[I]
+  end
   Xd
 end
 
@@ -95,28 +98,22 @@ end
 Create a diagonal tensor for a given vector of diagonal elements. Generalization of diagm.
 """
 function diagt{T<:Number}(v::Vector{T})
-    N=length(v)
-    dims=repmat([N],N)
-    I=zeros(tuple(dims...))
-    diagt(I,v,dims)
-end
-function diagt{T<:Number,D<:Integer}(v::Vector{T},dims::Vector{D})
-    I=zeros(tuple(dims...))
-    diagt(I,v,dims)
-end
-@generated function diagt{T1<:Number,T2<:Number,D<:Integer,N}(I::Array{T1,N},v::Vector{T2},dims::Vector{D})
-  quote
-      @assert(length(v)==minimum(dims),"Dimension mismatch.")
-      n=1
-      @nloops $N i I begin
-	 	    ind = [(@ntuple $N i)...]
-        if length(unique(ind))==1
-            I[ind...]=v[n]
-            n+=1;
-        end
-	  end
-	  I
+  N=length(v)
+  sz=tuple(repmat([N],N,1)[:]...)
+  D=zeros(sz)
+  R=CartesianRange(sz)
+  I=first(R)
+  for i=1:N
+    D[I]=v[i]
+    I=I+1
   end
+  D
+end
+
+function diagt{T<:Number,D<:Integer}(v::Vector{T},dims::Vector{D})
+  Dt=diagt(v)
+  sz=dims-[size(Dt)...]
+  blockdiag(Dt,zeros(sz...))
 end
 
 """
@@ -357,30 +354,30 @@ mttkrp{T1<:Number,T2<:Number,N}(X::Array{T1,N},M::Array{Matrix{T2}},n::Integer)=
 Identity tensor of a given dimension. Generalization of eye.
 """
 function neye{D<:Integer}(dims::Vector{D})
-    I=zeros(tuple(dims...))
-    neye(I,dims)
-end
-function neye(dims::Integer;order=0)
-  @assert(order>0,"Wrong input.")
-  neye(repmat([dims],order,1)[:])
+  dims=tuple(dims...)
+  A=zeros(dims)
+  R=CartesianRange(dims)
+  I=first(R)
+  Iend=last(R)
+  while I<=Iend
+      A[I]=1
+      I=I+1
+  end
+  A
 end
 function neye(d1,d2...)
+  if isempty(d2)
+    return neye([d1...])
+  end
   dims=[d1]
   for d in d2
-		push!(dims,d)
-	end
-	neye(dims)
-end
-@generated function neye{T<:Number,D<:Integer,N}(I::Array{T,N},dims::Vector{D})
-  quote
-  	@nloops $N i I begin
-	 	ind = [(@ntuple $N i)...]
-    if length(unique(ind))==1
-         I[ind...]=1
-    end
-	end
-	I
+    push!(dims,d)
   end
+  neye(dims)
+end
+function neye(d::Integer;order=0)
+  @assert(order>0,"Wrong input.")
+  neye(repmat([d],order,1)[:])
 end
 
 """
@@ -509,21 +506,24 @@ end
 
 Kronecker product of two tensors X and Y. Direct generalization of Kronecker product of matrices.
 """
-function tkron{T1<:Number,T2<:Number,N1,N2}(X1::Array{T1,N1},X2::Array{T2,N2})
-  if N1<3 && N2<3
-    kron(X1,X2)
-  else
-    core1sz=[size(X1)...]
-	  core2sz=[size(X2)...]
-	  S=shiftsmat(X1,core2sz) #matrix of shifts for indices of blocks of Xk
-	  Xk=zeros(tuple(core1sz.*core2sz...)) #initalize solution
-	  for i=1:prod(core1sz)
-		  I=indicesmat(X2,[S[i,:]...]) #matrix of shifted indices of X2
-		  idx=indicesmat2vec(I,size(Xk))
-		  Xk[idx]=X1[i]*vec(X2)
-	  end
-    Xk
+function tkron{T1<:Number,T2<:Number,N}(X1::Array{T1,N},X2::Array{T2,N})
+  if N<3
+    return kron(X1,X2)
   end
+  s1=size(X1)
+  s2=size(X2)
+  Xk=zeros(s1.*s2)
+  R1=CartesianRange(s1)
+  R2=CartesianRange(s2)
+  I=last(R2)
+  i=0
+  for I1 in R1
+    for I2 in R2
+      Xk[I2+(I1-1).*I]=X1[I1]*X2[I2]
+    end
+    i+=1
+  end
+  Xk
 end
 
 """

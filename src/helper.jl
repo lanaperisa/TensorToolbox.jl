@@ -1,6 +1,4 @@
-using Base.Cartesian
-
-#export check_vector_input, indicesmat2vec, indicesmat, shiftsmat
+#export check_vector_input
 export colspace, khatrirao, krontkron, kron, krontv, krtv, tkrtv, lanczos, lanczos_tridiag, randsvd
 export VectorCell, MatrixCell, TensorCell
 
@@ -22,6 +20,12 @@ const MatrixCell = Array{Matrix,1}
 Cell of multidimensional arrays of length N.
 """
 const TensorCell = Array{Array,1}
+
+function Base.broadcast{N}(.*,I1::CartesianIndex{N},I2::CartesianIndex{N})
+  prod=zeros(Int,N)
+  [prod[n]=I1[n]*I2[n] for n=1:N]
+  CartesianIndex{N}(tuple(prod...))
+end
 
 """
     check_vector_input(input,dim,default_value)
@@ -73,48 +77,6 @@ function colspace{T<:Number}(X::Matrix{T};method="lapack",maxrank=0,atol=1e-8,rt
   rtol != 0 ? tol=rtol*S[1] : tol=atol
   I=find(x-> x>tol ? true : false,S)
   U[:,I]
-end
-
-"""
-    indicesmat2vec(M,sz)
-
-For creating block diagonal tensors. Transforms matrix of multi-indices into a vector of linear indices.
-"""
-function indicesmat2vec{D<:Integer}(I::Matrix{D},sz::Tuple)
-	mult = [1 cumprod([sz[1:end-1]...])']
-	(I - 1) * mult' + 1
-end
-
-"""
-    indicesmat(A,shift)
-
-For creating block diagonal tensors. Creates a matrix of all multi-indices of a tensor shifted by a vector - each row of a matrix is one multi-index.
-"""
-@generated function indicesmat{T<:Number,D<:Integer,N}(A::Array{T,N},shift::Vector{D})
-  quote
-	I=zeros(D,0,N)
-	@nloops $N i A begin
-	   	ind = [(@ntuple $N i)...]
-   		I=vcat(I,(ind+shift)')
-	end
-	I
-  end
-end
-
-""""
-    shiftsmat(A,blsize)
-
-For creating block diagonal tensors. Creates a matrix of all shifts for element-wise multiplication with block sizes defined in blsize - each row of a matrix is one shift vector.
-"""
-@generated function shiftsmat{T<:Number,D<:Integer,N}(A::Array{T,N},blsize::Vector{D})
-  quote
-    I=zeros(D,0,N)
-    @nloops $N i A begin
-        in = ([(@ntuple $N i)...]-ones([size(A)...])).*blsize
-        I=vcat(I,in') #'
-    end
-    I
-    end
 end
 
 """
@@ -425,4 +387,3 @@ function randsvd{N<:Number}(A::Matrix{N};tol=1e-8,maxit=1000,reqrank=0,r=10,p=10
   end
   U,S
 end
-
