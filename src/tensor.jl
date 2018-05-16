@@ -519,7 +519,7 @@ function tkron{T1<:Number,T2<:Number,N}(X1::Array{T1,N},X2::Array{T2,N})
   i=0
   for I1 in R1
     for I2 in R2
-      Xk[I2+(I1-1).*I]=X1[I1]*X2[I2]
+      Xk[I2+(I1-1*one(I1)).*I]=X1[I1]*X2[I2]
     end
     i+=1
   end

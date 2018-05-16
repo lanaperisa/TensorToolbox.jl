@@ -1,5 +1,5 @@
 #export check_vector_input
-export colspace, khatrirao, krontkron, kron, krontv, krtv, tkrtv, lanczos, lanczos_tridiag, randsvd
+export .*, colspace, khatrirao, krontkron, kron, krontv, krtv, tkrtv, lanczos, lanczos_tridiag, randsvd
 export VectorCell, MatrixCell, TensorCell
 
 """
