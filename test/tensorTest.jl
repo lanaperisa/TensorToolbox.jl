@@ -1,5 +1,5 @@
 using TensorToolbox
-using Base.Test
+using Test
 
 println("\n\n**** Testing tensor.jl")
 

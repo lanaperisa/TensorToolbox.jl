@@ -15,7 +15,7 @@ Hierarchical Tucker tensor.
 - `fmat::MatrixCell`: Frame matrices. One for each leaf of the tree.
 For htensor X, X.isorth=true if frame matrices are othonormal.
 """
-type htensor#{T<:Number}
+mutable struct htensor#{T<:Number}
 	tree::dimtree
 	trten::TensorCell
   fmat::MatrixCell
@@ -42,8 +42,8 @@ function htensor(tree::dimtree,trten::TensorCell,mat...)
 	htensor(tree,trten,fmat,true)
 end
 #If array of matrices and tensors aren't defined as TensorCell and MatrixCell, but as M=[M1,M2,...,Mn]:
-htensor{T1<:Number,T2<:Number}(tree::dimtree,trten::Array{Array{T1,3}},fmat::Array{Matrix{T2}},isorth::Bool)=htensor(tree,TensorCell(trten),MatrixCell(fmat),isorth)
-htensor{T1<:Number,T2<:Number}(tree::dimtree,trten::Array{Array{T1,3}},fmat::Array{Matrix{T2}})=htensor(tree,TensorCell(trten),MatrixCell(fmat),true)
+htensor(tree::dimtree,trten::Array{Array{T1,3}},fmat::Array{Matrix{T2}},isorth::Bool) where {T1<:Number,T2<:Number}=htensor(tree,TensorCell(trten),MatrixCell(fmat),isorth)
+htensor(tree::dimtree,trten::Array{Array{T1,3}},fmat::Array{Matrix{T2}}) where {T1<:Number,T2<:Number}=htensor(tree,TensorCell(trten),MatrixCell(fmat),true)
 
 """
     randhtensor(I::Vector,R::Vector)
@@ -51,7 +51,7 @@ htensor{T1<:Number,T2<:Number}(tree::dimtree,trten::Array{Array{T1,3}},fmat::Arr
 
 Create random htensor of size I, hierarchical rank R and balanced tree T. If T not specified use balanced tree.
 """
-function randhtensor{D<:Integer}(sz::Vector{D},rnk::Vector{D},T::dimtree)
+function randhtensor(sz::Vector{D},rnk::Vector{D},T::dimtree) where {D<:Integer}
   N=length(sz)
   @assert(length(rnk)==non(T),"Size and rank dimension mismatch.")
   I=length(T.internal_nodes) #number of internal nodes
@@ -65,11 +65,11 @@ function randhtensor{D<:Integer}(sz::Vector{D},rnk::Vector{D},T::dimtree)
   end
   htensor(T,cmps[T.internal_nodes],MatrixCell(cmps[T.leaves]))
 end
-function randhtensor{D<:Integer}(sz::Vector{D},rnk::Vector{D})
+function randhtensor(sz::Vector{D},rnk::Vector{D}) where {D<:Integer}
     T=dimtree(length(sz))
     randhtensor(sz,rnk,T)
 end
-function randhtensor{D<:Integer}(sz::Vector{D},T::dimtree)
+function randhtensor(sz::Vector{D},T::dimtree) where {D<:Integer}
   N=length(sz)
   rnk=ones(Int,non(T))
   for l in T.leaves
@@ -82,7 +82,7 @@ function randhtensor{D<:Integer}(sz::Vector{D},T::dimtree)
   end
   randhtensor(sz,rnk)
 end
-function randhtensor{D<:Integer}(sz::Vector{D})
+function randhtensor(sz::Vector{D}) where {D<:Integer}
   T=dimtree(length(sz))
   randhtensor(sz,T)
 end
@@ -182,7 +182,7 @@ end
 
 Truncate full tensor X into a htensor for a given tree. If tree not specified use balanced tree.
 """
-function htrunc{T<:Number,N}(X::Array{T,N},tree::dimtree;method="lapack",maxrank=[],atol=1e-8,rtol=0)
+function htrunc(X::Array{T,N},tree::dimtree;method="lapack",maxrank=[],atol=1e-8,rtol=0) where {T<:Number,N}
   @assert(N==length(tree.leaves),"Dimension mismatch.")
   maxrank=check_vector_input(maxrank,2*N-1,10);
   I=length(tree.internal_nodes)
@@ -211,7 +211,7 @@ function htrunc{T<:Number,N}(X::Array{T,N},tree::dimtree;method="lapack",maxrank
   end
   htensor(tree,B,U)
 end
-htrunc{T<:Number,N}(X::Array{T,N};method="lapack",maxrank=[],atol=1e-8,rtol=0)=htrunc(X,dimtree(ndims(X)),method=method,maxrank=maxrank,atol=atol,rtol=rtol)
+htrunc(X::Array{T,N};method="lapack",maxrank=[],atol=1e-8,rtol=0) where {T<:Number,N}=htrunc(X,dimtree(ndims(X)),method=method,maxrank=maxrank,atol=atol,rtol=rtol)
 
 #Inner product of two htensors. **Documentation in tensor.jl.
 function innerprod(X1::htensor,X2::htensor)
@@ -250,8 +250,8 @@ function mtimes(α::Number,X::htensor)
   B[1]=α*B[1]
 	htensor(X.tree,B,X.fmat)
 end
-*{T<:Number}(α::T,X::htensor)=mtimes(α,X)
-*{T<:Number}(X::htensor,α::T)=*(α,X)
+*(α::T,X::htensor) where {T<:Number}=mtimes(α,X)
+*(X::htensor,α::T) where {T<:Number}=*(α,X)
 
 #Number of modes of a htensor. **Documentation in Base.
 function ndims(X::htensor)
@@ -461,7 +461,7 @@ end
 
 Transfer tensor to matrix. If transfer tensor is given as a tensor of order 3 and size `(r1,r2,r3)`, reshape it into a matrix of size `(r1r2,r3)`.
 """
-function trten2mat{T<:Number}(B::Array{T,3})
+function trten2mat(B::Array{T,3}) where {T<:Number}
   (r1,r2,r3)=size(B)
   reshape(B,r1*r2,r3)
 end
@@ -482,12 +482,12 @@ end
 
 Transfer tensor to tensor. If transfer tensor is given as a matrix, reshape it into a tensor of order 3 and size r1×r2×r3, where `r3=size(B,2)`.
 """
-function trten2ten{T<:Number}(B::Matrix{T},r1::Integer,r2::Integer)
+function trten2ten(B::Matrix{T},r1::Integer,r2::Integer) where {T<:Number}
   @assert(r1*r2==size(B,1),"Dimension mismatch.")
   r3=size(B,2)
   reshape(B,r1,r2,r3)
 end
-trten2ten{T<:Number}(B::Vector{T},r1::Integer,r2::Integer)=trten2ten(B[:,:],r1,r2)
+trten2ten(B::Vector{T},r1::Integer,r2::Integer) where {T<:Number}=trten2ten(B[:,:],r1,r2)
 function trten2ten(B::MatrixCell,r1::Vector{Int},r2::Vector{Int})
   I=length(B)
   @assert([r1[i]*r2[i]==size(B[i],1) for i=1:I],"Dimension mismatch.")
@@ -498,13 +498,13 @@ function trten2ten(B::MatrixCell,r1::Vector{Int},r2::Vector{Int})
   end
   Bten
 end
-function trten2ten{T<:Number}(B::Matrix{T})
+function trten2ten(B::Matrix{T}) where {T<:Number}
   reshape(B,size(B,1),size(B,2),1)
 end
 
 #htensor times matrix (n-mode product). **Documentation in tensor.jl.
 #t='t' transposes matrices
-function ttm{D<:Integer}(X::htensor,M::MatrixCell,modes::Vector{D},t='n')
+function ttm(X::htensor,M::MatrixCell,modes::Vector{D},t='n') where {D<:Integer}
   if t=='t'
 	 M=vec(M')
 	end
@@ -519,8 +519,8 @@ function ttm{D<:Integer}(X::htensor,M::MatrixCell,modes::Vector{D},t='n')
   end
     htensor(X.tree,X.trten,U)
 end
-ttm{D<:Integer}(X::htensor,M::MatrixCell,modes::Range{D},t='n')=ttm(X,M,collect(modes),t)
-ttm{T<:Number}(X::htensor,M::Matrix{T},n::Integer,t='n')=ttm(X,[M],[n],t)
+ttm(X::htensor,M::MatrixCell,modes::AbstractRange{D},t='n') where {D<:Integer}=ttm(X,M,collect(modes),t)
+ttm(X::htensor,M::Matrix{T},n::Integer,t='n') where {T<:Number}=ttm(X,[M],[n],t)
 ttm(X::htensor,M::MatrixCell,t::Char)=ttm(X,M,1:length(M),t)
 ttm(X::htensor,M::MatrixCell)=ttm(X,M,1:length(M))
 function ttm(X::htensor,M::MatrixCell,n::Integer,t='n')
@@ -532,15 +532,15 @@ function ttm(X::htensor,M::MatrixCell,n::Integer,t='n')
 	end
 end
 #If array of matrices isn't defined as MatrixCell, but as M=[M1,M2,...,Mn]:
-ttm{T<:Number,D<:Integer}(X::htensor,M::Array{Matrix{T}},modes::Vector{D},t='n')=ttm(X,MatrixCell(M),modes,t)
-ttm{T<:Number,D<:Integer}(X::htensor,M::Array{Matrix{T}},modes::Range{D},t='n')=ttm(X,MatrixCell(M),modes,t)
-ttm{T<:Number}(X::htensor,M::Array{Matrix{T}},t::Char)=ttm(X,MatrixCell(M),t)
-ttm{T<:Number}(X::htensor,M::Array{Matrix{T}})=ttm(X,MatrixCell(M))
-ttm{T<:Number}(X::htensor,M::Array{Matrix{T}},n::Integer,t='n')=ttm(X,MatrixCell(M),n,t)
+ttm(X::htensor,M::Array{Matrix{T}},modes::Vector{D},t='n') where {T<:Number,D<:Integer}=ttm(X,MatrixCell(M),modes,t)
+ttm(X::htensor,M::Array{Matrix{T}},modes::AbstractRange{D},t='n') where {T<:Number,D<:Integer}=ttm(X,MatrixCell(M),modes,t)
+ttm(X::htensor,M::Array{Matrix{T}},t::Char) where {T<:Number}=ttm(X,MatrixCell(M),t)
+ttm(X::htensor,M::Array{Matrix{T}}) where {T<:Number}=ttm(X,MatrixCell(M))
+ttm(X::htensor,M::Array{Matrix{T}},n::Integer,t='n') where {T<:Number}=ttm(X,MatrixCell(M),n,t)
 
 #htensor times vector (n-mode product). **Documentation in tensor.jl.
 #t='t' transposes matrices
-function ttv{D<:Integer}(X::htensor,V::VectorCell,modes::Vector{D})
+function ttv(X::htensor,V::VectorCell,modes::Vector{D}) where {D<:Integer}
   N=ndims(X)
   remmodes=setdiff(1:N,modes)
   U=deepcopy(X.fmat)
@@ -553,8 +553,8 @@ function ttv{D<:Integer}(X::htensor,V::VectorCell,modes::Vector{D})
   #reshape(htensor(X.tree,X.trten,U),tuple(sz))
   htensor(X.tree,X.trten,U)
 end
-ttv{T<:Number}(X::htensor,v::Vector{T},n::Integer)=ttv(X,Vector[v],[n])
-ttv{D<:Integer}(X::htensor,V::VectorCell,modes::Range{D})=ttv(X,V,collect(modes))
+ttv(X::htensor,v::Vector{T},n::Integer) where {T<:Number}=ttv(X,Vector[v],[n])
+ttv(X::htensor,V::VectorCell,modes::AbstractRange{D}) where {D<:Integer}=ttv(X,V,collect(modes))
 ttv(X::htensor,V::VectorCell)=ttv(X,V,1:length(V))
 function ttv(X::htensor,V::VectorCell,n::Integer)
 	if n>0
@@ -565,10 +565,10 @@ function ttv(X::htensor,V::VectorCell,n::Integer)
 	end
 end
 #If array of vectors isn't defined as VectorCell, but as V=[v1,v2,...,vn]:
-ttv{T<:Number,D<:Integer}(X::htensor,V::Array{Vector{T}},modes::Vector{D})=ttv(X,VectorCell(V),modes)
-ttv{T<:Number,D<:Integer}(X::htensor,V::Array{Vector{T}},modes::Range{D})=ttv(X,VectorCell(V),modes)
-ttv{T<:Number}(X::htensor,V::Array{Vector{T}})=ttv(X,VectorCell(V),1:length(V))
-ttv{T<:Number}(X::htensor,V::Array{Vector{T}},n::Integer)=ttv(X,VectorCell(V),n)
+ttv(X::htensor,V::Array{Vector{T}},modes::Vector{D}) where {T<:Number,D<:Integer}=ttv(X,VectorCell(V),modes)
+ttv(X::htensor,V::Array{Vector{T}},modes::AbstractRange{D}) where {T<:Number,D<:Integer}=ttv(X,VectorCell(V),modes)
+ttv(X::htensor,V::Array{Vector{T}}) where {T<:Number}=ttv(X,VectorCell(V),1:length(V))
+ttv(X::htensor,V::Array{Vector{T}},n::Integer) where {T<:Number}=ttv(X,VectorCell(V),n)
 
 #**Documentation in ttensor.jl.
 uminus(X::htensor)=mtimes(-1,X)

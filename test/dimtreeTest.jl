@@ -1,5 +1,4 @@
-using TensorToolbox
-using Base.Test
+using TensorToolbox, Test
 
 println("\n\n****Testing dimtree.jl")
 

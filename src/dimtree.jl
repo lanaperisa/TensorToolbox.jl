@@ -9,7 +9,7 @@ Dimension tree. Create from:
 - a vector of leaves (and a vector of internal nodes),
 - an order of a tensor N and a type treetype of a dimtree. Default: treetype="balanced".
 """
-type dimtree
+mutable struct dimtree
   leaves::Vector{Int}
   internal_nodes::Vector{Int}
   function dimtree(leaves::Vector{Int},internal_nodes::Vector{Int})
