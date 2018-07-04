@@ -5,7 +5,7 @@
 Julia package for tensors. Includes functionality for
 - dense tensors, 
 - tensors in Tucker format,
-- tensors in Kruckal (CP) format,
+- tensors in Kruskal (CP) format,
 - tensors in Hierarchical Tucker format. 
 
 Follows the functionality of MATLAB [Tensor toolbox](http://www.sandia.gov/~tgkolda/TensorToolbox/index-2.6.html) and [Hierarchical Tucker Toolbox](https://anchp.epfl.ch/htucker).
