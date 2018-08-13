@@ -16,7 +16,7 @@ function blockdiag(X1::Array{T1,N},X2::Array{T2,N}) where {T1<:Number, T2<:Numbe
     Xd[In]=X1[In]
   end
   for In in R2
-    Xd[I1+I]=X2[In]
+    Xd[I1+In]=X2[In]
   end
   Xd
 end
