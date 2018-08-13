@@ -49,7 +49,7 @@ function randttensorAbstractRange(sz::Vector{D},R::Vector{D}) where {D<:Integer}
   fmat=Matrix[randn(sz[n],R[n]) for n=1:length(sz)] #create random factor matrices
   ttensor(cten,fmat)
 end
-randttensor(sz::Integer,R::Integer,N::Integer)=randttensor(repmat([sz],N),repmat([R],N));
+randttensor(sz::Integer,R::Integer,N::Integer)=randttensor(repeat([sz],N),repeat([R],N));
 #For input defined as tuples or nx1 matrices - ranttensor(([I,I,I],[R,R,R]))
 function randttensor(arg...)
   randttensor([arg[1]...],[arg[2]...])

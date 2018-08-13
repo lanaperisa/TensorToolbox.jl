@@ -35,12 +35,12 @@ Check whether input vector is of appropriate size or if input is number create v
 function check_vector_input(input,dim::Integer,default_value::Number)
   if length(input)>0
      if isa(input,Number)
-        input=repmat([input],dim)
+        input=repeat([input],dim)
     else
       @assert(dim==length(input),"Dimensions mismatch.")
     end
   else #fixed-precision problem
-    input=repmat([default_value],dim)
+    input=repeat([default_value],dim)
   end
   input
 end

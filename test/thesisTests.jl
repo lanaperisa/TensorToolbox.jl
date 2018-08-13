@@ -138,9 +138,9 @@ function errortest{D<:Integer}(R::Integer,osp::Vector{D};f=1,create_plot=0,dir="
       end
     end
 
-    op=sort(vec(repmat(osp,nmbr,1)));
-    methods=vec(repmat(algs,L,1));
-    colors=vec(repmat(["HOSVD1","HOVSD2","HOSVD3","HOSVD4"][algs],L,1))
+    op=sort(vec(repeat(osp,nmbr,1)));
+    methods=vec(repeat(algs,L,1));
+    colors=vec(repeat(["HOSVD1","HOVSD2","HOSVD3","HOSVD4"][algs],L,1))
 
       p=plot(xgroup=op, x=methods, y=errors, color=colors,
           Guide.colorkey("Method"),

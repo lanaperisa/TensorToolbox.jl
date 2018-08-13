@@ -50,7 +50,7 @@ function randktensor(sz::Vector{D},R::Integer) where {D<:Integer}
   fmat=Matrix[randn(sz[n],R) for n=1:length(sz)] #create random factor matrices
   ktensor(fmat)
 end
-randktensor(sz::Number,R::Number,N::Integer)=randktensor(repmat([sz],N),R)
+randktensor(sz::Number,R::Number,N::Integer)=randktensor(repeat([sz],N),R)
 #For input defined as tuples or nx1 matrices - ranttensor(([I,I,I],[R,R,R]))
 
 """
@@ -72,7 +72,7 @@ function arrange(X::ktensor{T},mode=-1) where {T<:Number}
     [fmat[n]=Xnorm.fmat[n][:,p] for n=1:N]
     #Absorb the weight into one factor, if requested
     if mode>0
-        fmat[mode]=fmat[mode].*repmat(lambda',size(X,mode),1) #fmat[mode]*diagm(lambda)
+        fmat[mode]=fmat[mode].*repeat(lambda',size(X,mode),1) #fmat[mode]*diagm(lambda)
         lambda = ones(lambda)
     end
     ktensor(lambda,fmat)
@@ -105,7 +105,7 @@ function arrange!(X::ktensor{T},mode=-1) where {T<:Number}
     [X.fmat[n]=X.fmat[n][:,p] for n=1:N]
     #Absorb the weight into one factor, if requested
     if mode>0
-        X.fmat[mode]=X.fmat[mode].*repmat(X.lambda',size(X,mode),1) #X.fmat[mode]*diagm(X.lambda)
+        X.fmat[mode]=X.fmat[mode].*repeat(X.lambda',size(X,mode),1) #X.fmat[mode]*diagm(X.lambda)
         X.lambda = ones(X.lambda)
     end
     X
@@ -297,7 +297,7 @@ function mttkrp(X::ktensor{T},M::MatrixCell,n::Integer) where {T<:Number}
   @assert(length(M) == N,"Wrong number of matrices")
   n==1 ? R=size(M[2],2) : R=size(M[1],2)
   modes=setdiff(1:N,n)
-  W=repmat(X.lambda,1,R) #matrix of weights
+  W=repeat(X.lambda,1,R) #matrix of weights
   for m in modes
     W=W.*(X.fmat[m]'*M[m])
   end
@@ -365,10 +365,10 @@ function normalize(X::ktensor{T},mode=-1;normtype=2,factor=-1) where {T<:Number}
   end
   if mode == 0
     d=(lambda').^(1/N)
-   [fmat[n]=fmat[n].*repmat(d,size(X,n),1) for n=1:N] #fmat[n]*diagm(d)
+   [fmat[n]=fmat[n].*repeat(d,size(X,n),1) for n=1:N] #fmat[n]*diagm(d)
     lambda = ones(lambda)
   elseif mode > 0
-    fmat[mode] = fmat[mode].*repmat(lambda',size(X,mode),1) #fmat[mode]*diagm(lambda)
+    fmat[mode] = fmat[mode].*repeat(lambda',size(X,mode),1) #fmat[mode]*diagm(lambda)
     lambda = ones(lambda)
   elseif mode==-2
     p = sortperm(lambda,rev=true)
@@ -421,10 +421,10 @@ function normalize!(X::ktensor{T},mode=-1;normtype=2,factor=-1) where {T<:Number
   end
   if mode == 0
      d=(X.lambda').^(1/N)
-     [X.fmat[n]=X.fmat[n].*repmat(d,size(X,n),1) for n=1:N] #X.fmat[n]*diagm(d)
+     [X.fmat[n]=X.fmat[n].*repeat(d,size(X,n),1) for n=1:N] #X.fmat[n]*diagm(d)
      X.lambda = ones(X.lambda)
   elseif mode > 0
-    X.fmat[mode] = X.fmat[mode].*repmat(X.lambda',size(X,mode),1) #X.fmat[n]*diagm(X.lambda)
+    X.fmat[mode] = X.fmat[mode].*repeat(X.lambda',size(X,mode),1) #X.fmat[n]*diagm(X.lambda)
     X.lambda = ones(X.lambda)
   elseif mode==-2
     p = sortperm(X.lambda,rev=true)
@@ -531,7 +531,7 @@ function tocell(X::ktensor{T}) where {T<:Number}
     d = (X.lambda').^(1/N)
     fmat=MatrixCell(N)
     for n = 1:N
-        fmat[n] = X.fmat[n].*repmat(d,size(X.fmat[n],1),1)
+        fmat[n] = X.fmat[n].*repeat(d,size(X.fmat[n],1),1)
     end
     fmat
 end

@@ -9,9 +9,9 @@ Create block diagonal tensor where tensors X and Y are block elements. If X and 
 function blockdiag(X1::Array{T1,N},X2::Array{T2,N}) where {T1<:Number, T2<:Number, N}
   sz=tuple([size(X1)...]+[size(X2)...]...)
   Xd=zeros(sz)
-  R1=CartesianRange(size(X1))
+  R1=CartesianIndices(size(X1))
   I1=last(R1)
-  R2=CartesianRange(size(X2))
+  R2=CartesianIndices(size(X2))
   for In in R1
     Xd[In]=X1[In]
   end
@@ -68,14 +68,14 @@ function cp_als(X::Array{T},R::Integer;init="rand",tol=1e-4,maxit=1000,dimorder=
             W=reshape(prod(G[:,:,setdiff(collect(1:N),n)],3),Val{2})
             fmat[n]=fmat[n]/W
             if k == 1
-                lambda = sqrt.(sum(fmat[n].^2,1))' #2-norm
+                lambda = sqrt.(sum(fmat[n].^2,1)) #2-norm
             else
-                lambda = maximum(maximum(abs.(fmat[n]),1),1)' #max-norm
+                lambda = maximum(maximum(abs.(fmat[n]),1),1) #max-norm
             end
             fmat[n] = fmat[n]./lambda'
             G[:,:,n] = fmat[n]'*fmat[n]
         end
-        K=ktensor(vec(lambda),fmat)
+        K=ktensor(lambda[:],fmat)
         if nr==0
             fit=norm(K)^2-2*innerprod(X,K)
         else
@@ -99,9 +99,9 @@ Create a diagonal tensor for a given vector of diagonal elements. Generalization
 """
 function diagt(v::Vector{T}) where {T<:Number}
   N=length(v)
-  sz=tuple(repmat([N],N,1)[:]...)
+  sz=tuple(repeat([N],N,1)[:]...)
   D=zeros(sz)
-  R=CartesianRange(sz)
+  R=CartesianIndices(sz)
   In=first(R)
   for i=1:N
     D[In]=v[i]
@@ -352,12 +352,12 @@ Identity tensor of a given dimension. Generalization of eye.
 function neye(dims::Vector{D}) where {D<:Integer}
   dims=tuple(dims...)
   A=zeros(dims)
-  R=CartesianRange(dims)
+  R=CartesianIndices(dims)
   Ifirst=first(R)
   Iend=last(R)
   while Ifirst<=Iend
       A[Ifirst]=1
-      Ifirst=Ifirst+1
+      Ifirst=Ifirst+1*one(Ifirst)
   end
   A
 end
@@ -373,7 +373,7 @@ function neye(d1,d2...)
 end
 function neye(d::Integer;order=0)
   @assert(order>0,"Wrong input.")
-  neye(repmat([d],order,1)[:])
+  neye(repeat([d],order,1)[:])
 end
 
 """
@@ -509,8 +509,8 @@ function tkron(X1::Array{T1,N},X2::Array{T2,N}) where {T1<:Number,T2<:Number,N}
   s1=size(X1)
   s2=size(X2)
   Xk=zeros(s1.*s2)
-  R1=CartesianRange(s1)
-  R2=CartesianRange(s2)
+  R1=CartesianIndices(s1)
+  R2=CartesianIndices(s2)
   Il=last(R2)
   i=0
   for I1 in R1
