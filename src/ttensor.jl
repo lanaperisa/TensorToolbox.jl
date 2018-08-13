@@ -94,10 +94,10 @@ function cp_als(X::ttensor{T},R::Integer;init="rand",tol=1e-4,maxit=1000,dimorde
         lambda=[]
         for n in dimorder
             fmat[n]=mttkrp(X,fmat,n)
-            W=reshape(prod(G[:,:,setdiff(collect(1:N),n)],3),Val{2})
+            W=reshape(prod(G[:,:,setdiff(collect(1:N),n)],dims=3),Val(2))
             fmat[n]=fmat[n]/W
             if k == 1
-                lambda = sqrt.(sum(fmat[n].^2,1))[:] #2-norm
+                lambda = sqrt.(sum(fmat[n].^2,dims=1))[:] #2-norm
             else
                 lambda = maximum(maximum(abs.(fmat[n]),1),1)[:] #max-norm
             end
