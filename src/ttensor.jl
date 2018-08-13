@@ -10,7 +10,7 @@ export msvdvals, mtimes, mttkrp, ndims, nrank, nvecs, permutedims, plus, randran
 Tensor in Tucker format defined by its core tensor and factor matrices.
 For ttensor X, X.isorth=true if factor matrices are othonormal.
 """
-type ttensor{T<:Number}
+mutable struct ttensor{T<:Number}
 	cten::Array{T}
 	fmat::MatrixCell
 	isorth::Bool
@@ -23,19 +23,19 @@ type ttensor{T<:Number}
 		new(cten,fmat,isorth)
 	end
 end
-ttensor{T}(cten::Array{T},fmat::MatrixCell,isorth::Bool)=ttensor{T}(cten,fmat,isorth)
-ttensor{T}(cten::Array{T},fmat::MatrixCell)=ttensor{T}(cten,fmat,true)
-ttensor{T}(cten::Array{T},mat::Matrix)=ttensor{T}(cten,collect(mat),true)
-function ttensor{T}(cten::Array{T},mat...)
+ttensor(cten::Array{T},fmat::MatrixCell,isorth::Bool) where T=ttensor{T}(cten,fmat,isorth)
+ttensor(cten::Array{T},fmat::MatrixCell) where T=ttensor{T}(cten,fmat,true)
+ttensor(cten::Array{T},mat::Matrix) where T=ttensor{T}(cten,collect(mat),true)
+function ttensor(cten::Array{T},mat...) where T
   fmat=MatrixCell(0)
   for M in mat
 			push!(fmat,M)
 	end
-	ttensor{T}(cten,fmat,true)
+	ttensor(cten,fmat,true)
 end
 #If array of matrices isn't defined as MatrixCell, but as M=[M1,M2,...,Mn]:
-ttensor{T,T1<:Number}(cten::Array{T},fmat::Array{Matrix{T1}},isorth::Bool)=ttensor{T}(cten,MatrixCell(fmat),isorth)
-ttensor{T,T1<:Number}(cten::Array{T},fmat::Array{Matrix{T1}})=ttensor{T}(cten,MatrixCell(fmat),true)
+ttensor(cten::Array{T},fmat::Array{Matrix{T1}},isorth::Bool) where {T,T1<:Number}=ttensor{T}(cten,MatrixCell(fmat),isorth)
+ttensor(cten::Array{T},fmat::Array{Matrix{T1}}) where {T,T1<:Number}=ttensor{T}(cten,MatrixCell(fmat),true)
 
 """
     randttensor(I::Vector,R::Vector)
@@ -43,7 +43,7 @@ ttensor{T,T1<:Number}(cten::Array{T},fmat::Array{Matrix{T1}})=ttensor{T}(cten,Ma
 
 Create random ttensor of size I and multilinear rank R, or of order N and size I × ⋯ × I and mulilinear rank (R,...,R).
 """
-function randttensor{D<:Integer}(I::Vector{D},R::Vector{D})
+function randttensorAbstractRange(I::Vector{D},R::Vector{D}) where {D<:Integer}
   @assert(size(I)==size(R),"Size and rank should be of same length.")
   cten=randn(tuple(R...)) #create radnom core tensor
   fmat=Matrix[randn(I[n],R[n]) for n=1:length(I)] #create random factor matrices
@@ -60,12 +60,12 @@ end
 
 Size of core tensor of a ttensor.
 """
-function coresize{T<:Number}(X::ttensor{T})
+function coresize(X::ttensor{T}) where {T<:Number}
   size(X.cten)
 end
 
 #Compute a CP decomposition with R components of a tensor X. **Documentation in tensor.jl.
-function cp_als{T<:Number}(X::ttensor{T},R::Integer;init="rand",tol=1e-4,maxit=1000,dimorder=[])
+function cp_als(X::ttensor{T},R::Integer;init="rand",tol=1e-4,maxit=1000,dimorder=[]) where {T<:Number}
     N=ndims(X)
     nr=vecnorm(X)
     K=ktensor
@@ -131,7 +131,7 @@ TensorToolbox:
 
 Displays a tensor X of a given name.
 """
-function display{T<:Number}(X::ttensor{T},name="ttensor")
+function display(X::ttensor{T},name="ttensor") where {T<:Number}
   print("Tucker tensor of size ",size(X)," with core tensor of size ",coresize(X))
   if X.isorth == true
     print(" with orthonormal factor matrices")
@@ -155,7 +155,7 @@ TensorToolbox:
 
 Make full tensor out of a decomposed tensor.
 """
-function full{T<:Number}(X::ttensor{T})
+function full(X::ttensor{T}) where {T<:Number}
   ttm(X.cten,X.fmat)
 end
 
@@ -164,7 +164,7 @@ end
 
 Hadamard (element-wise) product of two ttensors. Same as: X.*Y.
 """
-function had{T1<:Number,T2<:Number}(X1::ttensor{T1},X2::ttensor{T2})
+function had(X1::ttensor{T1},X2::ttensor{T2}) where {T1<:Number,T2<:Number}
   @assert(size(X1) == size(X2))
 	fmat=MatrixCell(ndims(X1)) #initilize factor matrix
   n=1
@@ -175,14 +175,14 @@ function had{T1<:Number,T2<:Number}(X1::ttensor{T1},X2::ttensor{T2})
   cten=tkron(X1.cten,X2.cten) #Kronecker product of core tensors
   ttensor(cten,fmat)
 end
-Base.broadcast{T1<:Number,T2<:Number}(.*,X1::ttensor{T1},X2::ttensor{T2}) = had(X1,X2)
+Base.broadcast(.*,X1::ttensor{T1},X2::ttensor{T2}) where {T1<:Number,T2<:Number}= had(X1,X2)
 
 """
     hadcten(X,Y,fmat)
 
 Core tensor of Hadamard product of two ttensors with given factor matrices.
 """
-function hadcten{T1<:Number,T2<:Number}(X1::ttensor{T1},X2::ttensor{T2},fmat::MatrixCell)
+function hadcten(X1::ttensor{T1},X2::ttensor{T2},fmat::MatrixCell) where {T1<:Number,T2<:Number}
   N=ndims(X1);
   C=MatrixCell(N)
   for n=1:N
@@ -190,10 +190,9 @@ function hadcten{T1<:Number,T2<:Number}(X1::ttensor{T1},X2::ttensor{T2},fmat::Ma
   end
   cten=krontm(X1.cten,X2.cten,C)
 end
-hadcten{T1<:Number,T2<:Number,T3<:Number}(X1::ttensor{T1},X2::ttensor{T2},fmat::Array{Matrix{T3}})=hadcten(X1,X2,MatrixCell(fmat))
-
+hadcten(X1::ttensor{T1},X2::ttensor{T2},fmat::Array{Matrix{T3}}) where {T1<:Number,T2<:Number,T3<:Number}=hadcten(X1,X2,MatrixCell(fmat))
 #HOSVD for a ttensor. **Documentation in tensor.jl
-function hosvd{T<:Number}(X::ttensor{T};method="lapack",reqrank=[],eps_abs=[],eps_rel=[])
+function hosvd(X::ttensor{T};method="lapack",reqrank=[],eps_abs=[],eps_rel=[]) where {T<:Number}
 	F=hosvd(X.cten,method=method,reqrank=reqrank,eps_abs=eps_abs,eps_rel=eps_rel)
   fmat=MatrixCell(ndims(X))
   [fmat[n]=X.fmat[n]*F.fmat[n] for n=1:ndims(X)]
@@ -213,7 +212,7 @@ See also: hosvd2, hosvd3, hosvd4.
 - `eps_rel::Number/Vector`: Drop singular values (of mode-n matricization) below eps_rel*sigma_1. Optional.
 - `p::Integer`: Oversampling parameter. Defaul p=10.
 """
-function hosvd1{T1<:Number,T2<:Number}(X1::ttensor{T1},X2::ttensor{T2};method="randsvd",reqrank=[],eps_abs=[],eps_rel=[],p=10)
+function hosvd1(X1::ttensor{T1},X2::ttensor{T2};method="randsvd",reqrank=[],eps_abs=[],eps_rel=[],p=10) where {T1<:Number,T2<:Number}
   Xprod=full(X1).*full(X2);
   hosvd(Xprod,method=method,reqrank=reqrank,eps_abs=eps_abs,eps_rel=eps_rel,p=p)
 end
@@ -231,7 +230,7 @@ See also: hosvd1, hosvd3, hosvd4.
 - `eps_rel::Number/Vector`: Drop singular values (of mode-n matricization) below eps_rel*sigma_1. Optional.
 - `p::Integer`: Oversampling parameter. Defaul p=10.
 """
-function hosvd2{T1<:Number,T2<:Number}(X1::ttensor{T1},X2::ttensor{T2};method="randsvd",reqrank=[],eps_abs=[],eps_rel=[],p=10)
+function hosvd2(X1::ttensor{T1},X2::ttensor{T2};method="randsvd",reqrank=[],eps_abs=[],eps_rel=[],p=10) where {T1<:Number,T2<:Number}
 @assert(size(X1) == size(X2))
   N=ndims(X1)
   Q=MatrixCell(N);R=MatrixCell(N);
@@ -262,7 +261,7 @@ See also: hosvd1, hosvd2, hosvd4.
 - `eps_rel::Number/Vector`: Drop singular values (of mode-n matricization) below eps_rel*sigma_1. Optional.
 - `p::Integer`: Oversampling parameter. Defaul p=10.
 """
-function hosvd3{T1<:Number,T2<:Number}(X1::ttensor{T1},X2::ttensor{T2};method="lanczos",reqrank=[],variant='B',eps_abs=[],eps_rel=[],p=10)
+function hosvd3(X1::ttensor{T1},X2::ttensor{T2};method="lanczos",reqrank=[],variant='B',eps_abs=[],eps_rel=[],p=10) where {T1<:Number,T2<:Number}
  	@assert(size(X1) == size(X2))
   N=ndims(X1)
 	Ahad=MatrixCell(N) #initilize factor matrices
@@ -303,7 +302,7 @@ See also: hosvd1, hosvd2, hosvd3.
 - `eps_rel::Number/Vector`: Drop singular values (of mode-n matricization) below eps_rel*sigma_1. Optional.
 - `p::Integer`: Oversampling parameter. Defaul p=10.
 """
-function hosvd4{T1<:Number,T2<:Number}(X1::ttensor{T1},X2::ttensor{T2};method="lapack",reqrank=[],eps_abs=[],eps_rel=[],p=10)
+function hosvd4(X1::ttensor{T1},X2::ttensor{T2};method="lapack",reqrank=[],eps_abs=[],eps_rel=[],p=10) where {T1<:Number,T2<:Number}
   @assert(size(X1) == size(X2))
   N=ndims(X1)
   reqrank=check_vector_input(reqrank,N,0);
@@ -329,7 +328,7 @@ function hosvd4{T1<:Number,T2<:Number}(X1::ttensor{T1},X2::ttensor{T2};method="l
 end
 
 #Inner product of two ttensors. **Documentation in tensor.jl.
-function innerprod{T1<:Number,T2<:Number}(X1::ttensor{T1},X2::ttensor{T2})
+function innerprod(X1::ttensor{T1},X2::ttensor{T2}) where {T1<:Number,T2<:Number}
 	@assert size(X1) == size(X2)
 	if prod(size(X1.cten)) > prod(size(X2.cten))
 		innerprod(X2,X1)
@@ -348,14 +347,14 @@ end
 
 Two tensors in decomposed format are equal if they have equal components. Same as: X==Y.
 """
-function isequal{T1<:Number,T2<:Number}(X1::ttensor{T1},X2::ttensor{T2})
+function isequal(X1::ttensor{T1},X2::ttensor{T2}) where {T1<:Number,T2<:Number}
   if (X1.cten == X2.cten) && (X1.fmat == X2.fmat)
     true
   else
     false
   end
 end
-=={T1<:Number,T2<:Number}(X1::ttensor{T1},X2::ttensor{T2})=isequal(X1,X2)
+==(X1::ttensor{T1},X2::ttensor{T2}) where {T1<:Number,T2<:Number}=isequal(X1,X2)
 
 """
     lanczos(X,Y,n; <keyword arguments>)
@@ -370,7 +369,7 @@ Works with matrix (X ∗ Y)ₙ(X ∗ Y)ₙᵀ.
 - `maxit`: Maximal number of iterations. Default: 1000.
 - `p::Integer`: Oversampling parameter. Defaul p=10.
 """
-function lanczos{T1<:Number,T2<:Number}(X1::ttensor{T1},X2::ttensor{T2},mode::Integer;reqrank=0,variant='B',tol=1e-8,maxit=1000,p=10)
+function lanczos(X1::ttensor{T1},X2::ttensor{T2},mode::Integer;reqrank=0,variant='B',tol=1e-8,maxit=1000,p=10) where {T1<:Number,T2<:Number}
   @assert(size(X1)==size(X2),"Dimensions mismatch")
   Q,T=lanczos_tridiag(X1,X2,mode,reqrank=reqrank,variant=variant,tol=tol,maxit=maxit,p=p)
   E=eigfact(T,tol,Inf);
@@ -402,7 +401,7 @@ Returns orthonormal Q and symmetric tridiagonal T such that A≈Q*T*Q'.
 - `maxit`: Maximal number of iterations. Default: 1000.
 - `p::Integer`: Oversampling parameter. Defaul p=10.
 """
-function lanczos_tridiag{T1<:Number,T2<:Number}(X1::ttensor{T1},X2::ttensor{T2},mode::Integer;reqrank=0,variant='B',tol=1e-8,maxit=1000,p=10)
+function lanczos_tridiag(X1::ttensor{T1},X2::ttensor{T2},mode::Integer;reqrank=0,variant='B',tol=1e-8,maxit=1000,p=10) where {T1<:Number,T2<:Number}
   I=size(X1)
   m=I[mode]
   n=prod(deleteat!(copy([I...]),mode))
@@ -424,13 +423,14 @@ function lanczos_tridiag{T1<:Number,T2<:Number}(X1::ttensor{T1},X2::ttensor{T2},
     [r=r-Q*(Q'*r) for i=1:3]
     β[k]=norm(r)
     if β[k] < tol
+        K=k
       break
     end
     if k!=K
       Q=[Q r/β[k]]
     end
   end
-  T=SymTridiagonal(α[1:k], β[1:k-1])
+  T=SymTridiagonal(α[1:K], β[1:K-1])
   Q,T
 end
 
@@ -444,7 +444,7 @@ Mode-n matricized Hadamard product of ttensors X and Y times vector v.
 - `t='t'`:  (X ∗ Y)ₙᵀv.
 If v is a matrix, multiply column by column.
 """
-function mhadtv{T1<:Number,T2<:Number,T3<:Number}(X1::ttensor{T1},X2::ttensor{T2},v::Vector{T3},n::Integer,t='b';variant='B')
+function mhadtv(X1::ttensor{T1},X2::ttensor{T2},v::Vector{T3},n::Integer,t='b';variant='B') where {T1<:Number,T2<:Number,T3<:Number}
   @assert(size(X1)==size(X2),"Dimensions mismatch")
   I=size(X1)
   r1=coresize(X1)
@@ -494,7 +494,7 @@ function mhadtv{T1<:Number,T2<:Number,T3<:Number}(X1::ttensor{T1},X2::ttensor{T2
     end
   end
 end
-function mhadtv{T1<:Number,T2<:Number,T3<:Number}(X1::ttensor{T1},X2::ttensor{T2},M::Matrix{T3},n::Integer,t='b';variant='B')
+function mhadtv(X1::ttensor{T1},X2::ttensor{T2},M::Matrix{T3},n::Integer,t='b';variant='B') where {T1<:Number,T2<:Number,T3<:Number}
   @assert(size(X1)==size(X2),"Dimensions mismatch")
     if sort(collect(size(vec(M))))[1]==1
         return mhadtv(X1,X2,vec(M),n,t,variant=variant);
@@ -516,7 +516,7 @@ function mhadtv{T1<:Number,T2<:Number,T3<:Number}(X1::ttensor{T1},X2::ttensor{T2
   Mprod
 end
 
-function mhadtm{T1<:Number,T2<:Number,T3<:Number}(X1::ttensor{T1},X2::ttensor{T2},M::Matrix{T3},n::Integer,t='b';variant='B')
+function mhadtm(X1::ttensor{T1},X2::ttensor{T2},M::Matrix{T3},n::Integer,t='b';variant='B') where {T1<:Number,T2<:Number,T3<:Number}
   warn("Function mhadtm is depricated. Use mhadtv.")
   mhadtm(X1,X2,M,n,t,variant=variant)
 end
@@ -528,17 +528,17 @@ end
 
 Subtraction of two tensors. Same as: X-Y.
 """
-function minus{T1<:Number,T2<:Number}(X1::ttensor{T1},X2::ttensor{T2})
+function minus(X1::ttensor{T1},X2::ttensor{T2}) where {T1<:Number,T2<:Number}
   X1+(-1)*X2
 end
--{T1<:Number,T2<:Number}(X1::ttensor{T1},X2::ttensor{T2})=minus(X1,X2)
+-(X1::ttensor{T1},X2::ttensor{T2}) where {T1<:Number,T2<:Number}=minus(X1,X2)
 
 
 #Multilinear rank of a ttensor. **Documentation in tensor.jl.
-function mrank{T<:Number}(X::ttensor{T})
+function mrank(X::ttensor{T}) where {T<:Number}
   ntuple(n->nrank(X,n),ndims(X))
 end
-function mrank{T<:Number}(X::ttensor{T},tol::Number)
+function mrank(X::ttensor{T},tol::Number) where {T<:Number}
    ntuple(n->nrank(X,n,tol),ndims(X))
 end
 
@@ -547,7 +547,7 @@ end
 
 Singular values of mode-n matricization of a ttensor calculated directly. See also: nvecs.
 """
-function msvdvals{T<:Number}(X::ttensor{T},n::Integer)
+function msvdvals(X::ttensor{T},n::Integer) where {T<:Number}
   if X.isorth != true
     reorth!(X)
   end
@@ -560,14 +560,14 @@ end
 
 Scalar times ttensor. Same as: a*X.
 """
-function mtimes{T<:Number}(α::Number,X::ttensor{T})
+function mtimes(α::Number,X::ttensor{T}) where {T<:Number}
 	ttensor(α*X.cten,X.fmat);
 end
-*{T1<:Number,T2<:Number}(α::T1,X::ttensor{T2})=mtimes(α,X)
-*{T1<:Number,T2<:Number}(X::ttensor{T1},α::T2)=*(α,X)
+*(α::T1,X::ttensor{T2}) where {T1<:Number,T2<:Number}=mtimes(α,X)
+*(X::ttensor{T1},α::T2) where {T1<:Number,T2<:Number}=*(α,X)
 
 #Matricized ttensor times Khatri-Rao product. **Documentation in tensor.jl.
-function mttkrp{T<:Number}(X::ttensor{T},M::MatrixCell,n::Integer)
+function mttkrp(X::ttensor{T},M::MatrixCell,n::Integer) where {T<:Number}
   N=ndims(X)
   @assert(length(M) == N,"Wrong number of matrices.")
   modes=setdiff(1:N,n)
@@ -578,23 +578,23 @@ function mttkrp{T<:Number}(X::ttensor{T},M::MatrixCell,n::Integer)
   Y=mttkrp(X.cten,vec(X.fmat[modes]').*M[modes],n)
   X.fmat[n]*Y
 end
-mttkrp{T1<:Number,T2<:Number}(X::ttensor{T1},M::Array{Matrix{T2}},n::Integer)=mttkrp(X,MatrixCell(M),n)
+mttkrp(X::ttensor{T1},M::Array{Matrix{T2}},n::Integer) where {T1<:Number,T2<:Number}=mttkrp(X,MatrixCell(M),n)
 
 #Number of modes of a ttensor. **Documentation in Base.
-function ndims{T<:Number}(X::ttensor{T})
+function ndims(X::ttensor{T}) where {T<:Number}
 	ndims(X.cten)
 end
 
 #n-rank of a ttensor. **Documentation in tensor.jl.
-function nrank{T<:Number}(X::ttensor{T},n::Integer)
+function nrank(X::ttensor{T},n::Integer) where {T<:Number}
   rank(X.fmat[n])
 end
-function nrank{T<:Number}(X::ttensor{T},n::Integer,tol::Number)
+function nrank(X::ttensor{T},n::Integer,tol::Number) where {T<:Number}
   rank(X.fmat[n],tol)
 end
 
 #Computes the r leading left singular vectors of mode-n matricization of a tensor X. **Documentation in tensor.jl.
-function nvecs{T<:Number}(X::ttensor{T},n::Integer,r=0;flipsign=false)
+function nvecs(X::ttensor{T},n::Integer,r=0;flipsign=false) where {T<:Number}
   if r==0
     r=size(X,n)
   end
@@ -622,7 +622,7 @@ function nvecs{T<:Number}(X::ttensor{T},n::Integer,r=0;flipsign=false)
 end
 
 #Permute dimensions of a ttensor. **Documentation in Base.
-function permutedims{T<:Number,D<:Integer}(X::ttensor{T},perm::Vector{D})
+function permutedims(X::ttensor{T},perm::Vector{D}) where {T<:Number,D<:Integer}
   @assert(collect(1:ndims(X))==sort(perm),"Invalid permutation")
   cten=permutedims(X.cten,perm)
   fmat=X.fmat[perm]
@@ -636,13 +636,13 @@ end
 
 Addition of two tensors. Same as: X+Y.
 """
-function plus{T1<:Number,T2<:Number}(X1::ttensor{T1},X2::ttensor{T2})
+function plus(X1::ttensor{T1},X2::ttensor{T2}) where {T1<:Number,T2<:Number}
 	@assert(size(X1) == size(X2),"Dimension mismatch.")
 	fmat=Matrix[[X1.fmat[n] X2.fmat[n]] for n=1:ndims(X1)] #concatenate factor matrices
   cten=blockdiag(X1.cten,X2.cten)
 	ttensor(cten,fmat)
 end
-+{T1<:Number,T2<:Number}(X1::ttensor{T1},X2::ttensor{T2})=plus(X1,X2)
++(X1::ttensor{T1},X2::ttensor{T2}) where {T1<:Number,T2<:Number}=plus(X1,X2)
 
 """
     randrange(X,Y,n; <keyword arguments>)
@@ -656,8 +656,7 @@ Structure exploiting randomized range approximation of n-mode matricization of H
 - `r`: Number of samples for stopping criterion. Default: r=10.
 - `p::Integer`: Oversampling parameter. Defaul p=10.
 """
-
-function randrange{T1<:Number,T2<:Number}(X1::ttensor{T1},X2::ttensor{T2},mode::Integer;tol=1e-8,maxit=1000,reqrank=0,p=10,r=10)
+function randrange(X1::ttensor{T1},X2::ttensor{T2},mode::Integer;tol=1e-8,maxit=1000,reqrank=0,p=10,r=10) where {T1<:Number,T2<:Number}
   @assert(size(X1) == size(X2))
   N=ndims(X1)
   KR=MatrixCell(N); #transpose Khatri-Rao product of X1.fmat and X2.fmat
@@ -665,7 +664,7 @@ function randrange{T1<:Number,T2<:Number}(X1::ttensor{T1},X2::ttensor{T2},mode::
   randrange(X1.cten,X2.cten,KR,mode,tol=tol,maxit=maxit,reqrank=reqrank,p=p,r=r)
 end
 
-function randrange{T1<:Number,T2<:Number,N}(C1::Array{T1,N},C2::Array{T2,N},KR::MatrixCell,mode::Integer;tol=1e-8,maxit=1000,reqrank=0,p=10,r=10)
+function randrange(C1::Array{T1,N},C2::Array{T2,N},KR::MatrixCell,mode::Integer;tol=1e-8,maxit=1000,reqrank=0,p=10,r=10) where {T1<:Number,T2<:Number,N}
   I=zeros(Int,N)
   [I[n]= size(KR[n],1) for n=1:N]
   m=I[mode]
@@ -711,7 +710,7 @@ function randrange{T1<:Number,T2<:Number,N}(C1::Array{T1,N},C2::Array{T2,N},KR::
   end
   Q
 end
-randrange{T1<:Number,T2<:Number,T3<:Number,N}(C1::Array{T1,N},C2::Array{T2,N},KR::Array{Matrix{T3}},mode::Integer;tol=1e-8,maxit=1000,reqrank=0,p=10,r=10)=randrange(C1,C2,MatrixCell(KR),mode,tol,maxit,reqrank,p,r)
+randrange(C1::Array{T1,N},C2::Array{T2,N},KR::Array{Matrix{T3}},mode::Integer;tol=1e-8,maxit=1000,reqrank=0,p=10,r=10) where {T1<:Number,T2<:Number,T3<:Number,N}=randrange(C1,C2,MatrixCell(KR),mode,tol,maxit,reqrank,p,r)
 
 """
     randsvd(X,Y,n; <keyword arguments>)
@@ -727,7 +726,7 @@ Works with matrix (X ∗ Y)ₙ(X ∗ Y)ₙᵀ.
 - `r`: Number of samples for stopping criterion. Default: r=10.
 - `p::Integer`: Oversampling parameter. Defaul p=10.
 """
-function randsvd{T1<:Number,T2<:Number}(X1::ttensor{T1},X2::ttensor{T2},mode::Integer;variant='B',tol=1e-8,maxit=1000,reqrank=0,p=10,r=10)
+function randsvd(X1::ttensor{T1},X2::ttensor{T2},mode::Integer;variant='B',tol=1e-8,maxit=1000,reqrank=0,p=10,r=10) where {T1<:Number,T2<:Number}
   @assert(size(X1)==size(X2),"Dimensions mismatch")
   I=size(X1)
   m=I[mode]
@@ -783,7 +782,7 @@ end
 
 Orthogonalize factor matrices of a tensor.
 """
-function reorth{T<:Number}(X::ttensor{T})
+function reorth(X::ttensor{T}) where {T<:Number}
   N=ndims(X)
 	if X.isorth
 		X
@@ -807,7 +806,7 @@ end
 
 Orthogonalize factor matrices of a tensor. Rewrite ttensor.
 """
-function reorth!{T<:Number}(X::ttensor{T})
+function reorth!(X::ttensor{T}) where {T<:Number}
 	if X.isorth != true
 		for n=1:ndims(X)
 			Q,R=qr(X.fmat[n])
@@ -820,24 +819,24 @@ function reorth!{T<:Number}(X::ttensor{T})
 end
 
 #Size of a ttensor. **Documentation in Base.
-function size{T<:Number}(X::ttensor{T})
+function size(X::ttensor{T}) where {T<:Number}
 	tuple([size(X.fmat[n],1) for n=1:ndims(X)]...)
 end
 #Size of n-th mode of a ttensor.
-function size{T<:Number}(X::ttensor{T},n::Integer)
+function size(X::ttensor{T},n::Integer) where {T<:Number}
   size(X.fmat[n],1)
 end
 
-function Base.show{T<:Number}(io::IO,X::ttensor{T})
+function Base.show(io::IO,X::ttensor{T}) where {T<:Number}
     display(X)
 end
 
 #Mode-n matricization of a ttensor. **Documentation in tensor.jl.
-tenmat{T<:Number}(X::ttensor{T},n::Integer)=tenmat(full(X),n)
+tenmat(X::ttensor{T},n::Integer) where {T<:Number}=tenmat(full(X),n)
 
 #ttensor times matrix (n-mode product). **Documentation in tensor.jl.
 #t='t' transposes matrices
-function ttm{T<:Number,D<:Integer}(X::ttensor{T},M::MatrixCell,modes::Vector{D},t='n')
+function ttm(X::ttensor{T},M::MatrixCell,modes::Vector{D},t='n') where {T<:Number,D<:Integer}
   if t=='t'
 	 M=vec(M')
 	end
@@ -852,11 +851,11 @@ function ttm{T<:Number,D<:Integer}(X::ttensor{T},M::MatrixCell,modes::Vector{D},
   end
     ttensor(X.cten,fmat)
 end
-ttm{T<:Number,D<:Integer}(X::ttensor{T},M::MatrixCell,modes::Range{D},t='n')=ttm(X,M,collect(modes),t)
-ttm{T1<:Number,T2<:Number}(X::ttensor{T1},M::Matrix{T2},n::Integer,t='n')=ttm(X,[M],[n],t)
-ttm{T<:Number}(X::ttensor{T},M::MatrixCell,t::Char)=ttm(X,M,1:length(M),t)
-ttm{T<:Number}(X::ttensor{T},M::MatrixCell)=ttm(X,M,1:length(M))
-function ttm{T<:Number}(X::ttensor{T},M::MatrixCell,n::Integer,t='n')
+ttm(X::ttensor{T},M::MatrixCell,modes::AbstractRange{D},t='n') where {T<:Number,D<:Integer}=ttm(X,M,collect(modes),t)
+ttm(X::ttensor{T1},M::Matrix{T2},n::Integer,t='n') where {T1<:Number,T2<:Number}=ttm(X,[M],[n],t)
+ttm(X::ttensor{T},M::MatrixCell,t::Char) where {T<:Number}=ttm(X,M,1:length(M),t)
+ttm(X::ttensor{T},M::MatrixCell) where {T<:Number}=ttm(X,M,1:length(M))
+function ttm(X::ttensor{T},M::MatrixCell,n::Integer,t='n') where {T<:Number}
 	if n>0
 		ttm(X,M[n],n,t)
 	else
@@ -865,15 +864,15 @@ function ttm{T<:Number}(X::ttensor{T},M::MatrixCell,n::Integer,t='n')
 	end
 end
 #If array of matrices isn't defined as MatrixCell, but as M=[M1,M2,...,Mn]:
-ttm{T1<:Number,T2<:Number,D<:Integer}(X::ttensor{T1},M::Array{Matrix{T2}},modes::Vector{D},t='n')=ttm(X,MatrixCell(M),modes,t)
-ttm{T1<:Number,T2<:Number,D<:Integer}(X::ttensor{T1},M::Array{Matrix{T2}},modes::Range{D},t='n')=ttm(X,MatrixCell(M),modes,t)
-ttm{T1<:Number,T2<:Number}(X::ttensor{T1},M::Array{Matrix{T2}},t::Char)=ttm(X,MatrixCell(M),t)
-ttm{T1<:Number,T2<:Number}(X::ttensor{T1},M::Array{Matrix{T2}})=ttm(X,MatrixCell(M))
-ttm{T1<:Number,T2<:Number}(X::ttensor{T1},M::Array{Matrix{T2}},n::Integer,t='n')=ttm(X,MatrixCell(M),n,t)
+ttm(X::ttensor{T1},M::Array{Matrix{T2}},modes::Vector{D},t='n') where {T1<:Number,T2<:Number,D<:Integer}=ttm(X,MatrixCell(M),modes,t)
+ttm(X::ttensor{T1},M::Array{Matrix{T2}},modes::AbstractRange{D},t='n') where {T1<:Number,T2<:Number,D<:Integer}=ttm(X,MatrixCell(M),modes,t)
+ttm(X::ttensor{T1},M::Array{Matrix{T2}},t::Char) where {T1<:Number,T2<:Number}=ttm(X,MatrixCell(M),t)
+ttm(X::ttensor{T1},M::Array{Matrix{T2}}) where {T1<:Number,T2<:Number}=ttm(X,MatrixCell(M))
+ttm(X::ttensor{T1},M::Array{Matrix{T2}},n::Integer,t='n') where {T1<:Number,T2<:Number}=ttm(X,MatrixCell(M),n,t)
 
 #ttensor times vector (n-mode product). **Documentation in tensor.jl.
 #t='t' transposes matrices
-function ttv{T<:Number,D<:Integer}(X::ttensor{T},V::VectorCell,modes::Vector{D})
+function ttv(X::ttensor{T},V::VectorCell,modes::Vector{D}) where {T<:Number,D<:Integer}
   N=ndims(X)
   remmodes=setdiff(1:N,modes)
   fmat=VectorCell(N)
@@ -890,10 +889,10 @@ function ttv{T<:Number,D<:Integer}(X::ttensor{T},V::VectorCell,modes::Vector{D})
     ttensor(cten,X.fmat[remmodes])
   end
 end
-ttv{T1<:Number,T2<:Number}(X::ttensor{T1},v::Vector{T2},n::Integer)=ttv(X,Vector[v],[n])
-ttv{T<:Number,D<:Integer}(X::ttensor{T},V::VectorCell,modes::Range{D})=ttv(X,V,collect(modes))
-ttv{T<:Number}(X::ttensor{T},V::VectorCell)=ttv(X,V,1:length(V))
-function ttv{T<:Number}(X::ttensor{T},V::VectorCell,n::Integer)
+ttv(X::ttensor{T1},v::Vector{T2},n::Integer) where {T1<:Number,T2<:Number}=ttv(X,Vector[v],[n])
+ttv(X::ttensor{T},V::VectorCell,modes::AbstractRange{D}) where {T<:Number,D<:Integer}=ttv(X,V,collect(modes))
+ttv(X::ttensor{T},V::VectorCell) where {T<:Number}=ttv(X,V,1:length(V))
+function ttv(X::ttensor{T},V::VectorCell,n::Integer) where {T<:Number}
 	if n>0
 		ttm(X,V[n],n)
 	else
@@ -902,10 +901,10 @@ function ttv{T<:Number}(X::ttensor{T},V::VectorCell,n::Integer)
 	end
 end
 #If array of vectors isn't defined as VectorCell, but as V=[v1,v2,...,vn]:
-ttv{T1<:Number,T2<:Number,D<:Integer}(X::ttensor{T1},V::Array{Vector{T2}},modes::Vector{D})=ttv(X,VectorCell(V),modes)
-ttv{T1<:Number,T2<:Number,D<:Integer}(X::ttensor{T1},V::Array{Vector{T2}},modes::Range{D})=ttv(X,VectorCell(V),modes)
-ttv{T1<:Number,T2<:Number}(X::ttensor{T1},V::Array{Vector{T2}})=ttv(X,VectorCell(V))
-ttv{T1<:Number,T2<:Number}(X::ttensor{T1},V::Array{Vector{T2}},n::Integer)=ttv(X,VectorCell(V),n)
+ttv(X::ttensor{T1},V::Array{Vector{T2}},modes::Vector{D}) where {T1<:Number,T2<:Number,D<:Integer}=ttv(X,VectorCell(V),modes)
+ttv(X::ttensor{T1},V::Array{Vector{T2}},modes::AbstractRange{D}) where {T1<:Number,T2<:Number,D<:Integer}=ttv(X,VectorCell(V),modes)
+ttv(X::ttensor{T1},V::Array{Vector{T2}}) where {T1<:Number,T2<:Number}=ttv(X,VectorCell(V))
+ttv(X::ttensor{T1},V::Array{Vector{T2}},n::Integer) where {T1<:Number,T2<:Number}=ttv(X,VectorCell(V),n)
 
 """
    uminus(X::ttensor)
@@ -914,11 +913,11 @@ ttv{T1<:Number,T2<:Number}(X::ttensor{T1},V::Array{Vector{T2}},n::Integer)=ttv(X
 
 Unary minus. Same as: (-1)*X.
 """
-uminus{T<:Number}(X::ttensor{T})=mtimes(-1,X)
--{T<:Number}(X::ttensor{T})=uminus(X)
+uminus(X::ttensor{T}) where {T<:Number}=mtimes(-1,X)
+-(X::ttensor{T}) where {T<:Number}=uminus(X)
 
 #Frobenius norm of a ttensor. **Documentation in Base.
-function vecnorm{T<:Number}(X::ttensor{T})
+function vecnorm(X::ttensor{T}) where {T<:Number}
 	if prod(size(X)) > prod(size(X.cten))
 		if X.isorth
 			vecnorm(X.cten)
