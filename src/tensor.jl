@@ -534,7 +534,7 @@ function ttm(X::Array{T,N},M::MatrixCell,modes::Vector{D},t='n') where {T<:Numbe
     @show modes
     [@show size(MM) for MM in M]
   if t=='t'
-    M=vec(M')
+    [M[n]=M[n]' for n=1:length(M)]
   end
   [@show size(MM) for MM in M]
   @assert(length(modes)<=length(M),"Too few matrices.")
