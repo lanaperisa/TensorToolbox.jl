@@ -576,8 +576,10 @@ function mttkrp(X::ttensor{T},M::MatrixCell,n::Integer) where {T<:Number}
   @assert(!any(map(Bool,[size(M[m],2)-K for m in modes])),"Matrices must have the same number of columns")
   @assert(!any(map(Bool,[size(M[m],1)-sz[m] for m in modes])),"Matrices are of wrong size")
   fmat=MatrixCell(N-1)
+  i=1
   for m in modes
-      fmat[m]=X.fmat[m]'*M[m]
+      fmat[i]=X.fmat[m]'*M[m]
+      i+=1
   end
   Y=mttkrp(X.cten,fmat,n)
   X.fmat[n]*Y

@@ -65,12 +65,12 @@ function cp_als(X::Array{T},R::Integer;init="rand",tol=1e-4,maxit=1000,dimorder=
         lambda=[]
         for n in dimorder
             fmat[n]=mttkrp(X,fmat,n)
-            W=reshape(prod(G[:,:,setdiff(collect(1:N),n)],3),Val{2})
+            W=reshape(prod(G[:,:,setdiff(collect(1:N),dims=n)],3),Val(2))
             fmat[n]=fmat[n]/W
             if k == 1
-                lambda = sqrt.(sum(fmat[n].^2,1))[:] #2-norm
+                lambda = sqrt.(sum(fmat[n].^2,dims=1))[:] #2-norm
             else
-                lambda = maximum(maximum(abs.(fmat[n]),1),1)[:] #max-norm
+                lambda = maximum(maximum(abs.(fmat[n]),1),dims=1)[:] #max-norm
             end
             fmat[n] = fmat[n]./lambda'
             G[:,:,n] = fmat[n]'*fmat[n]
@@ -79,8 +79,8 @@ function cp_als(X::Array{T},R::Integer;init="rand",tol=1e-4,maxit=1000,dimorder=
         if nr==0
             fit=norm(K)^2-2*innerprod(X,K)
         else
-            nr_res=sqrt.(abs.(nr^2+norm(K)^2-2*innerprod(X,K)))
-            fir=1-nr_res/nr
+            nr_res=sqrt.(abs.(nr^2+norm(K)^2.-2*innerprod(X,K)))
+            fir=1.-nr_res/nr
         end
         fitchange=abs.(fitold-fit)
         if k>1 && fitchange<tol
@@ -415,7 +415,7 @@ function nvecs(X::Array{T},n::Integer,r=0;flipsign=false,svds=false) where {T<:N
     G=Symmetric(Xn*Xn') #Gramian
     #U=eigs(G,nev=r,which=:LM)[2] #has bugs!
     #if size(U,2)<r
-       U=eigfact(G)[:vectors][:,end:-1:end-r+1]
+       U=eigfact(G).vectors[:,end:-1:end-r+1]
     #end
   end
   if flipsign
