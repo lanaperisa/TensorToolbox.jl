@@ -193,7 +193,7 @@ end
 hadcten(X1::ttensor{T1},X2::ttensor{T2},fmat::Array{Matrix{T3}}) where {T1<:Number,T2<:Number,T3<:Number}=hadcten(X1,X2,MatrixCell(fmat))
 #HOSVD for a ttensor. **Documentation in tensor.jl
 function hosvd(X::ttensor{T};method="svd",reqrank=[],eps_abs=[],eps_rel=[]) where {T<:Number}
-	F=hosvd(X.cten,method=method,reqrank=reqrank,eps_abs=eps_abs,eps_rel=eps_rel)
+  F=hosvd(X.cten,method=method,reqrank=reqrank,eps_abs=eps_abs,eps_rel=eps_rel)
   fmat=MatrixCell(ndims(X))
   [fmat[n]=X.fmat[n]*F.fmat[n] for n=1:ndims(X)]
   reorth(ttensor(F.cten,fmat))

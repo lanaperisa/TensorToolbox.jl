@@ -130,7 +130,7 @@ Higher-order singular value decomposition.
 - `p::Integer`: Oversampling parameter. Defaul p=10.
 """
 function hosvd(X::Array{T,N};method="svd",reqrank=[],eps_abs=[],eps_rel=[],p=10) where {T<:Number,N}
-	fmat=MatrixCell(N)
+  fmat=MatrixCell(N)
 
   reqrank=check_vector_input(reqrank,N,0)
   eps_abs=check_vector_input(eps_abs,N,1e-8)
@@ -153,6 +153,7 @@ function hosvd(X::Array{T,N};method="svd",reqrank=[],eps_abs=[],eps_rel=[],p=10)
       fmat[n]=fmat[n][:,K]
     end
   end
+  [@show size(fmat[n]) for n=1:N]
   ttensor(ttm(X,fmat,'t'),fmat)
 end
 
