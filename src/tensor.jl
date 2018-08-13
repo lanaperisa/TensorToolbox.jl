@@ -153,7 +153,6 @@ function hosvd(X::Array{T,N};method="svd",reqrank=[],eps_abs=[],eps_rel=[],p=10)
       fmat[n]=fmat[n][:,K]
     end
   end
-  [@show size(fmat[n]) for n=1:N]
   ttensor(ttm(X,fmat,'t'),fmat)
 end
 
@@ -558,8 +557,8 @@ function ttm(X::Array{T,N},M::MatrixCell,modes::Vector{D},t='n') where {T<:Numbe
   X
 end
 ttm(X::Array{T1},M::Matrix{T2},n::Integer,t='n') where {T1<:Number,T2<:Number}=ttm(X,Matrix[M],[n],t)
-ttm(X::Array{T},M::MatrixCell,t::Char) where {T<:Number}=ttm(X,M,1:length(M),t)
-ttm(X::Array{T},M::MatrixCell) where {T<:Number}=ttm(X,M,1:length(M))
+ttm(X::Array{T},M::MatrixCell,t::Char) where {T<:Number}=ttm(X,M,collect(1:length(M)),t)
+ttm(X::Array{T},M::MatrixCell) where {T<:Number}=ttm(X,M,collect(1:length(M)))
 ttm(X::Array{T},M::MatrixCell,R::AbstractRange{D},t::Char) where {T<:Number,D<:Integer}=ttm(X,M,collect(R),t)
 ttm(X::Array{T},M::MatrixCell,R::AbstractRange{D}) where {T<:Number,D<:Integer}=ttm(X,M,collect(R))
 function ttm(X::Array{T,N},M::MatrixCell,n::Integer,t='n') where {T<:Number,N}
