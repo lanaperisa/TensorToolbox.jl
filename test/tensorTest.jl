@@ -32,7 +32,7 @@ end
 println("Created $N matrices with 5 rows and appropriate number of columns.")
 Xprod=ttm(X,M)
 println("Size of tensor Y=ttm(X,M): ",size(Xprod))
-err=vecnorm(tenmat(Xprod,1) - M[1]*tenmat(X,1)*kron(M[end:-1:2])')
+err=norm(tenmat(Xprod,1) - M[1]*tenmat(X,1)*kron(M[end:-1:2])')
 println("Multiplication error: ",err)
 @test err ≈ 0 atol=1e-10
 
@@ -56,20 +56,20 @@ M2=rand(20,20)
 M3=rand(20,12)
 println("Multiplying tkron(X,Y) by random matrix in mode $mode.")
 Z=krontm(X,Y,M3,mode)
-err= vecnorm(Z-ttm(tkron(X,Y),M3,mode))
+err= norm(Z-ttm(tkron(X,Y),M3,mode))
 println("Multiplication error: ",err)
 @test err ≈ 0 atol=1e-10
 mode=[3,2]
 M=[M3,M2]
 println("Multiplying tkron(X,Y) by random matrices in modes $mode.")
 Z=krontm(X,Y,M,mode)
-err = vecnorm(Z-ttm(tkron(X,Y),M,mode))
+err = norm(Z-ttm(tkron(X,Y),M,mode))
 println("Multiplication error: ",err)
 @test err ≈ 0 atol=1e-10
 M=[M1,M2,M3]
 println("Multiplying tkron(X,Y) by random matrices in all modes.")
 Z=krontm(X,Y,M)
-err = vecnorm(Z-ttm(tkron(X,Y),M))
+err = norm(Z-ttm(tkron(X,Y),M))
 println("Multiplication error: ",err)
 @test err ≈ 0 atol=1e-10
 
@@ -78,12 +78,12 @@ v=rand(240)
 n=1
 println("Multiplying mode-$n matricized tkron(X,Y) by a random vector.")
 Z=mkrontv(X,Y,v,n)
-err = vecnorm(Z-tenmat(tkron(X,Y),n)*v)
+err = norm(Z-tenmat(tkron(X,Y),n)*v)
 println("Multiplication error: ",err)
 @test err ≈ 0 atol=1e-10
 v=rand(10)
 Z=mkrontv(X,Y,v,n,'t')
-err = vecnorm(Z-tenmat(tkron(X,Y),n)'*v)
+err = norm(Z-tenmat(tkron(X,Y),n)'*v)
 println("Multiplication error: ",err)
 @test err ≈ 0 atol=1e-10
 
@@ -96,7 +96,7 @@ A3=rand(3,5);
 A=[A1,A2,A3]
 println("Multiplying mode-$n matricized tensor X by Khatri-Rao product of matrices.")
 Z=mttkrp(X,A,n)
-err = vecnorm(Z-tenmat(X,n)*khatrirao(A3,A2))
+err = norm(Z-tenmat(X,n)*khatrirao(A3,A2))
 println("Multiplication error: ",err)
 @test err ≈ 0 atol=1e-10
 

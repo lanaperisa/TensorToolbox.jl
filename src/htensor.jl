@@ -1,7 +1,7 @@
 #Tensors in Hierarchical Tucker format + functions
 
 export htensor, randhtensor, cat, display, full, hrank, htrunc, innerprod, isequal, minus, mtimes, ndims, plus, reorth, reorth!
-export size, squeeze, trten2mat, trten2ten, ttm, ttv, uminus, vecnorm
+export size, squeeze, trten2mat, trten2ten, ttm, ttv, uminus, norm
 
 """
     htensor(tree,trten,fmat)
@@ -575,10 +575,10 @@ uminus(X::htensor)=mtimes(-1,X)
 -(X::htensor)=uminus(X)
 
 #Frobenius norm of a htensor. **Documentation in Base.
-function vecnorm(X::htensor;orth=true)
+function norm(X::htensor;orth=true)
   if orth
     reorth!(X)
-    vecnorm(X.trten[1])
+    norm(X.trten[1])
   else
     sqrt(innerprod(X,X))
   end

@@ -34,7 +34,7 @@ Compute a CP decomposition with R components of a tensor X .
 """
 function cp_als(X::Array{T},R::Integer;init="rand",tol=1e-4,maxit=1000,dimorder=[]) where {T<:Number}
     N=ndims(X)
-    nr=vecnorm(X)
+    nr=norm(X)
     K=ktensor
     if length(dimorder) == 0
         dimorder=collect(1:N)
@@ -77,9 +77,9 @@ function cp_als(X::Array{T},R::Integer;init="rand",tol=1e-4,maxit=1000,dimorder=
         end
         K=ktensor(vec(lambda),fmat)
         if nr==0
-            fit=vecnorm(K)^2-2*innerprod(X,K)
+            fit=norm(K)^2-2*innerprod(X,K)
         else
-            nr_res=sqrt.(abs.(nr^2+vecnorm(K)^2-2*innerprod(X,K)))
+            nr_res=sqrt.(abs.(nr^2+norm(K)^2-2*innerprod(X,K)))
             fir=1-nr_res/nr
         end
         fitchange=abs.(fitold-fit)

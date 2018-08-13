@@ -3,7 +3,7 @@ using TensorToolbox
 #Define tensor as multidimensional arrays and calculate its norm:
 
 X=rand(4,3,2)
-vecnorm(X)
+norm(X)
 
 #Create identity and diagonal tensor:
 
@@ -98,7 +98,7 @@ X=randttensor([5,4,3],[2,2,2])
 size(X)
 coresize(X)
 ndims(X)
-vecnorm(X)
+norm(X)
 full(X)  #Creates full tensor out of Tucker format
 reorth(X) #Orthogonalize factor matrices
 permutedims(X,[2,1,3])
@@ -173,7 +173,7 @@ X=randktensor([5,4,3],2)
 
 size(X)
 ndims(X)
-vecnorm(X)
+norm(X)
 full(X)  #Creates full tensor out of Kruskal format
 permutedims(X,[2,1,3])
 ncomponents(X) #Number of components
@@ -258,7 +258,7 @@ X=randhtensor([5,4,3])
 
 size(X)
 ndims(X)
-vecnorm(X)
+norm(X)
 full(X)  #Creates full tensor out of Hierarchial Tucker format
 reorth(X) #Orthogonalize factor matrices
 

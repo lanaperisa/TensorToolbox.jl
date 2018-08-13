@@ -2,7 +2,7 @@
 
 export ttensor, randttensor
 export coresize, cp_als, display, full, had, hadcten, hosvd, hosvd1, hosvd2, hosvd3, hosvd4, innerprod, isequal, lanczos, lanczos_tridiag, mhadtv, minus, mrank
-export msvdvals, mtimes, mttkrp, ndims, nrank, nvecs, permutedims, plus, randrange, randsvd, reorth, reorth!, size, tenmat, ttm, ttv, uminus, vecnorm
+export msvdvals, mtimes, mttkrp, ndims, nrank, nvecs, permutedims, plus, randrange, randsvd, reorth, reorth!, size, tenmat, ttm, ttv, uminus, norm
 
 """
     ttensor(cten,fmat)
@@ -67,7 +67,7 @@ end
 #Compute a CP decomposition with R components of a tensor X. **Documentation in tensor.jl.
 function cp_als(X::ttensor{T},R::Integer;init="rand",tol=1e-4,maxit=1000,dimorder=[]) where {T<:Number}
     N=ndims(X)
-    nr=vecnorm(X)
+    nr=norm(X)
     K=ktensor
     if length(dimorder) == 0
         dimorder=collect(1:N)
@@ -106,9 +106,9 @@ function cp_als(X::ttensor{T},R::Integer;init="rand",tol=1e-4,maxit=1000,dimorde
         end
         K=ktensor(vec(lambda),fmat)
         if nr==0
-            fit=vecnorm(K)^2-2*innerprod(X,K)
+            fit=norm(K)^2-2*innerprod(X,K)
         else
-            nr_res=sqrt.(abs.(nr^2+vecnorm(K)^2-2*innerprod(X,K)))
+            nr_res=sqrt.(abs.(nr^2+norm(K)^2-2*innerprod(X,K)))
             fir=1-nr_res/nr
         end
         fitchange=abs.(fitold-fit)
@@ -917,19 +917,19 @@ uminus(X::ttensor{T}) where {T<:Number}=mtimes(-1,X)
 -(X::ttensor{T}) where {T<:Number}=uminus(X)
 
 #Frobenius norm of a ttensor. **Documentation in Base.
-function vecnorm(X::ttensor{T}) where {T<:Number}
+function norm(X::ttensor{T}) where {T<:Number}
 	if prod(size(X)) > prod(size(X.cten))
 		if X.isorth
-			vecnorm(X.cten)
+			norm(X.cten)
 		else
 			R=MatrixCell(ndims(X))
 			for n=1:ndims(X)
 				#R[n]=qrfact(X.fmat[n])[:R]
 				R[n]=qr(X.fmat[n])[2];
 			end
-			vecnorm(ttm(X.cten,R))
+			norm(ttm(X.cten,R))
 		end
 	else
-		vecnorm(full(X))
+		norm(full(X))
 	end
 end

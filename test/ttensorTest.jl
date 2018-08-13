@@ -20,16 +20,16 @@ for n=1:ndims(T)
   @test size(T.fmat[n]) == (size(X,n),size(X,n))
 end
 
-err=vecnorm(full(T) - X)
-println("\n\n...Testing function full, i.e. n-mode multiplication (ttm): vecnorm(full(T)-X) = ", err)
+err=norm(full(T) - X)
+println("\n\n...Testing function full, i.e. n-mode multiplication (ttm): norm(full(T)-X) = ", err)
 @test err ≈ 0 atol=1e-10
 
 A=MatrixCell(ndims(T))
 for n=1:ndims(T)
   A[n]=rand(rand(1:10),size(T,n))
 end
-err=vecnorm(full(ttm(T,A)) - ttm(full(T),A))
-println("\n...Testing ttm for ttensor T and array of matrices A : vecnorm(full(ttm(T,A))-ttm(full(T),A)) = ", err)
+err=norm(full(ttm(T,A)) - ttm(full(T),A))
+println("\n...Testing ttm for ttensor T and array of matrices A : norm(full(ttm(T,A))-ttm(full(T),A)) = ", err)
 @test err ≈ 0 atol=1e-10
 
 R=[5,5,5,5]
@@ -57,7 +57,7 @@ println("\n...Testing mrank of ttensor T: ", mrank(T))
 println("\n...Testing functions matten and tenmat (by mode).")
 for n=1:ndims(T)
   Tn=tenmat(T,n)
-  @test vecnorm(Tn-tenmat(full(T),n)) ≈ 0 atol=1e-10
+  @test norm(Tn-tenmat(full(T),n)) ≈ 0 atol=1e-10
 end
 
 R=[5,5,5];
@@ -68,12 +68,12 @@ println("\n\n...Testing hosvd for tensor with noise.")
 println("For ttensor T, X=full(T) tensor of size ",size(X)," and rank ",R," , N noise tensor and S=hosvd(X+N,",R,").")
 rsz = tuple([[sz...]' 1 1]...)
 Rdm = reshape(randn(rsz), sz);
-N=1e-3 * vecnorm(X) * Rdm / vecnorm(Rdm);
+N=1e-3 * norm(X) * Rdm / norm(Rdm);
 Y = X + N;
 S=hosvd(Y,reqrank=R);
-err=vecnorm(T-S)
-noise=vecnorm(N)
-println("Error( vecnorm(T-S) ): ",err,". Noise vecnorm: ",noise,".")
+err=norm(T-S)
+noise=norm(N)
+println("Error( norm(T-S) ): ",err,". Noise norm: ",noise,".")
 
 f(x,y,z)=1/(x+y+z)
 dx=dy=dz=[n*0.1 for n=1:20]
@@ -89,7 +89,7 @@ print("Factor matrices sizes: ")
 for A in T.fmat
 	print(size(A)," ")
 end
-@test vecnorm(full(T)-X) ≈ 0 atol=1e-5
+@test norm(full(T)-X) ≈ 0 atol=1e-5
 
 println("\n\n...Testing hosvd with eps_rel=1e-5 on function defined tensor X of size ", size(X))
 T=hosvd(float(X),eps_rel=1e-5)
@@ -124,14 +124,14 @@ println("Has orthogonal factor matrices: ", S.isorth)
 println("After reorthogonalization: ", reorth!(S).isorth)
 @test S.isorth
 
-println("\n\n...Testing vecnorm of ttensor T.")
-err=abs(vecnorm(T) - vecnorm(full(T)))
-println("|vecnorm(T) - vecnorm(full(T))| = ", err)
+println("\n\n...Testing norm of ttensor T.")
+err=abs(norm(T) - norm(full(T)))
+println("|norm(T) - norm(full(T))| = ", err)
 @test err ≈ 0 atol=1e-10
 
 println("\n\n...Testing scalar multiplication 3*T.")
-err=vecnorm(full(3*T) - 3*full(T))
-println("vecnorm(full(3*T) - 3*full(T)) = ", err )
+err=norm(full(3*T) - 3*full(T))
+println("norm(full(3*T) - 3*full(T)) = ", err )
 @test err ≈ 0 atol=1e-10
 
 X=randttensor([6,8,2,5,4],[4,3,2,2,3]);
@@ -140,8 +140,8 @@ println("\n\n...Creating two random ttensors X and Y of size ", size(X),".")
 println("\n...Testing addition.")
 Z=X+Y;
 F=full(X)+full(Y);
-err=vecnorm(full(Z) - F)
-println("vecnorm(full(X+Y) - (full(X)+full(Y))) = ",err )
+err=norm(full(Z) - F)
+println("norm(full(X+Y) - (full(X)+full(Y))) = ",err )
 @test err ≈ 0 atol=1e-10
 
 println("\n\n...Testing inner product.")
@@ -151,15 +151,15 @@ println("|innerprod(X,Y) - innerprod(full(X),full(Y))| = ",err )
 @test err ≈ 0 atol=1e-10
 
 println("\n\n...Testing Hadamard product.")
-err=vecnorm(full(X.*Y) - full(X).*full(Y))
-println("vecnorm(full(X.*Y) - full(X).*full(Y)) = ", err)
+err=norm(full(X.*Y) - full(X).*full(Y))
+println("norm(full(X.*Y) - full(X).*full(Y)) = ", err)
 @test  err ≈ 0 atol=1e-10
 
 
 println("\n\n...Testing singular values of matricizations of Tucker Tensor.")
 R=[3,3,3]
 T=randttensor([10,9,8],R);
-println("\nSingular values of matricizations of random Tucker tensor of size ", size(T), ", rank ",R," and vecnorm ",vecnorm(T),".")
+println("\nSingular values of matricizations of random Tucker tensor of size ", size(T), ", rank ",R," and norm ",norm(T),".")
 for n=1:ndims(T)
   sv = msvdvals(T,n)
   Tn=tenmat(T,n);
@@ -169,7 +169,7 @@ end
 
 R=[5,5,5,5]
 T=randttensor([20,20,20,20],R);
-println("\nSingular values of matricizations of random Tucker tensor of size ", size(T), ", rank ",R," and vecnorm ",vecnorm(T),".")
+println("\nSingular values of matricizations of random Tucker tensor of size ", size(T), ", rank ",R," and norm ",norm(T),".")
 for n=1:ndims(T)
   sv = msvdvals(T,n)
   Tn=tenmat(T,n);
@@ -186,17 +186,17 @@ n=1
 println("Multiplying mode-$n matricized had(X,Y) by a random vector.")
 Z=mhadtv(X,Y,v,n,'n')
 Hn=tenmat(X.*Y,n)
-err = vecnorm(Z-Hn*v)
+err = norm(Z-Hn*v)
 println("Multiplication error: ",err)
 @test err ≈ 0 atol=1e-10
 v=rand(5)
 Z=mhadtv(X,Y,v,n,'t')
-err = vecnorm(Z-Hn'*v)
+err = norm(Z-Hn'*v)
 println("Multiplication error: ",err)
 @test err ≈ 0 atol=1e-10
 v=rand(5)
 Z=mhadtv(X,Y,v,n,'b')
-err = vecnorm(Z-Hn*Hn'*v)
+err = norm(Z-Hn*Hn'*v)
 println("Multiplication error: ",err)
 @test err ≈ 0 atol=1e-10
 
@@ -209,7 +209,7 @@ M3=rand(3,5);
 M=[M1,M2,M3]
 println("Multiplying mode-$n matricized tensor X by Khatri-Rao product of matrices.")
 Z=mttkrp(X,M,n)
-err = vecnorm(Z-tenmat(X,n)*khatrirao(M3,M2))
+err = norm(Z-tenmat(X,n)*khatrirao(M3,M2))
 println("Multiplication error: ",err)
 @test err ≈ 0 atol=1e-10
 
@@ -225,6 +225,6 @@ end
 T=hosvd(X)
 println("Test rank-1 ttensor T of size: ", size(T))
 Z=cp_als(T,1)
-err=vecnorm(full(Z)-full(T))
-println("vecnorm(full(Tcp)-T) = ",err)
+err=norm(full(Z)-full(T))
+println("norm(full(Tcp)-T) = ",err)
 @test err ≈ 0 atol=1e-10
