@@ -136,7 +136,7 @@ function hosvd(X::Array{T,N};method="svd",reqrank=[],eps_abs=[],eps_rel=[],p=10)
   eps_abs=check_vector_input(eps_abs,N,1e-8)
   eps_rel=check_vector_input(eps_rel,N,0)
 
-	for n=1:N
+  for n=1:N
     Xn=float(tenmat(X,n))
     if method == "lanczos"
       fmat[n],S=lanczos(Xn,tol=eps_abs[n],reqrank=reqrank[n],p=p)
@@ -152,7 +152,8 @@ function hosvd(X::Array{T,N};method="svd",reqrank=[],eps_abs=[],eps_rel=[],p=10)
       K=find(x-> x>tol ? true : false,S)
       fmat[n]=fmat[n][:,K]
     end
-	end
+  end
+  [@show size(fmat[n]) for n=1:N]
   ttensor(ttm(X,fmat,'t'),fmat)
 end
 
