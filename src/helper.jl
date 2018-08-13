@@ -146,7 +146,7 @@ Kronecker product of matrices multiplied by Kronecker product of vectors.
 """
 function krontkron(A::MatrixCell,v::VectorCell,t='n')
   if t=='t'
-    A=vec(A')
+      [A[n]=A[n]' for n=1:length(A)]
   end
   @assert(length(A)==length(v),"There must be the same number of matrices and vectors.")
   N=length(A)

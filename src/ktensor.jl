@@ -551,7 +551,7 @@ end
 #t='t' transposes matrices
 function ttm(X::ktensor{T},M::MatrixCell,modes::Vector{D},t='n') where {T<:Number,D<:Integer}
   if t=='t'
-	 M=vec(M')
+	 [M[n]=M[n]' for n=1:length(M)]
 	end
 	@assert(length(modes)<=length(M),"Too few matrices")
 	@assert(length(M)<=ndims(X),"Too many matrices")

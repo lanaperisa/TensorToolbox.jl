@@ -182,7 +182,7 @@ Kronecker product of two tensors times matrix (n-mode product): (X ⊗ Y) x₁ M
 """
 function krontm(X1::Array{T1,N},X2::Array{T2,N},M::MatrixCell,modes::Vector{D},t='n') where {T1<:Number,T2<:Number,D<:Integer,N}
   if t=='t'
-    M=vec(M')
+    [M[n]=M[n]' for n=1:length(M)]
 	end
 	@assert(length(modes)<=length(M)<=N,"Dimension mismatch.")
   sz=[size(X1)...].*[size(X2)...]
@@ -532,11 +532,9 @@ If t='t', transpose matrices from M.
 """
 function ttm(X::Array{T,N},M::MatrixCell,modes::Vector{D},t='n') where {T<:Number,D<:Integer,N}
     @show modes
-    [@show size(MM) for MM in M]
   if t=='t'
     [M[n]=M[n]' for n=1:length(M)]
   end
-  [@show size(MM) for MM in M]
   @assert(length(modes)<=length(M),"Too few matrices.")
   @assert(length(M)<=N,"Too many matrices.")
   sz=[size(X)...]
