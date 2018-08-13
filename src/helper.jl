@@ -73,8 +73,8 @@ function colspace(X::Matrix{T};method="svd",maxrank=0,atol=1e-8,rtol=0,p=10) whe
     end
   end
   rtol != 0 ? tol=rtol*S[1] : tol=atol
-  I=find(x-> x>tol ? true : false,S)
-  U[:,I]
+  K=find(x-> x>tol ? true : false,S)
+  U[:,K]
 end
 
 """
@@ -87,8 +87,8 @@ If t='t', compute transpose Khatri-Rao product: M₁⊙ᵀ ⋯ ⊙ᵀ Mₙ.
 function khatrirao(M::MatrixCell,t='n')
     N=length(M)
     if t== 't'
-      I=[size(M[n],1) for n=1:N]
-      @assert(any(map(Bool,I-size(M[1],1)))==0,"Matrices must have the same number of rows.")
+      sz=[size(M[n],1) for n=1:N]
+      @assert(any(map(Bool,sz-size(M[1],1)))==0,"Matrices must have the same number of rows.")
       [M[n]=M[n]' for n=1:N]
       khatrirao(M)'
     else
@@ -97,10 +97,10 @@ function khatrirao(M::MatrixCell,t='n')
       J,K=size(M[end])
       X=reshape(M[end],J, 1, K)
       for n=N-1:-1:1
-        I=size(M[n],1)
-        Y=reshape(M[n],1,I,K)
-        X=reshape(Y.*X,I*J,1,K)
-        J=I*J
+        sz=size(M[n],1)
+        Y=reshape(M[n],1,sz,K)
+        X=reshape(Y.*X,sz*J,1,K)
+        J=sz*J
       end
       reshape(X,size(X,1),K)
     end
@@ -275,9 +275,9 @@ function lanczos(A::Matrix{N};tol=1e-8,maxit=1000,reqrank=0,p=10) where N<:Numbe
     U=Q*U[:,1:reqrank];
     S=S[1:reqrank];
   else
-    I=find(x-> x>tol ? true : false,S)
-    U=Q*U[:,I];
-    S=S[I];
+    K=find(x-> x>tol ? true : false,S)
+    U=Q*U[:,K];
+    S=S[K];
   end
   U,S
 end
@@ -379,9 +379,9 @@ function randsvd(A::Matrix{N};tol=1e-8,maxit=1000,reqrank=0,r=10,p=10) where N<:
       	S=S[1:reqrank];
       end
   else
-    I=find(x-> x>tol ? true : false,S)
-    U=Q*U[:,I];
-    S=S[I];
+    K=find(x-> x>tol ? true : false,S)
+    U=Q*U[:,K];
+    S=S[K];
   end
   U,S
 end

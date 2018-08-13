@@ -43,13 +43,13 @@ ttensor(cten::Array{T},fmat::Array{Matrix{T1}}) where {T,T1<:Number}=ttensor{T}(
 
 Create random ttensor of size I and multilinear rank R, or of order N and size I × ⋯ × I and mulilinear rank (R,...,R).
 """
-function randttensorAbstractRange(I::Vector{D},R::Vector{D}) where {D<:Integer}
-  @assert(size(I)==size(R),"Size and rank should be of same length.")
+function randttensorAbstractRange(sz::Vector{D},R::Vector{D}) where {D<:Integer}
+  @assert(size(sz)==size(R),"Size and rank should be of same length.")
   cten=randn(tuple(R...)) #create radnom core tensor
-  fmat=Matrix[randn(I[n],R[n]) for n=1:length(I)] #create random factor matrices
+  fmat=Matrix[randn(sz[n],R[n]) for n=1:length(sz)] #create random factor matrices
   ttensor(cten,fmat)
 end
-randttensor(I::Integer,R::Integer,N::Integer)=randttensor(repmat([I],N),repmat([R],N));
+randttensor(sz::Integer,R::Integer,N::Integer)=randttensor(repmat([sz],N),repmat([R],N));
 #For input defined as tuples or nx1 matrices - ranttensor(([I,I,I],[R,R,R]))
 function randttensor(arg...)
   randttensor([arg[1]...],[arg[2]...])
@@ -280,8 +280,8 @@ function hosvd3(X1::ttensor{T1},X2::ttensor{T2};method="lanczos",reqrank=[],vari
     end
     if reqrank[n] == 0
       eps_rel[n] != 0 ?  tol=eps_rel[n]*S[1] : tol=eps_abs[n];
-      I=find(x-> x>tol ? true : false,S)
-      Ahad[n]=Ahad[n][:,I];
+      K=find(x-> x>tol ? true : false,S)
+      Ahad[n]=Ahad[n][:,K];
     end
   end
   core=hadcten(X1,X2,Ahad)
@@ -402,9 +402,9 @@ Returns orthonormal Q and symmetric tridiagonal T such that A≈Q*T*Q'.
 - `p::Integer`: Oversampling parameter. Defaul p=10.
 """
 function lanczos_tridiag(X1::ttensor{T1},X2::ttensor{T2},mode::Integer;reqrank=0,variant='B',tol=1e-8,maxit=1000,p=10) where {T1<:Number,T2<:Number}
-  I=size(X1)
-  m=I[mode]
-  n=prod(deleteat!(copy([I...]),mode))
+  sz=size(X1)
+  m=sz[mode]
+  n=prod(deleteat!(copy([sz...]),mode))
   K=min(m,maxit);
   if reqrank!=0
     K=min(K,reqrank+p);
@@ -446,7 +446,7 @@ If v is a matrix, multiply column by column.
 """
 function mhadtv(X1::ttensor{T1},X2::ttensor{T2},v::Vector{T3},n::Integer,t='b';variant='B') where {T1<:Number,T2<:Number,T3<:Number}
   @assert(size(X1)==size(X2),"Dimensions mismatch")
-  I=size(X1)
+  sz=size(X1)
   r1=coresize(X1)
   r2=coresize(X2)
   R=[r1...].*[r2...]
@@ -456,7 +456,7 @@ function mhadtv(X1::ttensor{T1},X2::ttensor{T2},v::Vector{T3},n::Integer,t='b';v
   #X2=G₂ ×₁ B₁ ×₂ ... ×ₗ Bₗ
 
   if t=='t'
-    @assert(length(v) == I[n],"Vector v is of inappropriate size.")
+    @assert(length(v) == sz[n],"Vector v is of inappropriate size.")
     w1=krtv(X1.fmat[n]',X2.fmat[n]',v); #w1=(Aₖ' ⨀ Bₖ')*v
     W1=mkrontv(X1.cten,X2.cten,w1,n,'t') #W1=tenmat(G₁ ⨂ G₂,n)'*w1
     for k in N
@@ -466,17 +466,17 @@ function mhadtv(X1::ttensor{T1},X2::ttensor{T2},v::Vector{T3},n::Integer,t='b';v
     end
     vec(W1)
   elseif t=='n'
-    @assert(length(v) == prod(deleteat!(copy(collect(I)),n)),"Vector v is of inappropriate size.")
+    @assert(length(v) == prod(deleteat!(copy(collect(sz)),n)),"Vector v is of inappropriate size.")
     W1=v
     for k in N
-      W1=reshape(W1,I[k],round.(Int,prod(size(W1))/I[k]))
+      W1=reshape(W1,sz[k],round.(Int,prod(size(W1))/sz[k]))
       W2=krtv(X1.fmat[k]',X2.fmat[k]',W1) #W2=(Aₖ' ⨀ Bₖ')*W1
       W1=W2'
     end
     W2=mkrontv(X1.cten,X2.cten,vec(W1),n) #W1=tenmat(G₁ ⨂ G₂),n)*vec(W2)
     tkrtv(X1.fmat[n],X2.fmat[n],W2) #(Aₖ ⨀' Bₖ)*W2
   elseif t=='b'
-    @assert(length(v) == I[n],"Vector v is of inappropriate size.")
+    @assert(length(v) == sz[n],"Vector v is of inappropriate size.")
     if variant == 'A'    #use when prod(I[N])-prod(R[N]) < 0
       mhadtv(X1,X2,mhadtv(X1,X2,v,n,'t'),n,'n')
     elseif variant == 'B'
@@ -499,9 +499,9 @@ function mhadtv(X1::ttensor{T1},X2::ttensor{T2},M::Matrix{T3},n::Integer,t='b';v
     if sort(collect(size(vec(M))))[1]==1
         return mhadtv(X1,X2,vec(M),n,t,variant=variant);
   end
-  I=size(X1)
-  In=I[n]
-  Im=prod(deleteat!(copy([I...]),n))
+  sz=size(X1)
+  In=sz[n]
+  Im=prod(deleteat!(copy([sz...]),n))
   if t=='n'
     @assert(size(M,1) == Im, "Dimensions mismatch")
     Mprod=zeros(In,size(M,2))
@@ -571,10 +571,10 @@ function mttkrp(X::ttensor{T},M::MatrixCell,n::Integer) where {T<:Number}
   N=ndims(X)
   @assert(length(M) == N,"Wrong number of matrices.")
   modes=setdiff(1:N,n)
-  I=[size(X)...]
+  sz=[size(X)...]
   K=size(M[modes[1]],2)
   @assert(!any(map(Bool,[size(M[m],2)-K for m in modes])),"Matrices must have the same number of columns")
-  @assert(!any(map(Bool,[size(M[m],1)-I[m] for m in modes])),"Matrices are of wrong size")
+  @assert(!any(map(Bool,[size(M[m],1)-sz[m] for m in modes])),"Matrices are of wrong size")
   Y=mttkrp(X.cten,vec(X.fmat[modes]').*M[modes],n)
   X.fmat[n]*Y
 end
@@ -665,10 +665,10 @@ function randrange(X1::ttensor{T1},X2::ttensor{T2},mode::Integer;tol=1e-8,maxit=
 end
 
 function randrange(C1::Array{T1,N},C2::Array{T2,N},KR::MatrixCell,mode::Integer;tol=1e-8,maxit=1000,reqrank=0,p=10,r=10) where {T1<:Number,T2<:Number,N}
-  I=zeros(Int,N)
-  [I[n]= size(KR[n],1) for n=1:N]
-  m=I[mode]
-  n=prod(deleteat!(copy([I...]),mode))
+  sz=zeros(Int,N)
+  [sz[n]= size(KR[n],1) for n=1:N]
+  m=sz[mode]
+  n=prod(deleteat!(copy([sz...]),mode))
   remmodes=setdiff(1:N,mode);
   y=VectorCell(N-1);
   if reqrank!=0
@@ -728,9 +728,9 @@ Works with matrix (X ∗ Y)ₙ(X ∗ Y)ₙᵀ.
 """
 function randsvd(X1::ttensor{T1},X2::ttensor{T2},mode::Integer;variant='B',tol=1e-8,maxit=1000,reqrank=0,p=10,r=10) where {T1<:Number,T2<:Number}
   @assert(size(X1)==size(X2),"Dimensions mismatch")
-  I=size(X1)
-  m=I[mode]
-  n=prod(deleteat!(copy([I...]),mode))
+  sz=size(X1)
+  m=sz[mode]
+  n=prod(deleteat!(copy([sz...]),mode))
   if reqrank!=0
      Y=mhadtv(X1,X2,randn(m,reqrank+p),mode,variant=variant);  #Y=A*(A'*randn(m,reqrank+p));
      #Q=full(qrfact(Y)[:Q]);

@@ -12,11 +12,11 @@ function blockdiag(X1::Array{T1,N},X2::Array{T2,N}) where {T1<:Number, T2<:Numbe
   R1=CartesianRange(size(X1))
   I1=last(R1)
   R2=CartesianRange(size(X2))
-  for I in R1
-    Xd[I]=X1[I]
+  for In in R1
+    Xd[In]=X1[In]
   end
-  for I in R2
-    Xd[I1+I]=X2[I]
+  for In in R2
+    Xd[I1+I]=X2[In]
   end
   Xd
 end
@@ -102,10 +102,10 @@ function diagt(v::Vector{T}) where {T<:Number}
   sz=tuple(repmat([N],N,1)[:]...)
   D=zeros(sz)
   R=CartesianRange(sz)
-  I=first(R)
+  In=first(R)
   for i=1:N
-    D[I]=v[i]
-    I=I+1
+    D[In]=v[i]
+    In=In+1
   end
   D
 end
@@ -149,8 +149,8 @@ function hosvd(X::Array{T,N};method="svd",reqrank=[],eps_abs=[],eps_rel=[],p=10)
       fmat[n]=fmat[n][:,1:reqrank[n]]
     else
       eps_rel[n] != 0 ? tol=eps_rel[n]*S[1] : tol=eps_abs[n]
-      I=find(x-> x>tol ? true : false,S)
-      fmat[n]=fmat[n][:,I]
+      K=find(x-> x>tol ? true : false,S)
+      fmat[n]=fmat[n][:,K]
     end
 	end
   ttensor(ttm(X,fmat,'t'),fmat)
@@ -185,8 +185,8 @@ function krontm(X1::Array{T1,N},X2::Array{T2,N},M::MatrixCell,modes::Vector{D},t
     M=vec(M')
 	end
 	@assert(length(modes)<=length(M)<=N,"Dimension mismatch.")
-  I=[size(X1)...].*[size(X2)...]
-  R=copy(I)
+  sz=[size(X1)...].*[size(X2)...]
+  R=copy(sz)
   if length(modes) != length(M)
     M=M[modes] #discard matrices not needed for multiplication
   end
@@ -194,18 +194,18 @@ function krontm(X1::Array{T1,N},X2::Array{T2,N},M::MatrixCell,modes::Vector{D},t
       R[modes[n]]=size(M[n],1) #vector of rₖ
   end
   #Order of multiplication - if tkron(X₁,X₂) is i₁ × i₂ × ... × iₙ and Mₖ are rₖ × iₖ, sort by largest possible dimension reduction iₖ-rₖ
-  p=sortperm(I[modes]-R[modes],rev=true)
+  p=sortperm(sz[modes]-R[modes],rev=true)
   M=M[p]
   modes=modes[p]
-  @assert(I[modes[1]] == size(M[1],2),"Dimensions mismatch")
+  @assert(sz[modes[1]] == size(M[1],2),"Dimensions mismatch")
   Xn=mkrontv(X1,X2,M[1]',modes[1],'t')';
-  I[modes[1]]=size(M[1],1)
-  X=matten(Xn,modes[1],I)
+  sz[modes[1]]=size(M[1],1)
+  X=matten(Xn,modes[1],sz)
   for n=2:length(M)
-	   @assert(I[modes[n]] == size(M[n],2),"Dimensions mismatch")
+	   @assert(sz[modes[n]] == size(M[n],2),"Dimensions mismatch")
      Xn=tenmat(X,modes[n])
-	   I[modes[n]]=size(M[n],1)
-	   X=matten(M[n]*Xn,modes[n],I)
+	   sz[modes[n]]=size(M[n],1)
+	   X=matten(M[n]*Xn,modes[n],sz)
 	end
 #  end
   X
@@ -335,10 +335,10 @@ function mttkrp(X::Array{T,N},M::MatrixCell,n::Integer) where {T<:Number,N}
     [M[m]=M[m-1] for m=N-1:-1:n+1]
   end
   modes=setdiff(1:N,n)
-  I=[size(X)...]
+  sz=[size(X)...]
   K=size(M[modes[1]],2)
   @assert(!any(map(Bool,[size(M[m],2)-K for m in modes])),"Matrices must have the same number of columns.")
-  @assert(!any(map(Bool,[size(M[m],1)-I[m] for m in modes])),"Matrices are of wrong size.")
+  @assert(!any(map(Bool,[size(M[m],1)-sz[m] for m in modes])),"Matrices are of wrong size.")
   Xn=tenmat(X,n)
   Xn*khatrirao(reverse(M[modes]))
 end
@@ -353,11 +353,11 @@ function neye(dims::Vector{D}) where {D<:Integer}
   dims=tuple(dims...)
   A=zeros(dims)
   R=CartesianRange(dims)
-  I=first(R)
+  Ifirst=first(R)
   Iend=last(R)
-  while I<=Iend
-      A[I]=1
-      I=I+1
+  while Ifirst<=Iend
+      A[Ifirst]=1
+      Ifirst=Ifirst+1
   end
   A
 end
@@ -444,18 +444,18 @@ Sequentially truncated HOSVD of a tensor X of predifined rank and processing ord
 """
 function sthosvd(X::Array{T,N},reqrank::Vector{D},p::Vector{D}) where {T<:Number,D<:Integer,N}
 	@assert(N==length(reqrank)==length(p),"Dimensions mismatch")
-	I=[size(X)...]
+	sz=[size(X)...]
 	fmat=MatrixCell(N)
 	for n=1:N
-		fmat[n]=zeros(I[n],reqrank[n])
+		fmat[n]=zeros(sz[n],reqrank[n])
 	end
 	for n in p
 		Xn=tenmat(X,n)
 		U,S,V=svd(Xn)
 		fmat[n]=U[:,1:reqrank[n]]
 		Xn=diagm(S[1:reqrank[n]])*V'[1:reqrank[n],:]
-		I[n]=reqrank[n]
-		X=matten(Xn,n,I)
+		sz[n]=reqrank[n]
+		X=matten(Xn,n,sz)
 	end
 	ttensor(X,fmat)
 end
@@ -470,9 +470,9 @@ Mode-n matricization of a tensor or matricization by row and column vectors R an
 """
 function tenmat(X::Array{T,N},n::Integer) where {T<:Number,N}
 	@assert(n<=ndims(X),"Mode exceedes number of dimensions")
-	I=size(X)
+	sz=size(X)
 	m=setdiff(1:N,n)
-	reshape(permutedims(X,[n;m]),I[n],prod(I[m]))
+	reshape(permutedims(X,[n;m]),sz[n],prod(sz[m]))
 end
 
 function tenmat(X::Array{T,N};R=[],C=[]) where {T<:Number,N}
@@ -492,8 +492,8 @@ function tenmat(X::Array{T,N};R=[],C=[]) where {T<:Number,N}
         end
         C=collect(1:N);deleteat!(C,sort(R));
     end
-	  I=size(X);
-    J=prod(I[R]);K=prod(I[C]);
+	  sz=size(X);
+    J=prod(sz[R]);K=prod(sz[C]);
 	reshape(permutedims(X,[R;C]),J,K)
 end
 
@@ -511,11 +511,11 @@ function tkron(X1::Array{T1,N},X2::Array{T2,N}) where {T1<:Number,T2<:Number,N}
   Xk=zeros(s1.*s2)
   R1=CartesianRange(s1)
   R2=CartesianRange(s2)
-  I=last(R2)
+  Il=last(R2)
   i=0
   for I1 in R1
     for I2 in R2
-      Xk[I2+ewprod((I1-1*one(I1)),I)]=X1[I1]*X2[I2]
+      Xk[I2+ewprod((I1-1*one(I1)),Il)]=X1[I1]*X2[I2]
     end
     i+=1
   end
@@ -533,26 +533,26 @@ If t='t', transpose matrices from M.
 function ttm(X::Array{T,N},M::MatrixCell,modes::Vector{D},t='n') where {T<:Number,D<:Integer,N}
   if t=='t'
     M=vec(M')
-	end
-	@assert(length(modes)<=length(M),"Too few matrices.")
-	@assert(length(M)<=N,"Too many matrices.")
-  I=[size(X)...]
+  end
+  @assert(length(modes)<=length(M),"Too few matrices.")
+  @assert(length(M)<=N,"Too many matrices.")
+  sz=[size(X)...]
   if length(modes) < length(M)
     M=M[modes] #discard matrices not needed for multiplication
   end
-  R=copy(I)
+  R=copy(sz)
   for n=1:length(modes)
     R[modes[n]]=size(M[n],1) #vector of rₖ
   end
   #Order of multiplication - if X is i₁ × i₂ × ... × iₙ and Mₖ is rₖ × iₖ, sort by largest possible dimension reduction iₖ-rₖ
-  p=sortperm(I[modes]-R[modes],rev=true)
+  p=sortperm(sz[modes]-R[modes],rev=true)
   M=M[p]
   modes=modes[p]
   for n=1:length(M)
-	 @assert(I[modes[n]] == size(M[n],2),"Dimensions mismatch")
-   Xn=tenmat(X,modes[n])
-	 I[modes[n]]=size(M[n],1)
-	 X=matten(M[n]*Xn,modes[n],I)
+	 @assert(sz[modes[n]] == size(M[n],2),"Dimensions mismatch")
+     Xn=tenmat(X,modes[n])
+	 sz[modes[n]]=size(M[n],1)
+	 X=matten(M[n]*Xn,modes[n],sz)
 	end
   X
 end
@@ -599,18 +599,18 @@ function ttv(X::Array{T,N},V::VectorCell,modes::Vector{D}) where {T<:Number,D<:I
   if N > 1
     X=permutedims(X,[remmodes modes'])
   end
-  I=size(X)
+  sz=size(X)
   if length(modes) < length(V)
     V=V[modes]
   end
   M=N
   for n=length(modes):-1:1
-    X=reshape(X,prod(I[1:M-1]),I[M])
+    X=reshape(X,prod(sz[1:M-1]),sz[M])
     X=X*V[n]
     M-=1
   end
   if M>0
-    X=reshape(X,I[1:M])
+    X=reshape(X,sz[1:M])
   end
   X
 end

@@ -46,11 +46,11 @@ ktensor(fmat::Vector{Matrix{T}}) where {T<:Number}=ktensor(MatrixCell(fmat))
 
 Create random Kruskal tensor of size I with R components, or of order N and size I × ⋯ × I.
 """
-function randktensor(I::Vector{D},R::Integer) where {D<:Integer}
-  fmat=Matrix[randn(I[n],R) for n=1:length(I)] #create random factor matrices
+function randktensor(sz::Vector{D},R::Integer) where {D<:Integer}
+  fmat=Matrix[randn(sz[n],R) for n=1:length(sz)] #create random factor matrices
   ktensor(fmat)
 end
-randktensor(I::Number,R::Number,N::Integer)=randktensor(repmat([I],N),R)
+randktensor(sz::Number,R::Number,N::Integer)=randktensor(repmat([sz],N),R)
 #For input defined as tuples or nx1 matrices - ranttensor(([I,I,I],[R,R,R]))
 
 """
