@@ -192,7 +192,7 @@ function hadcten(X1::ttensor{T1},X2::ttensor{T2},fmat::MatrixCell) where {T1<:Nu
 end
 hadcten(X1::ttensor{T1},X2::ttensor{T2},fmat::Array{Matrix{T3}}) where {T1<:Number,T2<:Number,T3<:Number}=hadcten(X1,X2,MatrixCell(fmat))
 #HOSVD for a ttensor. **Documentation in tensor.jl
-function hosvd(X::ttensor{T};method="lapack",reqrank=[],eps_abs=[],eps_rel=[]) where {T<:Number}
+function hosvd(X::ttensor{T};method="svd",reqrank=[],eps_abs=[],eps_rel=[]) where {T<:Number}
 	F=hosvd(X.cten,method=method,reqrank=reqrank,eps_abs=eps_abs,eps_rel=eps_rel)
   fmat=MatrixCell(ndims(X))
   [fmat[n]=X.fmat[n]*F.fmat[n] for n=1:ndims(X)]
@@ -206,7 +206,7 @@ Hadamard product of ttensors X and Y as ttensor. Creates the product and calls h
 See also: hosvd2, hosvd3, hosvd4.
 
 ## Arguments:
-- `method` ∈ {"lapack","lanczos","randsvd"}. Method for SVD. Default: "randsvd".
+- `method` ∈ {"svd","lanczos","randsvd"}. Method for SVD. Default: "randsvd".
 - `reqrank::Vector`: Requested mutlilinear rank. Optional.
 - `eps_abs::Number/Vector`: Drop singular values (of mode-n matricization) below eps_abs. Optional.
 - `eps_rel::Number/Vector`: Drop singular values (of mode-n matricization) below eps_rel*sigma_1. Optional.
@@ -224,7 +224,7 @@ Hadamard product of ttensors X and Y as ttensor. Orthogonalizes factor matrices 
 See also: hosvd1, hosvd3, hosvd4.
 
 ## Arguments:
-- `method` ∈ {"lapack","lanczos","randsvd"} Method for SVD. Default: "randsvd".
+- `method` ∈ {"svd","lanczos","randsvd"} Method for SVD. Default: "randsvd".
 - `reqrank::Vector`: Requested mutlilinear rank. Optional.
 - `eps_abs::Number/Vector`: Drop singular values (of mode-n matricization) below eps_abs. Optional.
 - `eps_rel::Number/Vector`: Drop singular values (of mode-n matricization) below eps_rel*sigma_1. Optional.
@@ -296,13 +296,13 @@ If reqrank defined, calls additonal hosvd on updated core tensor.
 See also: hosvd1, hosvd2, hosvd3.
 
 ## Arguments:
-- `method` ∈ {"lapack","lanczos","randsvd"} Method for SVD. Default: "lapack".
+- `method` ∈ {"svd","lanczos","randsvd"} Method for SVD. Default: "svd".
 - `reqrank::Vector`: Requested mutlilinear rank. Optional.
 - `eps_abs::Number/Vector`: Drop singular values (of mode-n matricization) below eps_abs. Optional.
 - `eps_rel::Number/Vector`: Drop singular values (of mode-n matricization) below eps_rel*sigma_1. Optional.
 - `p::Integer`: Oversampling parameter. Defaul p=10.
 """
-function hosvd4(X1::ttensor{T1},X2::ttensor{T2};method="lapack",reqrank=[],eps_abs=[],eps_rel=[],p=10) where {T1<:Number,T2<:Number}
+function hosvd4(X1::ttensor{T1},X2::ttensor{T2};method="svd",reqrank=[],eps_abs=[],eps_rel=[],p=10) where {T1<:Number,T2<:Number}
   @assert(size(X1) == size(X2))
   N=ndims(X1)
   reqrank=check_vector_input(reqrank,N,0);

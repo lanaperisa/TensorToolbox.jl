@@ -123,13 +123,13 @@ Higher-order singular value decomposition.
 
 ## Arguments:
 - `X`: Tensor (multidimensional array) or ttensor.
-- `method` ∈ {"lapack","lanczos","randsvd"} Method for SVD. Default: "lapack".
+- `method` ∈ {"svd","lanczos","randsvd"} Method for SVD. Default: "svd".
 - `reqrank::Vector`: Requested mutlilinear rank. Optional.
 - `eps_abs::Number/Vector`: Drop singular values (of mode-n matricization) below eps_abs. Default: 1e-8.
 - `eps_rel::Number/Vector`: Drop singular values (of mode-n matricization) below eps_rel*sigma_1. Optional.
 - `p::Integer`: Oversampling parameter. Defaul p=10.
 """
-function hosvd(X::Array{T,N};method="lapack",reqrank=[],eps_abs=[],eps_rel=[],p=10) where {T<:Number,N}
+function hosvd(X::Array{T,N};method="svd",reqrank=[],eps_abs=[],eps_rel=[],p=10) where {T<:Number,N}
 	fmat=MatrixCell(N)
 
   reqrank=check_vector_input(reqrank,N,0)
@@ -138,9 +138,7 @@ function hosvd(X::Array{T,N};method="lapack",reqrank=[],eps_abs=[],eps_rel=[],p=
 
 	for n=1:N
     Xn=float(tenmat(X,n))
-    if method == "lapack"
-      fmat[n],S=LAPACK.gesvd!('A','N',Xn)
-    elseif method == "lanczos"
+    if method == "lanczos"
       fmat[n],S=lanczos(Xn,tol=eps_abs[n],reqrank=reqrank[n],p=p)
     elseif method == "randsvd"
       fmat[n],S=randsvd(Xn,tol=eps_abs[n],reqrank=reqrank[n],p=p)

@@ -52,16 +52,14 @@ end
 Column space basis.
 ## Arguments:
 - `X`: Matrix.
-- `method` ∈ {"lapack","lanczos","randsvd"} Method for SVD. Default: "lapack".
+- `method` ∈ {"svd","lanczos","randsvd"} Method for SVD. Default: "svd".
 - `maxrank::Integer`: Maximal rank. Optional.
 - `atol::Number`: Drop singular values below atol.  Default: 1e-8.
 - `rtol::Number`: Drop singular values below rtol*sigma_1. Optional.
 - `p::Integer`: Oversampling parameter used by lanczos and randsvd methods. Defaul p=10.
 """
-function colspace(X::Matrix{T};method="lapack",maxrank=0,atol=1e-8,rtol=0,p=10) where T<:Number
-  if method == "lapack"
-    U,S=LAPACK.gesvd!('A','N',X)
-  elseif method == "lanczos"
+function colspace(X::Matrix{T};method="svd",maxrank=0,atol=1e-8,rtol=0,p=10) where T<:Number
+  if method == "lanczos"
     U,S=lanczos(X,tol=atol,maxrank=maxrank,p=p)
   elseif method == "randsvd"
     U,S=randsvd(X,tol=atol,maxrank=maxrank,p=p)
