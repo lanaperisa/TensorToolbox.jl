@@ -43,14 +43,14 @@ ttensor(cten::Array{T},fmat::Array{Matrix{T1}}) where {T,T1<:Number}=ttensor{T}(
 
 Create random ttensor of size I and multilinear rank R, or of order N and size I × ⋯ × I and mulilinear rank (R,...,R).
 """
-function randttensorAbstractRange(sz::Vector{D},R::Vector{D}) where {D<:Integer}
+function randttensor(sz::Vector{D},R::Vector{D}) where {D<:Integer}
   @assert(size(sz)==size(R),"Size and rank should be of same length.")
   cten=randn(tuple(R...)) #create radnom core tensor
   fmat=Matrix[randn(sz[n],R[n]) for n=1:length(sz)] #create random factor matrices
   ttensor(cten,fmat)
 end
 randttensor(sz::Integer,R::Integer,N::Integer)=randttensor(repeat([sz],N),repeat([R],N));
-#For input defined as tuples or nx1 matrices - ranttensor(([I,I,I],[R,R,R]))
+#For input defined as tuples or nx1 matrices - randttensor(([I,I,I],[R,R,R]))
 function randttensor(arg...)
   randttensor([arg[1]...],[arg[2]...])
 end

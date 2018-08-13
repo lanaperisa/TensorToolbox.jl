@@ -531,7 +531,6 @@ Default modes: 1:length(M).
 If t='t', transpose matrices from M.
 """
 function ttm(X::Array{T,N},M::MatrixCell,modes::Vector{D},t='n') where {T<:Number,D<:Integer,N}
-    @show modes
   if t=='t'
     [M[n]=M[n]' for n=1:length(M)]
   end
