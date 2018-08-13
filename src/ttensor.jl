@@ -931,7 +931,7 @@ function norm(X::ttensor{T}) where {T<:Number}
 			R=MatrixCell(ndims(X))
 			for n=1:ndims(X)
 				#R[n]=qrfact(X.fmat[n])[:R]
-				R[n]=qr(X.fmat[n])[2];
+				R[n]=qr(X.fmat[n]).R
 			end
 			norm(ttm(X.cten,R))
 		end
