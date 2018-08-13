@@ -2,6 +2,7 @@
 module TensorToolbox
 
 #Tensors in Tucker format + functions
+
 using LinearAlgebra
 import Base: +, -, *, .*, ==, cat, display, full, isequal, kron, ndims, parent, permutedims, show, size, squeeze
 
