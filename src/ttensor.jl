@@ -577,7 +577,7 @@ function mttkrp(X::ttensor{T},M::MatrixCell,n::Integer) where {T<:Number}
   @assert(!any(map(Bool,[size(M[m],1)-sz[m] for m in modes])),"Matrices are of wrong size")
   fmat=MatrixCell(N-1)
   for m in modes
-      fmat[m]=X.fmat[m]'*M[modes]
+      fmat[m]=X.fmat[m]'*M[m]
   end
   Y=mttkrp(X.cten,fmat,n)
   X.fmat[n]*Y
