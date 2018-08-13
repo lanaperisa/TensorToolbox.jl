@@ -2,8 +2,9 @@
 module TensorToolbox
 
 #Tensors in Tucker format + functions
+using LinearAlgebra
 
-import LinearAlgebra: norm, rank
+import LinearAlgebra: norm
 import Base: +, -, *, .*, ==, cat, display, full, isequal, kron, ndims, parent, permutedims, show, size, squeeze
 
 include("helper.jl")
