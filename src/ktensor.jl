@@ -214,7 +214,7 @@ function fixsigns(X::ktensor{T}) where {T<:Number}
             maxind=indmax(abs.(X.fmat[n][:,r]))
             sgn[n]=sign(X.fmat[n][maxind,r])
         end
-        negind=find(sgn.==-1)
+        negind=findall(sgn.==-1)
         nflip=2*floor(Int,length(negind)/2)
         for i=1:nflip
             fmat[negind[i]][:,r]=-X.fmat[negind[i]][:,r]
@@ -235,7 +235,7 @@ function fixsigns!(X::ktensor{T}) where {T<:Number}
             maxind=indmax(abs.(X.fmat[n][:,r]))
             sgn[n]=sign(X.fmat[n][maxind,r])
         end
-        negind=find(sgn.==-1)
+        negind=findall(sgn.==-1)
         nflip=2*floor(Int,length(negind)/2)
         for i=1:nflip
             X.fmat[negind[i]][:,r]=-X.fmat[negind[i]][:,r]
@@ -358,7 +358,7 @@ function normalize(X::ktensor{T},mode=-1;normtype=2,factor=-1) where {T<:Number}
     end
   end
   #Check that all the lambda values are positive
-  negind = find(lambda .< 0)
+  negind = findall(lambda .< 0)
   for i in negind
     lambda[i] = -1 * lambda[i]
     fmat[1][:,i] = -1 * fmat[1][:,i]
@@ -414,7 +414,7 @@ function normalize!(X::ktensor{T},mode=-1;normtype=2,factor=-1) where {T<:Number
     end
   end
   #Check that all the lambda values are positive
-  negind = find(X.lambda .< 0)
+  negind = findall(X.lambda .< 0)
   for i in negind
     X.fmat[1][:,i] = -1 * X.fmat[1][:,i]
     X.lambda[i] = -1 * X.lambda[i]

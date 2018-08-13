@@ -272,7 +272,7 @@ function next_single_node(T::dimtree,dims::Vector{Int})
        return nodes[1]
     end
     for p in parents
-        inds=find(parents.==p)
+        inds=findall(parents.==p)
         if length(inds)>1
             return nodes[inds[1]]
         end
@@ -378,8 +378,8 @@ function squeeze(X::htensor)
   In=copy(X.tree.internal_nodes)
   L=copy(X.tree.leaves)
   sz=[size(X)...]
-  sdims=find(sz.==1) #singleton dimensions
-  while length(find(sz.!=-1)) >2
+  sdims=findall(sz.==1) #singleton dimensions
+  while length(findall(sz.!=-1)) >2
     node=next_single_node(T,sdims)
     if node == -1
         break
@@ -399,10 +399,10 @@ function squeeze(X::htensor)
       lft=0
     end
     if is_leaf(T,sibling_node)
-      v=setdiff(find(L.>L[inds]),ind)
+      v=setdiff(findall(L.>L[inds]),ind)
       L[v]-=2
       L[inds]=parent_node
-      #deleteat!(sdims,find(sdims.==inds))
+      #deleteat!(sdims,findall(sdims.==inds))
       sz[ind]=-1
       if lft==1
         U[ind]=U[ind+1]*tmp
@@ -447,8 +447,8 @@ function squeeze(X::htensor)
       deleteat!(U,ind)
     end
     deleteat!(L,ind)
-    deleteat!(sdims,find(sdims.==ind))
-    sdims[find(sdims.>ind)].-=1
+    deleteat!(sdims,findall(sdims.==ind))
+    sdims[findall(sdims.>ind)].-=1
     T=dimtree(copy(L))
     #display(T)
   end

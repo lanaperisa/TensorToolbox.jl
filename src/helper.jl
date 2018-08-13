@@ -73,7 +73,7 @@ function colspace(X::Matrix{T};method="svd",maxrank=0,atol=1e-8,rtol=0,p=10) whe
     end
   end
   rtol != 0 ? tol=rtol*S[1] : tol=atol
-  K=find(x-> x>tol ? true : false,S)
+  K=findall(x-> x>tol ? true : false,S)
   U[:,K]
 end
 
@@ -275,7 +275,7 @@ function lanczos(A::Matrix{N};tol=1e-8,maxit=1000,reqrank=0,p=10) where N<:Numbe
     U=Q*U[:,1:reqrank];
     S=S[1:reqrank];
   else
-    K=find(x-> x>tol ? true : false,S)
+    K=findall(x-> x>tol ? true : false,S)
     U=Q*U[:,K];
     S=S[K];
   end
@@ -379,7 +379,7 @@ function randsvd(A::Matrix{N};tol=1e-8,maxit=1000,reqrank=0,r=10,p=10) where N<:
       	S=S[1:reqrank];
       end
   else
-    K=find(x-> x>tol ? true : false,S)
+    K=findall(x-> x>tol ? true : false,S)
     U=Q*U[:,K];
     S=S[K];
   end

@@ -149,7 +149,7 @@ function hosvd(X::Array{T,N};method="svd",reqrank=[],eps_abs=[],eps_rel=[],p=10)
       fmat[n]=fmat[n][:,1:reqrank[n]]
     else
       eps_rel[n] != 0 ? tol=eps_rel[n]*S[1] : tol=eps_abs[n]
-      K=find(x-> x>tol ? true : false,S)
+      K=findall(x-> x>tol ? true : false,S)
       fmat[n]=fmat[n][:,K]
     end
   end
@@ -434,7 +434,7 @@ end
 #Squeeze all singleton dimensions. **Documentation in Base.jl.
 function squeeze(A::Array{T}) where {T<:Number}
   sz=size(A)
-  sdims=find(sz.==1) #singleton dimensions
+  sdims=findall(sz.==1) #singleton dimensions
   squeeze(A,tuple(sdims...))
 end
 
@@ -531,7 +531,8 @@ Tensor times matrix (n-mode product):  X x₁ M₁ x₂ M₂ x₃ ⋯ xₙ Mₙ
 Default modes: 1:length(M).
 If t='t', transpose matrices from M.
 """
-function ttm(X::Array{T,N},M::MatrixCell,modes::Vector{D},t='n') where {T<:Number,D<:Integer,N}
+function ttm(X::Array{T,N},A::MatrixCell,modes::Vector{D},t='n') where {T<:Number,D<:Integer,N}
+  M=deepcopy(A)
   if t=='t'
     [M[n]=M[n]' for n=1:length(M)]
   end

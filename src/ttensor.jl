@@ -281,7 +281,7 @@ function hosvd3(X1::ttensor{T1},X2::ttensor{T2};method="lanczos",reqrank=[],vari
     end
     if reqrank[n] == 0
       eps_rel[n] != 0 ?  tol=eps_rel[n]*S[1] : tol=eps_abs[n];
-      K=find(x-> x>tol ? true : false,S)
+      K=findall(x-> x>tol ? true : false,S)
       Ahad[n]=Ahad[n][:,K];
     end
   end

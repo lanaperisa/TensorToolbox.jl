@@ -321,7 +321,7 @@ function parent(T::dimtree)
   P=zeros(Int,nn) #parent[node]
   P[1]=0
   for n=2:nn
-    P[n]=ind2sub(C,find(x->x==n,C))[1][1]
+    P[n]=ind2sub(C,findall(x->x==n,C))[1][1]
   end
   P
 end
