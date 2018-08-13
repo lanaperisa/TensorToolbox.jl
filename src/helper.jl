@@ -1,5 +1,5 @@
 #export check_vector_input
-export .*, colspace, khatrirao, krontkron, kron, krontv, krtv, tkrtv, lanczos, lanczos_tridiag, randsvd
+export colspace, ewprod, khatrirao, krontkron, kron, krontv, krtv, tkrtv, lanczos, lanczos_tridiag, randsvd
 export VectorCell, MatrixCell, TensorCell
 
 """
@@ -21,7 +21,7 @@ Cell of multidimensional arrays of length N.
 """
 const TensorCell = Array{Array,1}
 
-function Base.broadcast(.*,I1::CartesianIndex{N},I2::CartesianIndex{N}) where N
+function ewprod(I1::CartesianIndex{N},I2::CartesianIndex{N}) where N
   prod=zeros(Int,N)
   [prod[n]=I1[n]*I2[n] for n=1:N]
   CartesianIndex{N}(tuple(prod...))
