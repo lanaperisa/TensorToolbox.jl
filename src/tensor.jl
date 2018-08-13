@@ -105,7 +105,7 @@ function diagt(v::Vector{T}) where {T<:Number}
   In=first(R)
   for i=1:N
     D[In]=v[i]
-    In=In+1
+    In=In+1*one(In)
   end
   D
 end
