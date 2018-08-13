@@ -194,7 +194,6 @@ hadcten(X1::ttensor{T1},X2::ttensor{T2},fmat::Array{Matrix{T3}}) where {T1<:Numb
 #HOSVD for a ttensor. **Documentation in tensor.jl
 function hosvd(X::ttensor{T};method="svd",reqrank=[],eps_abs=[],eps_rel=[]) where {T<:Number}
   F=hosvd(X.cten,method=method,reqrank=reqrank,eps_abs=eps_abs,eps_rel=eps_rel)
-  [@show size(F.fmat[n]) for n=1:ndims(X)]
   fmat=MatrixCell(ndims(X))
   [fmat[n]=X.fmat[n]*F.fmat[n] for n=1:ndims(X)]
   reorth(ttensor(F.cten,fmat))
@@ -576,7 +575,11 @@ function mttkrp(X::ttensor{T},M::MatrixCell,n::Integer) where {T<:Number}
   K=size(M[modes[1]],2)
   @assert(!any(map(Bool,[size(M[m],2)-K for m in modes])),"Matrices must have the same number of columns")
   @assert(!any(map(Bool,[size(M[m],1)-sz[m] for m in modes])),"Matrices are of wrong size")
-  Y=mttkrp(X.cten,vec(X.fmat[modes]').*M[modes],n)
+  fmat=MatrixCell(N-1)
+  for m in modes
+      fmat[m]=X.fmat[m]'*M[modes]
+  end
+  Y=mttkrp(X.cten,fmat,n)
   X.fmat[n]*Y
 end
 mttkrp(X::ttensor{T1},M::Array{Matrix{T2}},n::Integer) where {T1<:Number,T2<:Number}=mttkrp(X,MatrixCell(M),n)

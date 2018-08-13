@@ -1,5 +1,5 @@
 #export check_vector_input
-export colspace, ewprod, khatrirao, krontkron, kron, krontv, krtv, tkrtv, lanczos, lanczos_tridiag, randsvd
+export colspace, eye, ewprod, khatrirao, krontkron, kron, krontv, krtv, tkrtv, lanczos, lanczos_tridiag, randsvd
 export VectorCell, MatrixCell, TensorCell
 
 """
@@ -75,6 +75,16 @@ function colspace(X::Matrix{T};method="svd",maxrank=0,atol=1e-8,rtol=0,p=10) whe
   rtol != 0 ? tol=rtol*S[1] : tol=atol
   K=findall(x-> x>tol ? true : false,S)
   U[:,K]
+end
+
+"""
+    eye(n::Integer)
+
+Identity matrix of size nxn.
+"""    
+
+function eye(n::Integer)
+  Matrix(1.0I, n, n)
 end
 
 """

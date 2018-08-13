@@ -153,7 +153,6 @@ function hosvd(X::Array{T,N};method="svd",reqrank=[],eps_abs=[],eps_rel=[],p=10)
       fmat[n]=fmat[n][:,K]
     end
   end
-  [@show size(fmat[n]) for n=1:N]
   ttensor(ttm(X,fmat,'t'),fmat)
 end
 
