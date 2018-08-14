@@ -150,8 +150,8 @@ println("|innerprod(X,Y) - innerprod(full(X),full(Y))| = ",err )
 @test err ≈ 0 atol=1e-10
 
 println("\n\n...Testing Hadamard product.")
-err=norm(full(had(X,Y)) - full(X).*full(Y))
-println("norm(full(had(X,Y)) - full(X).*full(Y)) = ", err)
+err=norm(full(ewprod(X,Y)) - full(X).*full(Y))
+println("norm(full(ewprod(X,Y)) - full(X).*full(Y)) = ", err)
 @test  err ≈ 0 atol=1e-10
 
 
@@ -182,9 +182,9 @@ Y=randttensor([5,4,3],[2,2,2])
 println("\n\n...Creating two random ttensors X and Y of size ", size(X),".")
 v=rand(12)
 mode=1
-println("Multiplying mode-$mode matricized had(X,Y) by a random vector.")
+println("Multiplying mode-$mode matricized ewprod(X,Y) by a random vector.")
 Z=mhadtv(X,Y,v,mode,'n')
-Hn=tenmat(had(X,Y),mode)
+Hn=tenmat(ewprod(X,Y),mode)
 err = norm(Z-Hn*v)
 println("Multiplication error: ",err)
 @test err ≈ 0 atol=1e-10
