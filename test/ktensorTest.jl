@@ -128,7 +128,7 @@ err=norm(full(X)-full(Z))
 println("norm(full(X)-full(Z)) = ",err)
 @test err ≈ 0 atol=1e-10
 fixsigns!(X)
-@test norm(X-Xcopy) ≈ 0 atol=1e-8
+@test norm(X-Xcopy) ≈ 0 atol=1e-7
 
 println("...Testing functions ttm and ttv.")
 M=MatrixCell(undef,2)
