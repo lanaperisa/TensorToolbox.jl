@@ -1,4 +1,4 @@
-#Tensors in Kruskal (CP) format + functions
+argmax#Tensors in Kruskal (CP) format + functions
 
 export ktensor, randktensor, arrange, arrange!, cp_als, display, extract, fixsigns, fixsigns!, full, innerprod, isequal, minus, mtimes, mttkrp, ncomponents, ndims
 export normalize, normalize!, nvecs, permutedims, plus, redistribute, redistribute!, size, tenmat, tocell, ttensor, ttm, ttv, uminus, norm
@@ -30,7 +30,7 @@ ktensor(lambda::Vector{T},fmat::MatrixCell) where T=ktensor{T}(lambda,fmat,true)
 ktensor(lambda::Vector{T},mat::Matrix) where T=ktensor{T}(lambda,collect(mat),true)
 ktensor(fmat::MatrixCell)=ktensor(ones(size(fmat[1],2)),fmat)
 function ktensor(lambda::Vector{T},mat...) where T
-  fmat=MatrixCell(0)
+  fmat=MatrixCell(undef,0)
   for M in mat
 			push!(fmat,M)
 	end
@@ -68,12 +68,12 @@ function arrange(X::ktensor{T},mode=-1) where {T<:Number}
     Xnorm=normalize(X) #Ensure that matrices are normalized
     p=sortperm(Xnorm.lambda,rev=true) #Sort
     lambda=Xnorm.lambda[p]
-    fmat=MatrixCell(N)
+    fmat=MatrixCell(undef,N)
     [fmat[n]=Xnorm.fmat[n][:,p] for n=1:N]
     #Absorb the weight into one factor, if requested
     if mode>0
         fmat[mode]=fmat[mode].*repeat(lambda',size(X,mode),1) #fmat[mode]*diagm(lambda)
-        lambda = ones(lambda)
+        lambda = fill(1,size(lambda))#ones(lambda)
     end
     ktensor(lambda,fmat)
 end
@@ -81,7 +81,7 @@ function arrange(X::ktensor{T},perm::Vector{D}) where {T<:Number,D<:Integer}
     N=ndims(X)
     @assert(collect(1:ncomponents(X))==sort(perm),"Invalid permutation.")
     lambda = X.lambda[perm]
-    fmat=MatrixCell(N)
+    fmat=MatrixCell(undef,N)
     [fmat[n]=X.fmat[n][:,perm] for n=1:N]
     ktensor(lambda,fmat)
 end
@@ -106,7 +106,7 @@ function arrange!(X::ktensor{T},mode=-1) where {T<:Number}
     #Absorb the weight into one factor, if requested
     if mode>0
         X.fmat[mode]=X.fmat[mode].*repeat(X.lambda',size(X,mode),1) #X.fmat[mode]*diagm(X.lambda)
-        X.lambda = ones(X.lambda)
+        X.lambda = fill(1,size(X.lambda))#ones(X.lambda)
     end
     X
 end
@@ -126,7 +126,7 @@ function cp_als(X::ktensor{T},R::Integer;init="rand",tol=1e-4,maxit=1000,dimorde
     if length(dimorder) == 0
         dimorder=collect(1:N)
     end
-    fmat=MatrixCell(N)
+    fmat=MatrixCell(undef,N)
     if isa(init,Vector) || isa(init,MatrixCell)
         @assert(length(init)==N,"Wrong number of initial matrices.")
         for n in dimorder[2:end]
@@ -153,7 +153,7 @@ function cp_als(X::ktensor{T},R::Integer;init="rand",tol=1e-4,maxit=1000,dimorde
             if k == 1
                 lambda = sqrt.(sum(fmat[n].^2,dims=1))[:] #2-norm
             else
-                lambda = maximum(maximum(abs.(fmat[n]),1),dims=1)[:] #max-norm
+                lambda = maximum(maximum(abs.(fmat[n]),dims=1),dims=1)[:] #max-norm
             end
             fmat[n] = fmat[n]./lambda'
             G[:,:,n] = fmat[n]'*fmat[n]
@@ -194,7 +194,7 @@ Create a new ktensor with only the specified factors.
 function extract(X::ktensor{T},factors::Vector{D}) where {T<:Number,D<:Integer}
     N=ndims(X)
     lambda = X.lambda[factors]
-    fmat = MatrixCell(N)
+    fmat = MatrixCell(undef,N)
     [fmat[n]=X.fmat[n][:,factors] for n=1:N]
     ktensor(lambda, fmat)
 end
@@ -211,7 +211,7 @@ function fixsigns(X::ktensor{T}) where {T<:Number}
     fmat=deepcopy(X.fmat)
      for r=1:ncomponents(X)
         for n=1:N
-            maxind=indmax(abs.(X.fmat[n][:,r]))
+            maxind=argmax(abs.(X.fmat[n][:,r]))
             sgn[n]=sign(X.fmat[n][maxind,r])
         end
         negind=findall(sgn.==-1)
@@ -232,7 +232,7 @@ function fixsigns!(X::ktensor{T}) where {T<:Number}
     sgn=zeros(Int,N)
      for r=1:ncomponents(X)
         for n=1:N
-            maxind=indmax(abs.(X.fmat[n][:,r]))
+            maxind=argmax(abs.(X.fmat[n][:,r]))
             sgn[n]=sign(X.fmat[n][maxind,r])
         end
         negind=findall(sgn.==-1)
@@ -262,7 +262,7 @@ function innerprod(X1::ktensor{T},X2) where {T<:Number}
   @assert(size(X1)==size(X2),"Dimension mismatch.")
   inpr=0
   for r=1:ncomponents(X1)
-    inpr+=X1.lambda[r]*ttv(X2,[X1.fmat[n][:,r] for n=1:ndims(X1)])
+    inpr+=X1.lambda[r]*ttv(X2,[X1.fmat[n][:,r] for n=1:ndims(X1)])[1]
   end
   inpr
 end
@@ -366,10 +366,10 @@ function normalize(X::ktensor{T},mode=-1;normtype=2,factor=-1) where {T<:Number}
   if mode == 0
     d=(lambda').^(1/N)
    [fmat[n]=fmat[n].*repeat(d,size(X,n),1) for n=1:N] #fmat[n]*diagm(d)
-    lambda = ones(lambda)
+    lambda = fill(1,size(lambda))#ones(lambda)
   elseif mode > 0
     fmat[mode] = fmat[mode].*repeat(lambda',size(X,mode),1) #fmat[mode]*diagm(lambda)
-    lambda = ones(lambda)
+    lambda = fill(1,size(lambda))#ones(lambda)
   elseif mode==-2
     p = sortperm(lambda,rev=true)
     return arrange(ktensor(lambda,fmat),p)
@@ -422,10 +422,10 @@ function normalize!(X::ktensor{T},mode=-1;normtype=2,factor=-1) where {T<:Number
   if mode == 0
      d=(X.lambda').^(1/N)
      [X.fmat[n]=X.fmat[n].*repeat(d,size(X,n),1) for n=1:N] #X.fmat[n]*diagm(d)
-     X.lambda = ones(X.lambda)
+     X.lambda = fill(1,size(X.lambda))#ones(X.lambda)
   elseif mode > 0
     X.fmat[mode] = X.fmat[mode].*repeat(X.lambda',size(X,mode),1) #X.fmat[n]*diagm(X.lambda)
-    X.lambda = ones(X.lambda)
+    X.lambda = fill(1,size(X.lambda))#ones(X.lambda)
   elseif mode==-2
     p = sortperm(X.lambda,rev=true)
     X = arrange(X,p)
@@ -441,7 +441,7 @@ function nvecs(X::ktensor{T},n::Integer,r=0;flipsign=false) where {T<:Number}
         M = M .* (X.fmat[m]' * X.fmat[m])
     end
     #V=eigs(Symmetric(X.fmat[n] * M * X.fmat[n]'),nev=r,which=:LM)[2] #has bugs
-    V=eigfact(Symmetric(X.fmat[n] * M * X.fmat[n]'))[:vectors][:,end:-1:end-r+1]
+    V=eigen(Symmetric(X.fmat[n] * M * X.fmat[n]')).vectors[:,end:-1:end-r+1]
     if flipsign
         maxind = findmax(abs.(V),1)[2]
         for i = 1:r
@@ -529,7 +529,7 @@ function tocell(X::ktensor{T}) where {T<:Number}
     end
     N=ndims(X)
     d = (X.lambda').^(1/N)
-    fmat=MatrixCell(N)
+    fmat=MatrixCell(undef,N)
     for n = 1:N
         fmat[n] = X.fmat[n].*repeat(d,size(X.fmat[n],1),1)
     end

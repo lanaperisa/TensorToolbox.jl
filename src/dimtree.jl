@@ -30,17 +30,17 @@ end
 
 function dimtree(N::Integer,treetype="balanced")
   @assert(treetype=="balanced","Only balanced trees are supported.")
-  C=zeros(Int,2*N-1,2);
-  dims=Array{Any}(2*N-1);
+  C=zeros(Int,2*N-1,2)
+  dims=Array{Any}(undef,2*N-1)
   dims[1]=collect(1:N)
-  nn=1;
+  nn=1
   i=1
   while i<=nn
     if length(dims[i]) == 1
-      C[i,:]=[0 0];
+      C[i,:]=[0 0]
     else
-      ind_left=nn+1;
-      ind_right=nn+2;
+      ind_left=nn+1
+      ind_right=nn+2
       nn+=2
       C[i,:]=[ind_left,ind_right]
       dims[ind_left]=dims[i][1:ceil(Int,end/2)]
@@ -48,9 +48,9 @@ function dimtree(N::Integer,treetype="balanced")
     end
     i+=1
   end
-  L=findin(C[:,1],[0,0])
+  L=findall((in)([0,0]),C[:,1])
   leaves=zeros(Int,N)
-  leaves[dims[L]]=L;
+  [leaves[dims[l]].=l for l in L]
   dimtree(leaves)
 end
 
@@ -100,7 +100,7 @@ end
 Content of a node of a dimtree T.
 """
 function dims(T::dimtree)
-    dims_mat=Array{Vector}(non(T))
+    dims_mat=Array{Vector}(undef,non(T))
     [dims_mat[T.leaves[n]]=[n] for n=1:length(T.leaves)]
     for n in reverse(T.internal_nodes)
         c=children(T,n)
@@ -217,7 +217,7 @@ end
 True if a node is a left node of dimtree T. False otherwise.
 """
 function is_left(T::dimtree,node::Integer)
-    ind=findn(children(T)[:,1].==node)
+    ind=findall(children(T)[:,1].==node)
     if length(ind)>0
         return true
     else
@@ -231,7 +231,7 @@ end
 True if a node is a right node of dimtree T. False otherwise.
 """
 function is_right(T::dimtree,node::Integer)
-    ind=findn(children(T)[:,2].==node)
+    ind=findall(children(T)[:,2].==node)
     if length(ind)>0
         return true
     else
@@ -277,7 +277,7 @@ end
 Nodes on a level l in a dimtree T.
 """
 function nodes_on_lvl(T::dimtree,l::Integer)
-    findn(lvl(T).==l)
+    findall(lvl(T).==l)
 end
 
 """
@@ -287,12 +287,12 @@ Convert node numbers to transfer tensor or frames indices in a dimtree T.
 """
 function node2ind(T::dimtree,nodes::Vector{Int})
     ind=zeros(Int,length(nodes))
-    k=1;
+    k=1
     for n in nodes
         if is_leaf(T,n)
-            ind[k]=findin(T.leaves,n)[1]
+            ind[k]=findall((in)(n),T.leaves)[1]
         else
-            ind[k]=findin(T.internal_nodes,n)[1]
+            ind[k]=findall((in)(n),T.internal_nodes)[1]
         end
         k+=1
     end
@@ -321,7 +321,7 @@ function parent(T::dimtree)
   P=zeros(Int,nn) #parent[node]
   P[1]=0
   for n=2:nn
-    P[n]=ind2sub(C,findall(x->x==n,C))[1][1]
+    P[n]=CartesianIndices(C)[findall(C.==n)][1][1]
   end
   P
 end
@@ -378,11 +378,11 @@ Sibling of a node in a dimtree T.
 """
 function sibling(T::dimtree,node::Integer)
   C=children(T)
-  i,j=findn(C.==node)
-  if j==[1]
-      C[i...,2]
+  ind=findall(C.==node)[1]
+  if ind[2]==1
+      C[ind[1]...,2]
   else
-      C[i...,1]
+      C[ind[1]...,1]
   end
 end
 
@@ -427,7 +427,9 @@ function subtree(T::dimtree,node::Integer)
     return dimtree([1],Int[])
   end
   nodes=subnodes(T,node)
-  L=T.leaves[findin(T.leaves,nodes)]
-  I=T.internal_nodes[findin(T.internal_nodes,nodes)]
+  #L=T.leaves[findin(T.leaves,nodes)]
+  L=T.leaves[findall((in)(nodes),T.leaves)]
+  #I=T.internal_nodes[findin(T.internal_nodes,nodes)]
+  I=T.internal_nodes[findall((in)(nodes),T.internal_nodes)]
   dimtree(sortperm(L).+length(I))
 end

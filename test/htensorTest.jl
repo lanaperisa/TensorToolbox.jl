@@ -1,4 +1,5 @@
-using TensorToolbox, Test, LinearAlgebra
+#using TensorToolbox
+using Test, LinearAlgebra
 
 T1=dimtree([8,9,5,6,7])
 T2=dimtree([2,4,6,8,9])
@@ -30,7 +31,7 @@ println("\n...Testing ndims of htensor H : ", ndims(H))
 @test ndims(H) == ndims(X)
 
 
-A=MatrixCell(ndims(H))
+A=MatrixCell(undef,ndims(H))
 for n=1:ndims(H)
   A[n]=rand(rand(1:10),size(H,n))
 end
@@ -73,32 +74,32 @@ println("\n\nTesting function squeeze for squeezed tensor X and squeezed htensor
 X=rand(1,2,4,3,2)
 H=htrunc(X)
 Y=squeeze(H)
-err = norm(full(Y)-squeeze(X,1))
-println("norm(full(Y)-squeeze(X,1)) = ",err)
+err = norm(full(Y)-dropdims(X,dims=1))
+println("norm(full(Y)-dropdims(X,dims=1)) = ",err)
 @test err ≈ 0 atol=1e-10
 X=rand(2,1,4,3,2)
 H=htrunc(X)
 Y=squeeze(H)
-err = norm(full(Y)-squeeze(X,2))
-println("norm(full(Y)-squeeze(X,2)) = ",err)
+err = norm(full(Y)-dropdims(X,dims=2))
+println("norm(full(Y)-dropdims(X,dims=2)) = ",err)
 @test err ≈ 0 atol=1e-10
 X=rand(2,4,1,3,2)
 H=htrunc(X)
 Y=squeeze(H)
-err = norm(full(Y)-squeeze(X,3))
-println("norm(full(Y)-squeeze(X,3)) = ",err)
+err = norm(full(Y)-dropdims(X,dims=3))
+println("norm(full(Y)-dropdims(X,dims=3)) = ",err)
 @test err ≈ 0 atol=1e-10
 X=rand(2,4,3,1,2)
 H=htrunc(X)
 Y=squeeze(H)
-err = norm(full(Y)-squeeze(X,4))
-println("norm(full(Y)-squeeze(X,4)) = ",err)
+err = norm(full(Y)-dropdims(X,dims=4))
+println("norm(full(Y)-dropdims(X,dims=4)) = ",err)
 @test err ≈ 0 atol=1e-10
 X=rand(2,4,3,2,1)
 H=htrunc(X)
 Y=squeeze(H)
-err = norm(full(Y)-squeeze(X,5))
-println("norm(full(Y)-squeeze(X,5)) = ",err)
+err = norm(full(Y)-dropdims(X,dims=5))
+println("norm(full(Y)-dropdims(X,dims=5)) = ",err)
 @test err ≈ 0 atol=1e-10
 
 H=randhtensor([4,5,2])

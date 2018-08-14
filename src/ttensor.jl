@@ -27,7 +27,7 @@ ttensor(cten::Array{T},fmat::MatrixCell,isorth::Bool) where T=ttensor{T}(cten,fm
 ttensor(cten::Array{T},fmat::MatrixCell) where T=ttensor{T}(cten,fmat,true)
 ttensor(cten::Array{T},mat::Matrix) where T=ttensor{T}(cten,collect(mat),true)
 function ttensor(cten::Array{T},mat...) where T
-  fmat=MatrixCell(0)
+  fmat=MatrixCell(undef,0)
   for M in mat
 			push!(fmat,M)
 	end
@@ -72,7 +72,7 @@ function cp_als(X::ttensor{T},R::Integer;init="rand",tol=1e-4,maxit=1000,dimorde
     if length(dimorder) == 0
         dimorder=collect(1:N)
     end
-    fmat=MatrixCell(N)
+    fmat=MatrixCell(undef,N)
     if isa(init,Vector) || isa(init,MatrixCell)
         @assert(length(init)==N,"Wrong number of initial matrices.")
         for n in dimorder[2:end]
@@ -99,7 +99,7 @@ function cp_als(X::ttensor{T},R::Integer;init="rand",tol=1e-4,maxit=1000,dimorde
             if k == 1
                 lambda = sqrt.(sum(fmat[n].^2,dims=1))[:] #2-norm
             else
-                lambda = maximum(maximum(abs.(fmat[n]),1),1)[:] #max-norm
+                lambda = maximum(maximum(abs.(fmat[n]),dims=1),dims=1)[:] #max-norm
             end
             fmat[n] = fmat[n]./lambda'
             G[:,:,n] = fmat[n]'*fmat[n]
@@ -108,8 +108,8 @@ function cp_als(X::ttensor{T},R::Integer;init="rand",tol=1e-4,maxit=1000,dimorde
         if nr==0
             fit=norm(K)^2-2*innerprod(X,K)
         else
-            nr_res=sqrt.(abs.(nr^2+norm(K)^2-2*innerprod(X,K)))
-            fir=1-nr_res/nr
+            nr_res=sqrt.(abs.(nr^2+norm(K)^2 .-2*innerprod(X,K)))
+            fir=1 .-nr_res/nr
         end
         fitchange=abs.(fitold-fit)
         if k>1 && fitchange<tol
@@ -166,7 +166,7 @@ Hadamard (element-wise) product of two ttensors. Same as: X.*Y.
 """
 function had(X1::ttensor{T1},X2::ttensor{T2}) where {T1<:Number,T2<:Number}
   @assert(size(X1) == size(X2))
-	fmat=MatrixCell(ndims(X1)) #initilize factor matrix
+	fmat=MatrixCell(undef,ndims(X1)) #initilize factor matrix
   n=1
   for (A1,A2) in zip(X1.fmat,X2.fmat)
       fmat[n]=khatrirao(A1,A2,'t')
@@ -175,7 +175,7 @@ function had(X1::ttensor{T1},X2::ttensor{T2}) where {T1<:Number,T2<:Number}
   cten=tkron(X1.cten,X2.cten) #Kronecker product of core tensors
   ttensor(cten,fmat)
 end
-Base.broadcast(.*,X1::ttensor{T1},X2::ttensor{T2}) where {T1<:Number,T2<:Number}= had(X1,X2)
+Base.broadcast( .*,X1::ttensor{T1},X2::ttensor{T2}) where {T1<:Number,T2<:Number}= had(X1,X2)
 
 """
     hadcten(X,Y,fmat)
@@ -184,7 +184,7 @@ Core tensor of Hadamard product of two ttensors with given factor matrices.
 """
 function hadcten(X1::ttensor{T1},X2::ttensor{T2},fmat::MatrixCell) where {T1<:Number,T2<:Number}
   N=ndims(X1);
-  C=MatrixCell(N)
+  C=MatrixCell(undef,N)
   for n=1:N
     C[n]=fmat[n]'*khatrirao(X1.fmat[n],X2.fmat[n],'t');
   end
@@ -194,7 +194,7 @@ hadcten(X1::ttensor{T1},X2::ttensor{T2},fmat::Array{Matrix{T3}}) where {T1<:Numb
 #HOSVD for a ttensor. **Documentation in tensor.jl
 function hosvd(X::ttensor{T};method="svd",reqrank=[],eps_abs=[],eps_rel=[]) where {T<:Number}
   F=hosvd(X.cten,method=method,reqrank=reqrank,eps_abs=eps_abs,eps_rel=eps_rel)
-  fmat=MatrixCell(ndims(X))
+  fmat=MatrixCell(undef,ndims(X))
   [fmat[n]=X.fmat[n]*F.fmat[n] for n=1:ndims(X)]
   reorth(ttensor(F.cten,fmat))
 end
@@ -233,7 +233,7 @@ See also: hosvd1, hosvd3, hosvd4.
 function hosvd2(X1::ttensor{T1},X2::ttensor{T2};method="randsvd",reqrank=[],eps_abs=[],eps_rel=[],p=10) where {T1<:Number,T2<:Number}
 @assert(size(X1) == size(X2))
   N=ndims(X1)
-  Q=MatrixCell(N);R=MatrixCell(N);
+  Q=MatrixCell(undef,N);R=MatrixCell(undef,N);
   n=1
   for (A1,A2) in zip(X1.fmat,X2.fmat)
     Ahad=khatrirao(A1,A2,'t')
@@ -242,7 +242,7 @@ function hosvd2(X1::ttensor{T1},X2::ttensor{T2};method="randsvd",reqrank=[],eps_
 	 end
   X=hosvd(krontm(X1.cten,X2.cten,R),method=method,reqrank=reqrank,eps_abs=eps_abs,eps_rel=eps_rel,p=p);
   cten=X.cten;
-  fmat=MatrixCell(N)
+  fmat=MatrixCell(undef,N)
   [fmat[n]=Q[n]*X.fmat[n] for n=1:N];
   ttensor(cten,fmat)
 end
@@ -264,7 +264,7 @@ See also: hosvd1, hosvd2, hosvd4.
 function hosvd3(X1::ttensor{T1},X2::ttensor{T2};method="lanczos",reqrank=[],variant='B',eps_abs=[],eps_rel=[],p=10) where {T1<:Number,T2<:Number}
  	@assert(size(X1) == size(X2))
   N=ndims(X1)
-	Ahad=MatrixCell(N) #initilize factor matrices
+	Ahad=MatrixCell(undef,N) #initilize factor matrices
   if method != "lanczos" && method != "randsvd"
     error("Incorect method name.")
   end
@@ -308,9 +308,9 @@ function hosvd4(X1::ttensor{T1},X2::ttensor{T2};method="svd",reqrank=[],eps_abs=
   reqrank=check_vector_input(reqrank,N,0);
   eps_abs=check_vector_input(eps_abs,N,1e-8);
   eps_rel=check_vector_input(eps_rel,N,0);
-  Q=MatrixCell(N) #range approximation of tenmat(X1.*X2,n)
-  #KR=MatrixCell(N); #transpose Khatri-Rao product of X1.fmat and X2.fmat
-  fmat=MatrixCell(N);
+  Q=MatrixCell(undef,N) #range approximation of tenmat(X1.*X2,n)
+  #KR=MatrixCell(undef,N); #transpose Khatri-Rao product of X1.fmat and X2.fmat
+  fmat=MatrixCell(undef,N);
   #[KR[n]=khatrirao(X1.fmat[n],X2.fmat[n],'t') for n=1:N]
   KR=khatrirao(X1.fmat,X2.fmat,'t')
   for n=1:N
@@ -334,7 +334,7 @@ function innerprod(X1::ttensor{T1},X2::ttensor{T2}) where {T1<:Number,T2<:Number
 		innerprod(X2,X1)
 	else
     N=ndims(X1)
-    fmat=MatrixCell(N)
+    fmat=MatrixCell(undef,N)
     [fmat[n]=X1.fmat[n]'*X2.fmat[n] for n=1:N]
 		innerprod(X1.cten,ttm(X2.cten,fmat))
 	end
@@ -372,9 +372,9 @@ Works with matrix (X ∗ Y)ₙ(X ∗ Y)ₙᵀ.
 function lanczos(X1::ttensor{T1},X2::ttensor{T2},mode::Integer;reqrank=0,variant='B',tol=1e-8,maxit=1000,p=10) where {T1<:Number,T2<:Number}
   @assert(size(X1)==size(X2),"Dimensions mismatch")
   Q,T=lanczos_tridiag(X1,X2,mode,reqrank=reqrank,variant=variant,tol=tol,maxit=maxit,p=p)
-  E=eigfact(T,tol,Inf);
-  U=E[:vectors][:,end:-1:1];
-  S=sqrt.(abs.(E[:values][end:-1:1]));
+  E=eigen(T,tol,Inf);
+  U=E.vectors[:,end:-1:1];
+  S=sqrt.(abs.(E.values[end:-1:1]));
   if reqrank!=0
     if reqrank > size(U,2)
       warn("Required rank for mode $mode exceeds actual rank, the resulting rank will be ",size(U,2),". Try changing tolerance.");
@@ -457,21 +457,21 @@ function mhadtv(X1::ttensor{T1},X2::ttensor{T2},v::Vector{T3},n::Integer,t='b';v
 
   if t=='t'
     @assert(length(v) == sz[n],"Vector v is of inappropriate size.")
-    w1=krtv(X1.fmat[n]',X2.fmat[n]',v); #w1=(Aₖ' ⨀ Bₖ')*v
+    w1=krtv(copy(X1.fmat[n]'),copy(X2.fmat[n]'),v); #w1=(Aₖ' ⨀ Bₖ')*v
     W1=mkrontv(X1.cten,X2.cten,w1,n,'t') #W1=tenmat(G₁ ⨂ G₂,n)'*w1
     for k in N
-      W1=reshape(W1,R[k],round.(Int,prod(size(W1))/R[k]))
+      W1=copy(reshape(W1,R[k],round.(Int,prod(size(W1))/R[k])))
       W2=tkrtv(X1.fmat[k],X2.fmat[k],W1) #vec(W2)=(Aₖ ⨀' Bₖ)*vec(W1)
-      W1=W2'
+      W1=copy(W2')
     end
     vec(W1)
   elseif t=='n'
     @assert(length(v) == prod(deleteat!(copy(collect(sz)),n)),"Vector v is of inappropriate size.")
     W1=v
     for k in N
-      W1=reshape(W1,sz[k],round.(Int,prod(size(W1))/sz[k]))
-      W2=krtv(X1.fmat[k]',X2.fmat[k]',W1) #W2=(Aₖ' ⨀ Bₖ')*W1
-      W1=W2'
+      W1=copy(reshape(W1,sz[k],:))
+      W2=krtv(copy(X1.fmat[k]'),copy(X2.fmat[k]'),W1) #W2=(Aₖ' ⨀ Bₖ')*W1
+      W1=copy(W2')
     end
     W2=mkrontv(X1.cten,X2.cten,vec(W1),n) #W1=tenmat(G₁ ⨂ G₂),n)*vec(W2)
     tkrtv(X1.fmat[n],X2.fmat[n],W2) #(Aₖ ⨀' Bₖ)*W2
@@ -480,12 +480,12 @@ function mhadtv(X1::ttensor{T1},X2::ttensor{T2},v::Vector{T3},n::Integer,t='b';v
     if variant == 'A'    #use when prod(I[N])-prod(R[N]) < 0
       mhadtv(X1,X2,mhadtv(X1,X2,v,n,'t'),n,'n')
     elseif variant == 'B'
-      w1=krtv(X1.fmat[n]',X2.fmat[n]',v); #w1=(Aₖ' ⨀ Bₖ')*v
+      w1=krtv(copy(X1.fmat[n]'),copy(X2.fmat[n]'),v); #w1=(Aₖ' ⨀ Bₖ')*v
       W1=mkrontv(X1.cten,X2.cten,w1,n,'t') #W1=tenmat(G₁ ⨂ G₂,n)'*w1
       for k in N
-        W1=reshape(W1,R[k],round.(Int,prod(size(W1))/R[k]))
+        W1=copy(reshape(W1,R[k],round.(Int,prod(size(W1))/R[k])))
         W2=tkrtv(X1.fmat[k],X2.fmat[k],W1)
-        W1=krtv(X1.fmat[k]',X2.fmat[k]',W2)'
+        W1=copy(krtv(copy(X1.fmat[k]'),copy(X2.fmat[k]'),W2)')
       end
       W2=mkrontv(X1.cten,X2.cten,vec(W1),n) #W2=tenmat(G₁ ⨂ G₂),n)*vec(W1)
       tkrtv(X1.fmat[n],X2.fmat[n],W2) #(Aₖ' ⨀ Bₖ')'*W2
@@ -575,7 +575,7 @@ function mttkrp(X::ttensor{T},M::MatrixCell,n::Integer) where {T<:Number}
   K=size(M[modes[1]],2)
   @assert(!any(map(Bool,[size(M[m],2)-K for m in modes])),"Matrices must have the same number of columns")
   @assert(!any(map(Bool,[size(M[m],1)-sz[m] for m in modes])),"Matrices are of wrong size")
-  fmat=MatrixCell(N-1)
+  fmat=MatrixCell(undef,N-1)
   i=1
   for m in modes
       fmat[i]=X.fmat[m]'*M[m]
@@ -605,7 +605,7 @@ function nvecs(X::ttensor{T},n::Integer,r=0;flipsign=false) where {T<:Number}
     r=size(X,n)
   end
   N=ndims(X)
-  V=MatrixCell(N)
+  V=MatrixCell(undef,N)
   V[n]=X.fmat[n]
   for m in setdiff(1:N,n)
     V[m]=X.fmat[m]'*X.fmat[m]
@@ -614,7 +614,7 @@ function nvecs(X::ttensor{T},n::Integer,r=0;flipsign=false) where {T<:Number}
   Hn=tenmat(H,n)
   Gn=tenmat(X.cten,n)
   #V=eigs(Symmetric(Hn*Gn'*X.fmat[n]'),nev=r,which=:LM)[2] #has bugs
-  V=eigfact(Symmetric(Hn*Gn'*X.fmat[n]'))[:vectors][:,end:-1:end-r+1]
+  V=eigen(Symmetric(Hn*Gn'*X.fmat[n]')).vectors[:,end:-1:end-r+1]
   if flipsign
       maxind = findmax(abs.(V),1)[2]
       for i = 1:r
@@ -665,7 +665,7 @@ Structure exploiting randomized range approximation of n-mode matricization of H
 function randrange(X1::ttensor{T1},X2::ttensor{T2},mode::Integer;tol=1e-8,maxit=1000,reqrank=0,p=10,r=10) where {T1<:Number,T2<:Number}
   @assert(size(X1) == size(X2))
   N=ndims(X1)
-  KR=MatrixCell(N); #transpose Khatri-Rao product of X1.fmat and X2.fmat
+  KR=MatrixCell(undef,N); #transpose Khatri-Rao product of X1.fmat and X2.fmat
   [KR[n]=khatrirao(X1.fmat[n],X2.fmat[n],'t') for n=1:N]
   randrange(X1.cten,X2.cten,KR,mode,tol=tol,maxit=maxit,reqrank=reqrank,p=p,r=r)
 end
@@ -676,7 +676,7 @@ function randrange(C1::Array{T1,N},C2::Array{T2,N},KR::MatrixCell,mode::Integer;
   m=sz[mode]
   n=prod(deleteat!(copy([sz...]),mode))
   remmodes=setdiff(1:N,mode);
-  y=VectorCell(N-1);
+  y=VectorCell(undef,N-1);
   if reqrank!=0
     Y=zeros(m,reqrank+p);
     for i=1:reqrank+p
@@ -697,7 +697,7 @@ function randrange(C1::Array{T1,N},C2::Array{T2,N},KR::MatrixCell,mode::Integer;
     end
     j=0;
     Q=zeros(m,0);
-    maxcolnorm=maximum([norm(Y[:,i]) for i=1:r]);
+    maxcolnorm=maximum([norm(Y[:,i]) for i=1:r])
     while maxcolnorm > rangetol && j<maxit
       j+=1;
       p=Q'*Y[:,j];
@@ -711,7 +711,7 @@ function randrange(C1::Array{T1,N},C2::Array{T2,N},KR::MatrixCell,mode::Integer;
       Y=[Y w-Q*p]; #Y[:,j+r]=w-Q*p;
       p=q'*Y[:,j+1:j+r-1]
       Y[:,j+1:j+r-1]-=q*p;
-      maxcolnorm=maximum([norm(Y[:,i]) for i=j+1:j+r]);
+      maxcolnorm=maximum([norm(Y[:,i]) for i=j+1:j+r])
     end
   end
   Q
@@ -747,7 +747,7 @@ function randsvd(X1::ttensor{T1},X2::ttensor{T2},mode::Integer;variant='B',tol=1
     Y=mhadtv(X1,X2,randn(m,r),mode,variant=variant);  #Y=A*(A'*randn(m,r));
     j=0;
     Q=zeros(m,0);
-    maxcolnorm=maximum([norm(Y[:,i]) for i=1:r]);
+    maxcolnorm=maximum([norm(Y[:,i]) for i=1:r])
     while maxcolnorm > rangetol && j<maxit
       j+=1;
       p=Q'*Y[:,j];
@@ -759,7 +759,7 @@ function randsvd(X1::ttensor{T1},X2::ttensor{T2},mode::Integer;variant='B',tol=1
       Y=[Y w-Q*p]; #Y[:,j+r]=w-Q*p;
       p=q'*Y[:,j+1:j+r-1]
       Y[:,j+1:j+r-1]-=q*p;
-      maxcolnorm=maximum([norm(Y[:,i]) for i=j+1:j+r]);
+      maxcolnorm=maximum([norm(Y[:,i]) for i=j+1:j+r])
     end
   end
   B=mhadtv(X1,X2,Q,mode,'t');#B=A'*Q;
@@ -767,9 +767,9 @@ function randsvd(X1::ttensor{T1},X2::ttensor{T2},mode::Integer;variant='B',tol=1
   #or (faster for small rank):
   #B=mhadtv(X1,X2,Q,mode,'n');
   #B=Symmetric(Q'*B);
-  E=eigfact(B,tol,Inf);
-  U=E[:vectors][:,end:-1:1];
-  S=sqrt.(abs.(E[:values][end:-1:1]));
+  E=eigen(B,tol,Inf);
+  U=E.vectors[:,end:-1:1];
+  S=sqrt.(abs.(E.values[end:-1:1]));
   if reqrank != 0
     if reqrank > size(U,2)
       warn("Required rank for mode $mode exceeds actual rank, the resulting rank will be smaller.")
@@ -793,8 +793,8 @@ function reorth(X::ttensor{T}) where {T<:Number}
 	if X.isorth
 		X
 	else
-		Q=MatrixCell(N)
-		R=MatrixCell(N)
+		Q=MatrixCell(undef,N)
+		R=MatrixCell(undef,N)
     n=1;
 		for A in X.fmat
 			Qt,Rt=qr(A)
@@ -881,7 +881,7 @@ ttm(X::ttensor{T1},M::Array{Matrix{T2}},n::Integer,t='n') where {T1<:Number,T2<:
 function ttv(X::ttensor{T},V::VectorCell,modes::Vector{D}) where {T<:Number,D<:Integer}
   N=ndims(X)
   remmodes=setdiff(1:N,modes)
-  fmat=VectorCell(N)
+  fmat=VectorCell(undef,N)
   if length(modes) < length(V)
     V=V[modes]
   end
@@ -928,7 +928,7 @@ function norm(X::ttensor{T}) where {T<:Number}
 		if X.isorth
 			norm(X.cten)
 		else
-			R=MatrixCell(ndims(X))
+			R=MatrixCell(undef,ndims(X))
 			for n=1:ndims(X)
 				#R[n]=qrfact(X.fmat[n])[:R]
 				R[n]=qr(X.fmat[n]).R

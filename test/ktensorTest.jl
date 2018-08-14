@@ -1,4 +1,5 @@
-using TensorToolbox, Test, LinearAlgebra
+#using TensorToolbox
+using Test, LinearAlgebra
 
 println("\n\n****Testing ktensor.jl")
 
@@ -63,8 +64,7 @@ Z=rand(4,3,2)
 @test norm(innerprod(X,Z)-innerprod(full(X),Z)) ≈ 0 atol=1e-10
 
 println("...Testing function norm.")
-n=norm(X)
-@test abs(n-norm(full(X)))≈ 0 atol=1e-10
+@test abs(norm(X)-norm(full(X)))≈ 0 atol=1e-10
 
 
 println("...Testing functions arrange and arrange!.")
@@ -110,13 +110,13 @@ normalize!(X,factor=2)
 @test norm(full(X)-full(Xcopy)) ≈ 0 atol=1e-10
 
 println("...Testing functions redistribute and redistribute!.")
-n=2
-Z=redistribute(X,n)
+mode=2
+Z=redistribute(X,mode)
 err=norm(full(X)-full(Z))
 println("norm(full(X)-full(Z)) = ",err)
 @test err ≈ 0 atol=1e-10
 Xcopy=deepcopy(X)
-redistribute!(X,n)
+redistribute!(X,mode)
 @test norm(full(X)-full(Xcopy)) ≈ 0 atol=1e-10
 
 println("...Testing functions fixsigns, fixsigns! and isequal.")
@@ -131,14 +131,14 @@ fixsigns!(X)
 @test norm(X-Xcopy) ≈ 0 atol=1e-8
 
 println("...Testing functions ttm and ttv.")
-M=MatrixCell(2)
+M=MatrixCell(undef,2)
 M[1]=rand(4,3)
 M[2]=rand(4,2)
 mode=[2,3]
 Z=ttm(X,M,mode)
 W=ttm(full(X),M,mode)
 @test norm(W-full(Z)) ≈ 0 atol=1e-10
-v=VectorCell(2)
+v=VectorCell(undef,2)
 v[1]=rand(3)
 v[2]=rand(2)
 mode=[2,3]
@@ -151,20 +151,20 @@ M=tocell(X)
 println("Is the output MatrixCell: ",isa(M,MatrixCell))
 @test isa(M,MatrixCell)
 
-n=2;
-println("\n...Testing function tenmat by mode $n.")
-Xn=tenmat(X,n)
-@test tenmat(full(X),n) == Xn
+mode=2;
+println("\n...Testing function tenmat by mode $mode.")
+Xn=tenmat(X,mode)
+@test tenmat(full(X),mode) == Xn
 
 println("\n...Testing function mttkrp.")
 X=randktensor([5,4,3],3)
-n=1
+mode=1
 M1=rand(5,5);
 M2=rand(4,5);
 M3=rand(3,5);
 M=[M1,M2,M3]
-println("Multiplying mode-$n matricized tensor X by Khatri-Rao product of matrices.")
-Z=mttkrp(X,M,n)
-err = norm(Z-tenmat(X,n)*khatrirao(M3,M2))
+println("Multiplying mode-$mode matricized tensor X by Khatri-Rao product of matrices.")
+Z=mttkrp(X,M,mode)
+err = norm(Z-tenmat(X,mode)*khatrirao(M3,M2))
 println("Multiplication error: ",err)
 @test err ≈ 0 atol=1e-10

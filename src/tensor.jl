@@ -39,7 +39,7 @@ function cp_als(X::Array{T},R::Integer;init="rand",tol=1e-4,maxit=1000,dimorder=
     if length(dimorder) == 0
         dimorder=collect(1:N)
     end
-    fmat=MatrixCell(N)
+    fmat=MatrixCell(undef,N)
     if isa(init,Vector) || isa(init,MatrixCell)
         @assert(length(init)==N,"Wrong number of initial matrices.")
         for n in dimorder[2:end]
@@ -70,7 +70,7 @@ function cp_als(X::Array{T},R::Integer;init="rand",tol=1e-4,maxit=1000,dimorder=
             if k == 1
                 lambda = sqrt.(sum(fmat[n].^2,dims=1))[:] #2-norm
             else
-                lambda = maximum(maximum(abs.(fmat[n]),1),dims=1)[:] #max-norm
+                lambda = maximum(maximum(abs.(fmat[n]),dims=1),dims=1)[:] #max-norm
             end
             fmat[n] = fmat[n]./lambda'
             G[:,:,n] = fmat[n]'*fmat[n]
@@ -79,8 +79,8 @@ function cp_als(X::Array{T},R::Integer;init="rand",tol=1e-4,maxit=1000,dimorder=
         if nr==0
             fit=norm(K)^2-2*innerprod(X,K)
         else
-            nr_res=sqrt.(abs.(nr^2+norm(K)^2.-2*innerprod(X,K)))
-            fir=1.-nr_res/nr
+            nr_res=sqrt.(abs.(nr^2+norm(K)^2 .-2*innerprod(X,K)))
+            fir=1 .-nr_res/nr
         end
         fitchange=abs.(fitold-fit)
         if k>1 && fitchange<tol
@@ -130,7 +130,7 @@ Higher-order singular value decomposition.
 - `p::Integer`: Oversampling parameter. Defaul p=10.
 """
 function hosvd(X::Array{T,N};method="svd",reqrank=[],eps_abs=[],eps_rel=[],p=10) where {T<:Number,N}
-  fmat=MatrixCell(N)
+  fmat=MatrixCell(undef,N)
 
   reqrank=check_vector_input(reqrank,N,0)
   eps_abs=check_vector_input(eps_abs,N,1e-8)
@@ -198,7 +198,7 @@ function krontm(X1::Array{T1,N},X2::Array{T2,N},M::MatrixCell,modes::Vector{D},t
   M=M[p]
   modes=modes[p]
   @assert(sz[modes[1]] == size(M[1],2),"Dimensions mismatch")
-  Xn=mkrontv(X1,X2,M[1]',modes[1],'t')';
+  Xn=copy(mkrontv(X1,X2,copy(M[1]'),modes[1],'t')')
   sz[modes[1]]=size(M[1],1)
   X=matten(Xn,modes[1],sz)
   for n=2:length(M)
@@ -415,7 +415,7 @@ function nvecs(X::Array{T},n::Integer,r=0;flipsign=false,svds=false) where {T<:N
     G=Symmetric(Xn*Xn') #Gramian
     #U=eigs(G,nev=r,which=:LM)[2] #has bugs!
     #if size(U,2)<r
-       U=eigfact(G).vectors[:,end:-1:end-r+1]
+       U=eigen(G).vectors[:,end:-1:end-r+1]
     #end
   end
   if flipsign
@@ -434,7 +434,7 @@ end
 function squeeze(A::Array{T}) where {T<:Number}
   sz=size(A)
   sdims=findall(sz.==1) #singleton dimensions
-  squeeze(A,tuple(sdims...))
+  dropdims(A,dims=tuple(sdims...))
 end
 
 """
@@ -445,7 +445,7 @@ Sequentially truncated HOSVD of a tensor X of predifined rank and processing ord
 function sthosvd(X::Array{T,N},reqrank::Vector{D},p::Vector{D}) where {T<:Number,D<:Integer,N}
 	@assert(N==length(reqrank)==length(p),"Dimensions mismatch")
 	sz=[size(X)...]
-	fmat=MatrixCell(N)
+	fmat=MatrixCell(undef,N)
 	for n=1:N
 		fmat[n]=zeros(sz[n],reqrank[n])
 	end
@@ -554,7 +554,7 @@ function ttm(X::Array{T,N},A::MatrixCell,modes::Vector{D},t='n') where {T<:Numbe
      Xn=tenmat(X,modes[n])
 	 sz[modes[n]]=size(M[n],1)
 	 X=matten(M[n]*Xn,modes[n],sz)
-	end
+  end
   X
 end
 ttm(X::Array{T1},M::Matrix{T2},n::Integer,t='n') where {T1<:Number,T2<:Number}=ttm(X,Matrix[M],[n],t)

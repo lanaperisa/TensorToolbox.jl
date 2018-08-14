@@ -1,5 +1,5 @@
-using TensorToolbox, LinearAlgebra
-using Test
+#using TensorToolbox
+using Test, LinearAlgebra
 
 println("\n\n****Testing ttensor.jl")
 
@@ -24,7 +24,7 @@ err=norm(full(T) - X)
 println("\n\n...Testing function full, i.e. n-mode multiplication (ttm): norm(full(T)-X) = ", err)
 @test err ≈ 0 atol=1e-10
 
-A=MatrixCell(ndims(T))
+A=MatrixCell(undef,ndims(T))
 for n=1:ndims(T)
   A[n]=rand(rand(1:10),size(T,n))
 end
@@ -86,8 +86,8 @@ println("Type of output T: ", typeof(T))
 @test isa(T,ttensor)
 println("Core tensor size: ",  coresize(T))
 print("Factor matrices sizes: ")
-for A in T.fmat
-	print(size(A)," ")
+for fmat in T.fmat
+	print(size(fmat)," ")
 end
 @test norm(full(T)-X) ≈ 0 atol=1e-5
 
@@ -98,8 +98,8 @@ println("Type of output T: ", typeof(T))
 @test isa(T,ttensor)
 println("Core tensor size: ", coresize(T))
 print("Factor matrices sizes: ")
-for A in T.fmat
-	print(size(A)," ")
+for fmat in T.fmat
+	print(size(fmat)," ")
 end
 println("\n\n...Testing if factor matrices of ttensor T are orthogonal: ", T.isorth)
 @test T.isorth
@@ -151,8 +151,8 @@ println("|innerprod(X,Y) - innerprod(full(X),full(Y))| = ",err )
 @test err ≈ 0 atol=1e-10
 
 println("\n\n...Testing Hadamard product.")
-err=norm(full(X.*Y) - full(X).*full(Y))
-println("norm(full(X.*Y) - full(X).*full(Y)) = ", err)
+err=norm(full(had(X,Y)) - full(X).*full(Y))
+println("norm(full(had(X,Y)) - full(X).*full(Y)) = ", err)
 @test  err ≈ 0 atol=1e-10
 
 
@@ -163,8 +163,8 @@ println("\nSingular values of matricizations of random Tucker tensor of size ", 
 for n=1:ndims(T)
   sv = msvdvals(T,n)
   Tn=tenmat(T,n);
-  println("Mode-$n singular values error: ",norm(sv-svdfact!(tenmat(full(T),n))[:S][1:length(sv)]))
-  @test norm(sv-svdfact!(tenmat(full(T),n))[:S][1:length(sv)]) ≈ 0 atol=1e-10
+  println("Mode-$n singular values error: ",norm(sv-svd!(tenmat(full(T),n)).S[1:length(sv)]))
+  @test norm(sv-svd!(tenmat(full(T),n)).S[1:length(sv)]) ≈ 0 atol=1e-10
 end
 
 R=[5,5,5,5]
@@ -172,9 +172,9 @@ T=randttensor([20,20,20,20],R);
 println("\nSingular values of matricizations of random Tucker tensor of size ", size(T), ", rank ",R," and norm ",norm(T),".")
 for n=1:ndims(T)
   sv = msvdvals(T,n)
-  Tn=tenmat(T,n);
-  println("Mode-$n singular values error: ",norm(sv-svdfact!(tenmat(full(T),n))[:S][1:length(sv)]))
-  @test norm(sv-svdfact!(tenmat(full(T),n))[:S][1:length(sv)]) ≈ 0 atol=1e-10
+  Tn=tenmat(T,n)
+  println("Mode-$n singular values error: ",norm(sv-svd!(tenmat(full(T),n)).S[1:length(sv)]))
+  @test norm(sv-svd!(tenmat(full(T),n)).S[1:length(sv)]) ≈ 0 atol=1e-10
 end
 
 println("\n...Testing function mhadtv.")
@@ -182,34 +182,34 @@ X=randttensor([5,4,3],[3,3,3])
 Y=randttensor([5,4,3],[2,2,2])
 println("\n\n...Creating two random ttensors X and Y of size ", size(X),".")
 v=rand(12)
-n=1
-println("Multiplying mode-$n matricized had(X,Y) by a random vector.")
-Z=mhadtv(X,Y,v,n,'n')
-Hn=tenmat(X.*Y,n)
+mode=1
+println("Multiplying mode-$mode matricized had(X,Y) by a random vector.")
+Z=mhadtv(X,Y,v,mode,'n')
+Hn=tenmat(had(X,Y),mode)
 err = norm(Z-Hn*v)
 println("Multiplication error: ",err)
 @test err ≈ 0 atol=1e-10
 v=rand(5)
-Z=mhadtv(X,Y,v,n,'t')
+Z=mhadtv(X,Y,v,mode,'t')
 err = norm(Z-Hn'*v)
 println("Multiplication error: ",err)
 @test err ≈ 0 atol=1e-10
 v=rand(5)
-Z=mhadtv(X,Y,v,n,'b')
+Z=mhadtv(X,Y,v,mode,'b')
 err = norm(Z-Hn*Hn'*v)
 println("Multiplication error: ",err)
 @test err ≈ 0 atol=1e-10
 
 println("\n...Testing function mttkrp.")
 X=randttensor([5,4,3],[3,3,3])
-n=1
+mode=1
 M1=rand(5,5);
 M2=rand(4,5);
 M3=rand(3,5);
 M=[M1,M2,M3]
-println("Multiplying mode-$n matricized tensor X by Khatri-Rao product of matrices.")
-Z=mttkrp(X,M,n)
-err = norm(Z-tenmat(X,n)*khatrirao(M3,M2))
+println("Multiplying mode-$mode matricized tensor X by Khatri-Rao product of matrices.")
+Z=mttkrp(X,M,mode)
+err = norm(Z-tenmat(X,mode)*khatrirao(M3,M2))
 println("Multiplication error: ",err)
 @test err ≈ 0 atol=1e-10
 

@@ -81,8 +81,7 @@ end
     eye(n::Integer)
 
 Identity matrix of size nxn.
-"""    
-
+"""
 function eye(n::Integer)
   Matrix(1.0I, n, n)
 end
@@ -98,12 +97,12 @@ function khatrirao(M::MatrixCell,t='n')
     N=length(M)
     if t== 't'
       sz=[size(M[n],1) for n=1:N]
-      @assert(any(map(Bool,sz-size(M[1],1)))==0,"Matrices must have the same number of rows.")
+      @assert(any(map(Bool,sz .-size(M[1],1)))==0,"Matrices must have the same number of rows.")
       [M[n]=M[n]' for n=1:N]
       khatrirao(M)'
     else
       K=[size(M[n],2) for n=1:N]
-      @assert(any(map(Bool,K-size(M[1],2)))==0,"Matrices must have the same number of columns.")
+      @assert(any(map(Bool,K .-size(M[1],2)))==0,"Matrices must have the same number of columns.")
       J,K=size(M[end])
       X=reshape(M[end],J, 1, K)
       for n=N-1:-1:1
@@ -117,14 +116,14 @@ function khatrirao(M::MatrixCell,t='n')
 end
 khatrirao(M::Array{Matrix{T}},t='n') where T<:Number =khatrirao(MatrixCell(M),t)
 function khatrirao(M1::Matrix{T1}, M2::Matrix{T2},t='n') where {T1<:Number,T2<:Number}
-  M=MatrixCell(2);
+  M=MatrixCell(undef,2);
   M[1]=M1;M[2]=M2;
   khatrirao(M,t)
 end
 function khatrirao(M1::MatrixCell, M2::MatrixCell,t='n')
     @assert(length(M1)==length(M2),"Matrix cells must be of same length.")
     N=length(M1)
-    M=MatrixCell(N)
+    M=MatrixCell(undef,N)
     for n=1:N
       M[n]=khatrirao(M1[n],M2[n],t)
     end
@@ -187,7 +186,7 @@ function krontv(A::Matrix{T1},B::Matrix{T2},v::Vector{T3}) where {T1<:Number,T2<
 end
 function krontv(A::Matrix{T1},B::Matrix{T2},M::Matrix{T3}) where {T1<:Number,T2<:Number,T3<:Number}
   if sort(collect(size(vec(M))))[1]==1
-        return krontv(A,B,vec(M));
+        return krontv(A,B,vec(M))
   end
   m,n=size(A);
   p,q=size(B);
@@ -239,19 +238,19 @@ If v is a matrix, multiply column by column.
 """
 function tkrtv(A::Matrix{T1},B::Matrix{T2},v::Vector{T3}) where {T1<:Number,T2<:Number,T3<:Number}
   @assert(size(A,1)==size(B,1),"Dimension mismatch.")
-  m,n=size(A);
-  p=size(B,2);
+  m,n=size(A)
+  p=size(B,2)
   @assert(length(v)==n*p, "Dimensions mismatch.")
   if n<=p
-    sum((B*reshape(v,p,n)).*A,2);
+    sum((B*reshape(v,p,n)).*A,dims=2)
   else
-    sum(B.*(A*reshape(v,p,n)'),2);
+    sum(B.*(A*reshape(v,p,n)'),dims=2)
   end
 end
 function tkrtv(A::Matrix{T1},B::Matrix{T2},M::Matrix{T3}) where {T1<:Number,T2<:Number,T3<:Number}
   @assert(size(A,1)==size(B,1),"Dimension mismatch.")
   if sort(collect(size(vec(M))))[1]==1
-    return tkrtv(A,B,vec(M));
+    return tkrtv(A,B,vec(M))
   end
   m,n=size(A);
   p=size(B,2);
@@ -278,7 +277,7 @@ Lanczos based SVD - computes left singular vectors and singular values of a matr
 """
 function lanczos(A::Matrix{N};tol=1e-8,maxit=1000,reqrank=0,p=10) where N<:Number
   Q,T=lanczos_tridiag(A,tol=tol,maxit=maxit,reqrank=reqrank,p=p)
-  E=eigfact(T,tol,Inf);
+  E=eigen(T,tol,Inf);
   U=E[:vectors][:,end:-1:1];
   S=sqrt.(abs.(E[:values][end:-1:1]));
   if reqrank!=0
@@ -377,7 +376,7 @@ function randsvd(A::Matrix{N};tol=1e-8,maxit=1000,reqrank=0,r=10,p=10) where N<:
   end
   B=A'*Q;
   B=Symmetric(B'*B);
-  E=eigfact(B,tol,Inf);
+  E=eigen(B,tol,Inf);
   U=E[:vectors][:,end:-1:1];
   S=sqrt.(abs.(E[:values][end:-1:1]));
   if reqrank != 0

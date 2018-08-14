@@ -1,4 +1,4 @@
-using TensorToolbox, LinearAlgebra
+#using TensorToolbox, LinearAlgebra
 
 #Define tensor as multidimensional arrays and calculate its norm:
 
@@ -17,13 +17,13 @@ innerprod(X,Y)
 
 #Matricization of a tensor:
 
-X=rand(4,3,2);n=1;
-A=tenmat(X,n)
+X=rand(4,3,2);mode=1;
+A=tenmat(X,mode)
 B=tenmat(X,R=[2,1],C=3) #by row modes [2,1] and column mode 3
 
 #Fold matrix back to tensor:
 
-X=matten(A,n,[4,3,2])
+X=matten(A,mode,[4,3,2])
 X=matten(B,[2,1],[3],[4,3,2]) # by row modes [2,1] and column mode 3
 
 #n-mode product of a tensor and a matrix or an array of matrices:
@@ -55,8 +55,8 @@ tkron(X,Y)
 #The n-rank and the mutlilinear rank of a tensor:
 
 X=rand(5,4,3);
-n=2;
-nrank(X,n)
+mode=2;
+nrank(X,mode)
 mrank(X)
 
 #The HOSVD:
@@ -105,8 +105,8 @@ permutedims(X,[2,1,3])
 
 #n-mode matricization of a tensor in Tucker format:
 
-n=1;
-tenmat(X,n)
+mode=1;
+tenmat(X,mode)
 
 #Basic operations:
 
@@ -136,8 +136,8 @@ ttv(X,V) #X times vectors from V by each mode
 #The n-rank and the mutlilinear rank of a tensor in Tucker format:
 
 X=randttensor([9,8,7],[5,4,3]);
-n=2;
-nrank(X,n)
+mode=2;
+nrank(X,mode)
 mrank(X)
 
 #HOSVD of a tensor in Tucker format:
@@ -180,8 +180,8 @@ ncomponents(X) #Number of components
 
 #n-mode matricization of a tensor in Kruskal format:
 
-n=1;
-tenmat(X,n)
+mode=1;
+tenmat(X,mode)
 
 #Basic operations:
 
@@ -223,9 +223,9 @@ fixsigns!(X)
 #Distribute weights a tensor in Kruskal format to a specific mode:
 
 X=randktensor([3,3,3],3);
-n=2;
-redistribute(X,n)
-redistribute!(X,n)
+mode=2;
+redistribute(X,mode)
+redistribute!(X,mode)
 
 #The CP decomposition:
 
