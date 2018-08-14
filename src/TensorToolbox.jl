@@ -5,7 +5,7 @@ module TensorToolbox
 using LinearAlgebra
 
 import LinearAlgebra: norm, normalize, normalize!
-import Base: +, -, *, ==, cat, display, isequal, kron, ndims, parent, permutedims, show, size
+import Base: +, -, *, ==, cat, display, full, isequal, kron, ndims, parent, permutedims, show, size
 
 include("helper.jl")
 include("tensor.jl")
