@@ -1,5 +1,4 @@
-#using TensorToolbox
-using Test, LinearAlgebra
+#using TensorToolbox, Test, LinearAlgebra
 
 T1=dimtree([8,9,5,6,7])
 T2=dimtree([2,4,6,8,9])
