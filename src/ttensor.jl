@@ -1,7 +1,7 @@
 #Tensors in Tucker format + functions
 
 export ttensor, randttensor
-export coresize, cp_als, display, full, had, hadcten, hosvd, hosvd1, hosvd2, hosvd3, hosvd4, innerprod, isequal, lanczos, lanczos_tridiag, mhadtv, minus, mrank
+export coresize, cp_als, display, ewprod, full, hadcten, hosvd, hosvd1, hosvd2, hosvd3, hosvd4, innerprod, isequal, lanczos, lanczos_tridiag, mhadtv, minus, mrank
 export msvdvals, mtimes, mttkrp, ndims, nrank, nvecs, permutedims, plus, randrange, randsvd, reorth, reorth!, size, tenmat, ttm, ttv, uminus, norm
 
 """
@@ -160,11 +160,11 @@ function full(X::ttensor{T}) where {T<:Number}
 end
 
 """
-   had(X,Y)
+   ewprod(X,Y)
 
-Hadamard (element-wise) product of two ttensors. Same as: X.*Y.
+Element-wise product of two ttensors.
 """
-function had(X1::ttensor{T1},X2::ttensor{T2}) where {T1<:Number,T2<:Number}
+function ewprod(X1::ttensor{T1},X2::ttensor{T2}) where {T1<:Number,T2<:Number}
   @assert(size(X1) == size(X2))
 	fmat=MatrixCell(undef,ndims(X1)) #initilize factor matrix
   n=1
@@ -175,7 +175,6 @@ function had(X1::ttensor{T1},X2::ttensor{T2}) where {T1<:Number,T2<:Number}
   cten=tkron(X1.cten,X2.cten) #Kronecker product of core tensors
   ttensor(cten,fmat)
 end
-Base.broadcast( .*,X1::ttensor{T1},X2::ttensor{T2}) where {T1<:Number,T2<:Number}= had(X1,X2)
 
 """
     hadcten(X,Y,fmat)

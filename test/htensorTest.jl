@@ -1,4 +1,4 @@
-using TensorToolbox
+#using TensorToolbox
 using Test, LinearAlgebra
 
 T1=dimtree([8,9,5,6,7])

@@ -21,7 +21,9 @@ Cell of multidimensional arrays of length N.
 """
 const TensorCell = Array{Array,1}
 
-function ewprod(I1::CartesianIndex{N},I2::CartesianIndex{N}) where N
+function ewprod(I1::CartesianIndex,I2::CartesianIndex)
+  N=length(I1)
+  @assert(length(I2)==N,"Dimension mismatch.")
   prod=zeros(Int,N)
   [prod[n]=I1[n]*I2[n] for n=1:N]
   CartesianIndex{N}(tuple(prod...))

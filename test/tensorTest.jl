@@ -1,4 +1,4 @@
-using TensorToolbox
+#using TensorToolbox
 using Test, LinearAlgebra
 
 println("\n\n**** Testing tensor.jl")
