@@ -459,7 +459,8 @@ function mhadtv(X1::ttensor{T1},X2::ttensor{T2},v::Vector{T3},n::Integer,t='b';v
     w1=krtv(copy(X1.fmat[n]'),copy(X2.fmat[n]'),v); #w1=(Aₖ' ⨀ Bₖ')*v
     W1=mkrontv(X1.cten,X2.cten,w1,n,'t') #W1=tenmat(G₁ ⨂ G₂,n)'*w1
     for k in N
-      W1=copy(reshape(W1,R[k],round.(Int,prod(size(W1))/R[k])))
+      #W1=copy(reshape(W1,R[k],round.(Int,prod(size(W1))/R[k])))
+      W1=copy(reshape(W1,R[k],:))
       W2=tkrtv(X1.fmat[k],X2.fmat[k],W1) #vec(W2)=(Aₖ ⨀' Bₖ)*vec(W1)
       W1=copy(W2')
     end
@@ -482,7 +483,8 @@ function mhadtv(X1::ttensor{T1},X2::ttensor{T2},v::Vector{T3},n::Integer,t='b';v
       w1=krtv(copy(X1.fmat[n]'),copy(X2.fmat[n]'),v); #w1=(Aₖ' ⨀ Bₖ')*v
       W1=mkrontv(X1.cten,X2.cten,w1,n,'t') #W1=tenmat(G₁ ⨂ G₂,n)'*w1
       for k in N
-        W1=copy(reshape(W1,R[k],round.(Int,prod(size(W1))/R[k])))
+        #W1=copy(reshape(W1,R[k],round.(Int,prod(size(W1))/R[k])))
+        W1=copy(reshape(W1,R[k],:))
         W2=tkrtv(X1.fmat[k],X2.fmat[k],W1)
         W1=copy(krtv(copy(X1.fmat[k]'),copy(X2.fmat[k]'),W2)')
       end

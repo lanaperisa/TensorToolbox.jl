@@ -1,5 +1,5 @@
-export blockdiag, cp_als, diagt, hosvd, innerprod, krontm, matten, mkrontm, mkrontv, mrank, mttkrp, neye, nrank, nvecs
-export squeeze, sthosvd, tenmat, tkron, ttm, ttt, ttv
+export blockdiag, cp_als, diagt, dropdims, hosvd, innerprod, krontm, matten, mkrontm, mkrontv, mrank, mttkrp, neye, nrank, nvecs
+export sthosvd, tenmat, tkron, ttm, ttt, ttv
 
 """
    blockdiag(X,Y)
@@ -431,7 +431,7 @@ function nvecs(X::Array{T},n::Integer,r=0;flipsign=false,svds=false) where {T<:N
 end
 
 #Squeeze all singleton dimensions. **Documentation in Base.jl.
-function squeeze(A::Array{T}) where {T<:Number}
+function dropdims(A::Array{T}) where {T<:Number}
   sz=size(A)
   sdims=findall(sz.==1) #singleton dimensions
   dropdims(A,dims=tuple(sdims...))

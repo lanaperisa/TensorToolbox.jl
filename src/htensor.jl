@@ -1,6 +1,6 @@
 #Tensors in Hierarchical Tucker format + functions
-export htensor, randhtensor, cat, display, full, hrank, htrunc, innerprod, isequal, minus, mtimes, ndims, plus, reorth, reorth!
-export size, squeeze, trten2mat, trten2ten, ttm, ttv, uminus, norm
+export htensor, randhtensor, cat, display, dropdims, full, hrank, htrunc, innerprod, isequal, minus, mtimes, ndims, plus, reorth, reorth!
+export size, trten2mat, trten2ten, ttm, ttv, uminus, norm
 
 """
     htensor(tree,trten,fmat)
@@ -258,7 +258,7 @@ function ndims(X::htensor)
 	length(X.fmat)
 end
 
-#Used by squeeze
+#Used by dropdims
 function next_single_node(T::dimtree,dims::Vector{Int})
     #println("dims = $dims")
     nodes=T.leaves[dims]
@@ -367,11 +367,11 @@ end
 """
 TensorToolbox:
 
-    squeeze(X)
+    dropdims(X)
 
 Remove singleton dimensions from htensor.
 """
-function squeeze(X::htensor)
+function dropdims(X::htensor)
   B=deepcopy(X.trten)
   U=deepcopy(X.fmat)
   T=deepcopy(X.tree)
