@@ -39,23 +39,23 @@ function contract(X1::Array{T1},ind1::Vector{Int},X2::Array{T2},ind2::Vector{Int
     sz2=[size(X2)...]
     @assert(sz1[ind1]==sz2[ind2],"Dimension mismatch.")
     sz=[sz1[setdiff(1:ndims(X1),ind1)];sz2[setdiff(1:ndims(X2),ind2)]]
-   Xres=reshape(transpose(tenmat(X1,row=ind1))*tenmat(X2,row=ind2),tuple(sz...))
-   if perm!=[]
+    Xres=reshape(transpose(tenmat(X1,row=ind1))*tenmat(X2,row=ind2),tuple(sz...))
+    if perm!=[]
       Xres=permutedims(Xres,perm)
-   end
-   Xres
+    end
+    Xres
 end
 contract(X1::Array{T1},X2::Array{T2},ind::Vector{Int}) where {T1<:Number,T2<:Number} =contract(X1,ind,X2,ind)
 contract(X1::Array{T1},ind1::Int,X2::Array{T2},ind2::Int,perm=[]) where {T1<:Number,T2<:Number} =contract(X1,[ind1],X2,[ind2],perm)
-contract(X1::Array{T1},X2::Array{T2}) where {T1<:Number,T2<:Number} = contract(X1,3,X2,1)
-function conprod(X::TensorCell,squeeze=true)
+contract(X1::Array{T1},X2::Array{T2}) where {T1<:Number,T2<:Number} = contract(X1,ndims(X1),X2,1)
+function contract(X::TensorCell,squeeze=true)
     N=length(X)
     @assert(any([size(X[n])[end]==size(X[n+1])[1] for n=1:N-1]),"Dimensions mismatch.")
     Xcontr=contract(X[1],X[2])
     for n=3:N
         Xcontr=contract(Xcontr,X[n])
     end
-    squeeze == true ? squeeze(Xcontr) : Xcontr
+    squeeze == true ? dropdims(Xcontr) : Xcontr
 end
 
 

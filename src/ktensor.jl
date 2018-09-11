@@ -1,6 +1,6 @@
 argmax#Tensors in Kruskal (CP) format + functions
 
-export ktensor, randktensor, arrange, arrange!, cp_als, display, extract, fixsigns, fixsigns!, full, innerprod, isequal, minus, mtimes, mttkrp, ncomponents, ndims
+export ktensor, randktensor, arrange, arrange!, cp_als, display, extract, fixsigns, fixsigns!, full, innerprod, isequal, krank, kten2TT, minus, mtimes, mttkrp, ncomponents, ndims
 export normalize, normalize!, nvecs, permutedims, plus, redistribute, redistribute!, size, tenmat, tocell, ttensor, ttm, ttv, uminus, norm
 
 """
@@ -277,6 +277,37 @@ function isequal(X1::ktensor{T1},X2::ktensor{T2}) where {T1<:Number,T2<:Number}
   end
 end
 ==(X1::ktensor{T1},X2::ktensor{T2}) where {T1<:Number,T2<:Number}=isequal(X1,X2)
+
+"""
+    krank(X::ktensor)
+
+Represenation k-rank. Equal to number of columns of factor matrices if ktensor X.
+"""
+function krank(X::ktensor{T}) where {T<:Number}
+    size(X.fmat[1],2)
+end
+
+"""
+    kten2TT(X::ktensor)
+
+Transform ktensor to TTtensor.
+"""
+function kten2TT(X::ktensor{T}) where {T<:Number}
+    N=ndims(X)
+    Isz=size(X)
+    r=krank(X)
+    G=TensorCell(undef,N)
+    G[1]=reshape(X.fmat[1],(1,Isz[1],r))
+    G[N]=reshape(X.fmat[N]',(r,Isz[N],1))
+    for n=2:N-1
+        G[n]=zeros(r,Isz[n],r)
+        for i=1:Isz[n]
+            G[n][:,i,:]=Diagonal(X.fmat[n][i,:])
+        end
+    end
+    TTtensor(G)
+end
+
 
 #Subtraction of two ktensors. **Documentation in ttensor.jl.
 function minus(X1::ktensor{T1},X2::ktensor{T2}) where {T1<:Number,T2<:Number}

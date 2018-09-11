@@ -13,5 +13,6 @@ include("ttensor.jl")
 include("ktensor.jl")
 include("dimtree.jl")
 include("htensor.jl")
+include("TTtensor.jl")
 
 end #module

@@ -786,6 +786,7 @@ end
 """
       reorth(X::ttensor)
       reorth(X::htensor)
+      reorth(X::TTtensor[,direction,full])
 
 Orthogonalize factor matrices of a tensor.
 """
@@ -810,6 +811,7 @@ end
 """
     reorth!(X::ttensor)
     reorth!(X::htensor)
+    reorth(X::TTtensor[,direction,full])
 
 Orthogonalize factor matrices of a tensor. Rewrite ttensor.
 """

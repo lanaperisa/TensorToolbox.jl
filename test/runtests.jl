@@ -8,5 +8,6 @@ include("ttensorTest.jl")
 include("ktensorTest.jl")
 include("dimtreeTest.jl")
 include("htensorTest.jl")
+include("TTtensorTest.jl")
 
 println("\n\n")
