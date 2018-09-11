@@ -23,7 +23,7 @@ using TensorToolbox
 Define tensor as multidimensional array and calculate its norm:
 ```julia
 X=rand(4,3,2)
-vecnorm(X)
+norm(X)
 ```
 Create identity and diagonal tensor:
 ```julia
@@ -119,7 +119,7 @@ Basic functions:
 size(X) 
 coresize(X)
 ndims(X)
-vecnorm(X)
+norm(X)
 full(X)  #Creates full tensor out of Tucker format
 reorth(X) #Orthogonalize factor matrices
 permutedims(X,[2,1,3]) 
@@ -195,7 +195,7 @@ Basic functions:
 ```julia
 size(X) 
 ndims(X)
-vecnorm(X)
+norm(X)
 full(X)  #Creates full tensor out of Kruskal format
 permutedims(X,[2,1,3]) 
 ncomponents(X) #Number of components
@@ -287,7 +287,7 @@ Basic functions:
 ```julia
 size(X)
 ndims(X)
-vecnorm(X)
+norm(X)
 full(X)  #Creates full tensor out of Hierarchial Tucker format
 reorth(X) #Orthogonalize factor matrices
 ```
