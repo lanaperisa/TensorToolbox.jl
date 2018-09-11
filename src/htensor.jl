@@ -195,13 +195,13 @@ function htrunc(X::Array{T,N},tree::dimtree;method="svd",maxrank=[],atol=1e-8,rt
   for i in reverse(tree.internal_nodes)
     ind=node2ind(tree,i)
     if i!=1
-      Xt=tenmat(X,R=t[ind])
+      Xt=tenmat(X,row=t[ind])
       Ut=colspace(Xt,method=method,maxrank=maxrank[ind],atol=atol,rtol=rtol) #Ut=svdfact(Xt)[:U][1:maxrank[ind]]
     else
       Ut=vec(X)
     end
-    Xl=tenmat(X,R=tl[ind])
-    Xr=tenmat(X,R=tr[ind])
+    Xl=tenmat(X,row=tl[ind])
+    Xr=tenmat(X,row=tr[ind])
     Ul=colspace(Xl,method=method,maxrank=maxrank[ind],atol=atol,rtol=rtol) #Ul=svdfact(Xl)[:U][1:maxrank[ind]]
     Ur=colspace(Xr,method=method,maxrank=maxrank[ind],atol=atol,rtol=rtol) #Ur=svdfact(Xr)[:U][1:maxrank[ind]]
     #B=krontv(Ur',Ul',Ut)

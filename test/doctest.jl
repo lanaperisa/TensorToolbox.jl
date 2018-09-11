@@ -7,7 +7,7 @@ norm(X)
 
 #Create identity and diagonal tensor:
 
-I=neye(2,2,2)
+Id=neye(2,2,2)
 D=diagt([1,2,3,4])
 
 #For two tensors of same size calculate their inner product:
@@ -19,7 +19,7 @@ innerprod(X,Y)
 
 X=rand(4,3,2);mode=1;
 A=tenmat(X,mode)
-B=tenmat(X,R=[2,1],C=3) #by row modes [2,1] and column mode 3
+B=tenmat(X,row=[2,1],col=3) #by row modes [2,1] and column mode 3
 
 #Fold matrix back to tensor:
 
