@@ -24,7 +24,7 @@ err=norm(full(Z)-(full(X)+full(Y)))
 println("\n...Test addition: ")
 @test err ≈ 0 atol=1e-10
 
-z=dotprod(X,Y)
+z=innerprod(X,Y)
 err=norm(z-innerprod(full(X),full(Y)))
 println("\n...Test dot product: ")
 @test err ≈ 0 atol=1e-10

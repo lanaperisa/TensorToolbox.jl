@@ -1,6 +1,6 @@
 #using TensorToolbox
 
-export TTtensor, randTTtensor, dotprod, full, minus, mtimes, mtimes!, ndims, plus
+export TTtensor, randTTtensor, innerprod, full, minus, mtimes, mtimes!, ndims, plus
 export reorth, reorth!, size, TTcontr, TTrank, TTsvd, TTtv, norm
 
 mutable struct TTtensor
@@ -51,10 +51,9 @@ function randTTtensor(arg...)
   randTTtensor([arg[1]...],[arg[2]...])
 end
 
-function dotprod(X1::TTtensor,X2::TTtensor)
+function innerprod(X1::TTtensor,X2::TTtensor)
     Isz=size(X1)
     @assert(Isz==size(X2),"Dimension mismatch.")
-    #v=zeros(1,size(X1.cores[1],3)*size(X2.cores[1],3))
     v=kron(X1.cores[1][:,1,:],X2.cores[1][:,1,:])
     for i=2:Isz[1]
         v+=kron(X1.cores[1][:,i,:],X2.cores[1][:,i,:])
@@ -415,5 +414,5 @@ end
 
 #Frobenius norm of a TTtensor. **Documentation in Base.
 function norm(X::TTtensor)
-    sqrt(abs.(dotprod(X,X)))
+    sqrt(abs.(innerprod(X,X)))
 end

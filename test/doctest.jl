@@ -292,4 +292,49 @@ ttv(X,V) #X times vectors from V by each mode
 X=htrunc(rand(9,8,7),maxrank=2)
 hrank(X)
 
+##Tensors in Tensor Train format
+
+#Define tensor in TT format by its core tensors:
+
+G=TensorCell(undef,3)
+G[1]=rand(1,4,3)
+G[2]=rand(3,6,4)
+G[3]=rand(4,3,1)
+X=TTtensor(G)
+
+#Get TT format of a tensor by using TTsvd:
+
+X=rand(5,4,3,2)
+TTsvd(X)
+TTsvd(X,reqrank=[2,2,2])
+
+#Create random TT tensor of size 5x4x3 and TT-rank (2,2):
+
+X=randTTtensor([5,4,3],[2,2])
+
+#Basic functions::
+
+size(X)
+TTrank(X)
+ndims(X)
+norm(X)
+full(X)  #Creates full tensor out of Tucker format
+reorth(X)
+
+#Basic operations:
+
+X=randTTtensor([5,4,3],[2,2])
+Y=randTTtensor([5,4,3],[3,3])
+
+innerprod(X,Y)
+X+Y
+X-Y
+3*X
+
+#TTsvd of a TT tensor:
+
+X=randTTtensor([7,6,5],[5,4])
+TTsvd(X,reqrank=[3,3])
+
+
 println()
