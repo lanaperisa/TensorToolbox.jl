@@ -1,4 +1,4 @@
-#using TensorToolbox, Test, LinearAlgebra
+using TensorToolbox, Test, LinearAlgebra
 
 println("\n\n**** Testing tensor.jl")
 
@@ -18,7 +18,7 @@ end
 
 println("\n...Testing functions matten and tenmat (by rows and columns).")
 R=[2,1];C=[4,3];
-Xmat=tenmat(X,R=R,C=C);
+Xmat=tenmat(X,row=R,col=C);
 println("Size of R=$R and C=$C matricization: ", [size(Xmat)...])
 println("Check if it folds back correctly: ",matten(Xmat,R,C,[size(X)...]) == X)
 @test matten(Xmat,R,C,[size(X)...]) == X
@@ -103,3 +103,21 @@ println("\n...Testing function dropdims.")
 X=rand(5,4,1,3,6,1)
 Xsq=dropdims(X)
 println("Tensor X of size :",size(X)," squeezed to size :",size(Xsq),".")
+
+println("\n...Testing contraction (contract).")
+X=rand(5,4,3);
+Y=rand(3,4,2);
+Z=contract(X,Y)
+for i1=1:5, i2=1:4, j2=1:4,j3=1:2
+    s=0;
+    for i=1:3
+        s+=X[i1,i2,i]*Y[i,j2,j3];
+    end
+    @test Z[i1,i2,j2,j3] ≈ s atol=1e-10
+end
+X=rand(5,4,3,2);
+Y=rand(5,7,3,6);
+Z=contract(X,[1,3],Y,[1,3])
+err=norm(Z-reshape(tenmat(X,row=[1,3])'*tenmat(Y,row=[1,3]),(4,2,7,6)))
+println("Error: ",err)
+@test err ≈ 0 atol=1e-10
