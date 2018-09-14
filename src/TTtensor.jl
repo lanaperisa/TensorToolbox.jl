@@ -113,6 +113,18 @@ function ndims(X::TTtensor)
 	length(X.cores)
 end
 
+
+#Frobenius norm of a TTtensor. **Documentation in Base.
+function norm(X::TTtensor)
+    if X.lorth==true
+        sqrt(contract(X.cores[end],[1,2,3],X.cores[end],[1,2,3])[1])
+    elseif X.rorth==true
+        sqrt(contract(X.cores[1],[1,2,3],X.cores[1],[1,2,3])[1])
+    else
+        sqrt(abs.(innerprod(X,X)))
+    end
+end
+
 """
     plus(X::TTtensor,Y::TTtensor)
 
@@ -266,26 +278,21 @@ end
 
 Representational TT-rank of X. If cores of X are of size R{n-1} x In x Rn, returns (R1,...,R{n-1}) for full=false or (1,R1,....,Rn) for full=true."""
 function TTrank(X::TTtensor,full=false)
-  if full==true
-    tuple([1;[size(X.cores[n],3) for n=1:ndims(X)]...]...)
-  else
-    tuple([size(X.cores[n],3) for n=1:ndims(X)-1]...)
-  end
+    TTrank(X.cores,full)
 end
-function TTrank(X::TensorCell)
-    R=zeros(Int,length(X)+1)
-    R[1]=size(X[1],1)
-    for n=1:length(X)
-        R[n+1]=size(X[n])[3]
+function TTrank(X::TensorCell,full=false)
+    rnk=[size(X[n])[3] for n=1:length(X)-1]
+    if full==true
+        rnk=[1,rnk...,1]
     end
-    tuple(R...)
+    tuple(rnk...)
 end
 
 """
-    TTsvd(X[,tol=1e-8,reqrank=[]])
-    TTsvd(X::TTtensor[,tol=1e-8,reqrank=[]])
+    TTsvd(X;tol=1e-8,reqrank=[])
+    TTsvd(X::TTtensor;tol=1e-8,reqrank=[])
 
-Decomposes full tensor X into its TT format. If inout is already a TTtensor, recompresses it."""
+Decomposes full tensor X into its TT format. If input is already a TTtensor, recompresses it."""
 function TTsvd(X::Array{T,N};tol=1e-8,reqrank=[],tol_rel=0) where {T<:Number,N}
     Isz=size(X)
     if length(reqrank)>0
@@ -330,12 +337,15 @@ end
 function TTsvd(X::TensorCell;reqrank=[],tol=1e-8,tol_rel=0)
     N=length(X)
     Isz=[size(X[n],2) for n=1:N]
-
     l=length(reqrank)
     G=reorth(X,"right")
 
     if l>0
         @assert(l==N-1,"Requested rank of inapropriate size.")
+        if any(reqrank.<TTrank(G))==false
+            @warn "Requested rank larger than the currect rank."
+            return X
+        end
         for n=1:N-1
             U,S,V=svd(tenmat(G[n],row=1:2))
             if reqrank[n]<size(U,2)
@@ -409,10 +419,4 @@ function TTtv(X::TensorCell,U::Matrix)
     Ucell=MatrixCell(undef,1)
     Ucell[1]=U
     TTtrv(X,Ucell)
-end
-
-
-#Frobenius norm of a TTtensor. **Documentation in Base.
-function norm(X::TTtensor)
-    sqrt(abs.(innerprod(X,X)))
 end
