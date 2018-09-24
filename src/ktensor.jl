@@ -179,10 +179,10 @@ end
 function display(X::ktensor{T},name="ktensor") where {T<:Number}
     println("Kruskal tensor of size ",size(X),":\n")
     println("$name.lambda: ")
-    show(STDOUT, "text/plain", X.lambda)
+    show(stdout, "text/plain", X.lambda)
     for n=1:ndims(X)
         println("\n\n$name.fmat[$n]:")
-        show(STDOUT, "text/plain", X.fmat[n])
+        show(stdout, "text/plain", X.fmat[n])
     end
 end
 

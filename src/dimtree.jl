@@ -129,7 +129,7 @@ function display(T::dimtree)
     initial_blank_len[l]=initial_blank_len[l-1]+a
     a=a*2
   end
-  blank_len=2*initial_blank_len[1:end-1]+1
+  blank_len=2*initial_blank_len[1:end-1].+1
   l=h;k=h-1;
   [print(" ") for i=1:initial_blank_len[l]]; l-=1
   print(minimum(t[1]),"-",maximum(t[1]))

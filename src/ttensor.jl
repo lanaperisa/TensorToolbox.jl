@@ -138,10 +138,10 @@ function display(X::ttensor{T},name="ttensor") where {T<:Number}
   end
   print(":\n")
   println("$name.cten: ")
-  show(STDOUT, "text/plain", X.cten)
+  show(stdout, "text/plain", X.cten)
   for n=1:ndims(X)
       println("\n\n$name.fmat[$n]:")
-      show(STDOUT, "text/plain", X.fmat[n])
+      show(stdout, "text/plain", X.fmat[n])
   end
 end
 

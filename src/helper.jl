@@ -280,8 +280,8 @@ Lanczos based SVD - computes left singular vectors and singular values of a matr
 function lanczos(A::Matrix{N};tol=1e-8,maxit=1000,reqrank=0,p=10) where N<:Number
   Q,T=lanczos_tridiag(A,tol=tol,maxit=maxit,reqrank=reqrank,p=p)
   E=eigen(T,tol,Inf);
-  U=E[:vectors][:,end:-1:1];
-  S=sqrt.(abs.(E[:values][end:-1:1]));
+  U=E.vectors[:,end:-1:1];
+  S=sqrt.(abs.(E.values[end:-1:1]));
   if reqrank!=0
     U=Q*U[:,1:reqrank];
     S=S[1:reqrank];
@@ -379,8 +379,8 @@ function randsvd(A::Matrix{N};tol=1e-8,maxit=1000,reqrank=0,r=10,p=10) where N<:
   B=A'*Q;
   B=Symmetric(B'*B);
   E=eigen(B,tol,Inf);
-  U=E[:vectors][:,end:-1:1];
-  S=sqrt.(abs.(E[:values][end:-1:1]));
+  U=E.vectors[:,end:-1:1];
+  S=sqrt.(abs.(E.values[end:-1:1]));
   if reqrank != 0
       if size(U,2)<reqrank
 	      warn("Requested rank exceeds the actual rank. Try changing tolerance.");
