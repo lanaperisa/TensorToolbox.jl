@@ -182,3 +182,21 @@ Ttt=kten2TT(T)
 err=norm(full(T)-full(Ttt))
 println("norm(full(T)-full(Ttt)) = ", err)
 @test err ≈ 0 atol=1e-8
+
+println("\n... Testing contraction of full tensor to TTtensor - function contract.")
+N=5
+Isz=repeat([5],N,1)
+R=repeat([3],N-1,1)
+T=randTTtensor(Isz,R)
+Xsz=[Isz[1:N-1]...;2]
+X=rand(Xsz...)
+Tfull=full(T)
+T1=contract(Tfull,collect(1:N-1),X,collect(1:N-1),[2,1])
+Y=contract(T,X,1,4)
+@test norm(T1-full(Y)) ≈ 0 atol=1e-12
+
+Xsz=[Isz[1:N-2]...;2]
+X=rand(Xsz...)
+T2=contract(Tfull,collect(2:N-1),X,collect(1:N-2),[1,3,2])
+Y=contract(T,X,2,3)
+@test norm(T2-full(Y)) ≈ 0 atol=1e-12

@@ -1,7 +1,7 @@
 #using TensorToolbox
 
 export TTtensor, randTTtensor, innerprod, full, minus, mtimes, mtimes!, ndims, plus
-export reorth, reorth!, size, TTcontr, TTrank, TTsvd, TTtv, norm
+export reorth, reorth!, size, TTrank, TTsvd, TTtv, norm
 
 mutable struct TTtensor
   cores::TensorCell
@@ -51,6 +51,64 @@ function randTTtensor(arg...)
   randTTtensor([arg[1]...],[arg[2]...])
 end
 
+"""
+---------------------------------------------------
+    contract(T::TTtensor,X::Array,start_mode,modes)
+
+Contract modes 1:ndims(X-1) of full tensor X to TTtensor T cores[start_mode:start_mode+modes-1].
+Output: TTtensor.
+"""
+function contract(T::TTtensor,X::Array,start_mode=1,modes=0)
+    if modes==0
+        modes=ndims(X)-1
+    end
+    @assert(ndims(X)==modes+1,"Dimension mismatch.")
+    for n=start_mode:start_mode+modes-1
+        if n==start_mode
+            X=contract(T.cores[n],2,X,1)
+            X=permutedims(X,[collect(2:ndims(X))...;1])
+        else
+            X=contract(T.cores[n],collect(1:2),X,collect(1:2))
+        end
+    end
+    X=permutedims(X,[3,2,1])
+    N=ndims(T)-modes+1
+    G=TensorCell(undef,N)
+    for n=1:start_mode-1
+        G[n]=T.cores[n]
+    end
+    G[start_mode]=X
+    for n=start_mode+1:N
+         G[n]=T.cores[modes+n-1]
+    end
+    TTtensor(G)
+end
+contract(X::Array,T::TTtensor,start_mode=1,modes=0)=contract(T,X,start_mode,modes)
+function contract(X::TensorCell,squeeze=true)
+    N=length(X)
+    if N==1
+        return X[1]
+    end
+    @assert(any([size(X[n])[end]==size(X[n+1])[1] for n=1:N-1]),"Dimensions mismatch.")
+    Xcontr=contract(X[1],X[2])
+    for n=3:N
+        Xcontr=contract(Xcontr,X[n])
+    end
+    squeeze == true ? dropdims(Xcontr) : Xcontr
+end
+#
+function contract(X1::TensorCell,X2::TensorCell)
+    N=length(X2)
+    @assert(length(X1)==N,"Dimensions mismatch.")
+    @assert(size(X1)[1:end-1]==size(X2)[1:end-1],"Dimensions mismatch.")
+    A=dropdims(contract(X1[1],2,X2[1],2))
+    for n=2:N
+        A=contract(X1[n],1,A,1,[3,1,2])
+        A=contract(X2[n],[1,2],A,[1,2],[2,1])
+    end
+    A
+end
+
 function innerprod(X1::TTtensor,X2::TTtensor)
     Isz=size(X1)
     @assert(Isz==size(X2),"Dimension mismatch.")
@@ -62,6 +120,23 @@ function innerprod(X1::TTtensor,X2::TTtensor)
         w=VectorCell(undef,Isz[n])
         for i=1:Isz[n]
             w[i]=krontv(Matrix(transpose(X1.cores[n][:,i,:])),Matrix(transpose(X2.cores[n][:,i,:])),vec(v))
+        end
+        v=vec(sum(w))
+    end
+    v[1]
+end
+
+function innerprod(X1::TensorCell,X2::TensorCell)
+    Isz=[size(X,2) for X in X1]
+    @assert(Isz==[size(X,2) for X in X2],"Dimension mismatch.")
+    v=kron(X1[1][:,1,:],X2[1][:,1,:])
+    for i=2:Isz[1]
+        v+=kron(X1[1][:,i,:],X2[1][:,i,:])
+    end
+    for n=2:ndims(X1)
+        w=VectorCell(undef,Isz[n])
+        for i=1:Isz[n]
+            w[i]=krontv(Matrix(transpose(X1[n][:,i,:])),Matrix(transpose(X2[n][:,i,:])),vec(v))
         end
         v=vec(sum(w))
     end
@@ -115,13 +190,18 @@ end
 
 
 #Frobenius norm of a TTtensor. **Documentation in Base.
-function norm(X::TTtensor)
+function norm(X::TTtensor,orth="")
     if X.lorth==true
         sqrt(contract(X.cores[end],[1,2,3],X.cores[end],[1,2,3])[1])
     elseif X.rorth==true
         sqrt(contract(X.cores[1],[1,2,3],X.cores[1],[1,2,3])[1])
     else
-        sqrt(abs.(innerprod(X,X)))
+        if orth=="reorth"
+            Xorth=reorth(X)
+            sqrt(abs.(innerprod(Xorth,Xorth)))
+        else
+            sqrt(abs.(innerprod(X,X)))
+        end
     end
 end
 

@@ -29,11 +29,12 @@ dirsum(X1::Array{T1},X2::Array{T2}) where {T1<:Number,T2<:Number} = blockdiag(X1
 
 """
     contract(X,Y)
+    contract(X,indX,Y,indY[,perm])
     contract(X::TensorCell)
-    contract(X1,ind1,X2,ind2[,perm])
 
-Contracted product of tensors. Contract ind1 modes of array X1 to ind2 modes of array X2 and permute the result by vector perm.
-Default: ind1=[3], ind2=[1]."""
+Contracted product of tensors. Contract indX modes of array X to indY modes of array Y and permute the result by vector perm.
+Default: indX=[ndims(X)], indY=[1].
+"""
 function contract(X1::Array{T1},ind1::Vector{Int},X2::Array{T2},ind2::Vector{Int},perm=[]) where {T1<:Number,T2<:Number}
     sz1=[size(X1)...]
     sz2=[size(X2)...]
@@ -48,15 +49,7 @@ end
 contract(X1::Array{T1},X2::Array{T2},ind::Vector{Int}) where {T1<:Number,T2<:Number} =contract(X1,ind,X2,ind)
 contract(X1::Array{T1},ind1::Int,X2::Array{T2},ind2::Int,perm=[]) where {T1<:Number,T2<:Number} =contract(X1,[ind1],X2,[ind2],perm)
 contract(X1::Array{T1},X2::Array{T2}) where {T1<:Number,T2<:Number} = contract(X1,ndims(X1),X2,1)
-function contract(X::TensorCell,squeeze=true)
-    N=length(X)
-    @assert(any([size(X[n])[end]==size(X[n+1])[1] for n=1:N-1]),"Dimensions mismatch.")
-    Xcontr=contract(X[1],X[2])
-    for n=3:N
-        Xcontr=contract(Xcontr,X[n])
-    end
-    squeeze == true ? dropdims(Xcontr) : Xcontr
-end
+
 
 
 """
@@ -510,7 +503,10 @@ function tenmat(X::Array{T,N},n::Integer) where {T<:Number,N}
 	@assert(n<=ndims(X),"Mode exceedes number of dimensions")
 	sz=size(X)
 	m=setdiff(1:N,n)
-	reshape(permutedims(X,[n;m]),sz[n],prod(sz[m]))
+    if [n;m]!=collect(1:N)
+        X=permutedims(X,[n;m])
+    end
+	reshape(X,sz[n],prod(sz[m]))
 end
 
 function tenmat(X::Array{T,N};row=[],col=[]) where {T<:Number,N}
@@ -522,17 +518,22 @@ function tenmat(X::Array{T,N};row=[],col=[]) where {T<:Number,N}
         if isa(col,Integer)
             col=[col]
         end
-        row=collect(1:N);deleteat!(row,sort(col));
+        row=collect(1:N)
+        deleteat!(row,sort(col))
     else
         @assert(!(false in [r in collect(1:N) for r in row]),"Incorrect modes.")
         if isa(row,Integer)
             row=[row]
         end
-        col=collect(1:N);deleteat!(col,sort(row));
+        col=collect(1:N)
+        deleteat!(col,sort(row))
     end
-	  sz=size(X);
-    J=prod(sz[row]);K=prod(sz[col]);
-	reshape(permutedims(X,[row;col]),J,K)
+	sz=size(X)
+    J=prod(sz[row]);K=prod(sz[col])
+    if [row;col]!=collect(1:N)
+        X=permutedims(X,[row;col])
+    end
+	reshape(X,J,K)
 end
 
 """

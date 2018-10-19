@@ -336,6 +336,73 @@ function lanczos_tridiag(A::Matrix{N};tol=1e-8,maxit=1000,reqrank=0,p=10) where 
   Q,T
   end
 
+function randrange(A::Matrix{T},gram=true,t='t';tol=1e-8,maxit=1000,reqrank=0,r=10,p=10) where T<:Number
+  m,n=size(A)
+  if reqrank!=0
+    if t=='t'
+      Y=A'*randn(m,reqrank+p)
+      if gram
+        Y=A*Y
+      end
+    elseif t=='n'
+      Y=A*randn(n,reqrank+p)
+      if gram
+        Y=A'*Y
+      end
+    else
+      error("Wrong input.")
+    end
+    Q=qr(Y).Q;
+  else
+    maxit=min(m,n,maxit);
+    rangetol=tol*sqrt.(pi/2)/10; #assures ||A-Q*Q'*A||<=tol
+    if t=='t'
+      Y=A'*randn(m,r)
+      if gram
+        Y=A*Y
+        Q=zeros(m,0)
+      else
+        Q=zeros(n,0)
+      end
+    elseif t=='n'
+      Y=A*randn(n,r)
+      if gram
+        Y=A'*Y
+        Q=zeros(n,0)
+      else
+        Q=zeros(m,0)
+      end
+    end
+
+    j=0
+    maxcolnorm=maximum([norm(Y[:,i]) for i=1:r]);
+    while maxcolnorm > rangetol && j<maxit
+      j+=1;
+      v=Q'*Y[:,j];
+      Y[:,j]-=Q*v;
+      q=Y[:,j]/norm(Y[:,j]);
+      Q=[Q q];
+      if t=='t'
+        w=A'*randn(m)
+        if gram
+          w=A*w
+        end
+      elseif t=='n'
+        w=A*randn(n)
+        if gram
+          w=A'*w
+        end
+      end
+      v=Q'*w;
+      Y=[Y w-Q*v]; #Y[:,j+r]=w-Q*v;
+      v=q'*Y[:,j+1:j+r-1]
+      Y[:,j+1:j+r-1]-=q*v;
+      maxcolnorm=maximum([norm(Y[:,i]) for i=j+1:j+r]);
+    end
+  end
+  Q
+end
+
 """
    randsvd(A; <keyword arguments>)
 
@@ -349,50 +416,49 @@ Randomized SVD algorithm - returns left singular vectors and singular values of 
 - `r`: Number of samples for stopping criterion. Default: r=10.
 - `p`: Oversampling parameter. Default: p=10.
 """
-function randsvd(A::Matrix{N};tol=1e-8,maxit=1000,reqrank=0,r=10,p=10) where N<:Number
+function randsvd(A::Matrix{T},svdvecs="left";tol=1e-8,maxit=1000,reqrank=0,r=10,p=10) where T<:Number
   m,n=size(A)
-  if reqrank!=0
-    Y=A*(A'*randn(m,reqrank+p));
-    #Q=qrfact(Y)[:Q];
-    Q=qr(Y)[1];
-  else
-    maxit=min(m,n,maxit);
-    rangetol=tol*sqrt.(pi/2)/10; #assures ||A-Q*Q'*A||<=tol
-    Y=A*(A'*randn(m,r));
-    j=0;
-    Q=zeros(m,0);
-    maxcolnorm=maximum([norm(Y[:,i]) for i=1:r]);
-    while maxcolnorm > rangetol && j<maxit
-      j+=1;
-      v=Q'*Y[:,j];
-      Y[:,j]-=Q*v;
-      q=Y[:,j]/norm(Y[:,j]);
-      Q=[Q q];
-      w=A*(A'*randn(m));
-      v=Q'*w;
-      Y=[Y w-Q*v]; #Y[:,j+r]=w-Q*v;
-      v=q'*Y[:,j+1:j+r-1]
-      Y[:,j+1:j+r-1]-=q*v;
-      maxcolnorm=maximum([norm(Y[:,i]) for i=j+1:j+r]);
-    end
-  end
-  B=A'*Q;
-  B=Symmetric(B'*B);
-  E=eigen(B,tol,Inf);
-  U=E.vectors[:,end:-1:1];
-  S=sqrt.(abs.(E.values[end:-1:1]));
-  if reqrank != 0
+  if svdvecs=="left" || svdvecs=="right"
+    svdvecs=="left" ? t ='t' : t='n'
+    Q=randrange(A,true,t,tol=tol,maxit=maxit,reqrank=reqrank,r=r,p=p)
+    svdvecs=="left" ? B=A'*Q : B=A*Q
+    B=Symmetric(B'*B)
+    E=eigen(B,tol,Inf)
+    U=E.vectors[:,end:-1:1];
+    S=sqrt.(abs.(E.values[end:-1:1]))
+    if reqrank != 0
       if size(U,2)<reqrank
 	      warn("Requested rank exceeds the actual rank. Try changing tolerance.");
         U=Q*U;
       else
-	      U=Q*U[:,1:reqrank];
-      	S=S[1:reqrank];
+	      U=Q*U[:,1:reqrank]
+      	S=S[1:reqrank]
       end
-  else
-    K=findall(x-> x>tol ? true : false,S)
-    U=Q*U[:,K];
-    S=S[K];
+    else
+      K=findall(x-> x>tol ? true : false,S)
+      U=Q*U[:,K]
+      S=S[K]
+    end
+    U,S
+  elseif svdvecs=="both"
+    Q=randrange(A,false,'n',tol=tol,maxit=maxit,reqrank=reqrank,r=r,p=p)
+    B=transpose(Q)*A
+    U,S,V=svd(B)
+    if reqrank != 0
+      if size(U,2)<reqrank
+	      warn("Requested rank exceeds the actual rank. Try changing tolerance.");
+        U=Q*U;
+      else
+	      U=Q*U[:,1:reqrank]
+      	S=S[1:reqrank]
+        V=V[:,1:reqrank]
+      end
+    else
+      K=findall(x-> x>tol ? true : false,S)
+      U=Q*U[:,K]
+      S=S[K]
+      V=V[:,K]
+    end
+    U,S,V
   end
-  U,S
 end
