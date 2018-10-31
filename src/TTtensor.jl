@@ -101,12 +101,12 @@ function contract(X1::TensorCell,X2::TensorCell)
     N=length(X2)
     @assert(length(X1)==N,"Dimensions mismatch.")
     @assert(size(X1)[1:end-1]==size(X2)[1:end-1],"Dimensions mismatch.")
-    A=dropdims(contract(X1[1],2,X2[1],2))
+    Xcontr=Matrix(transpose(dropdims(contract(X1[1],2,X2[1],2))))
     for n=2:N
-        A=contract(X1[n],1,A,1,[3,1,2])
-        A=contract(X2[n],[1,2],A,[1,2],[2,1])
+        Xcontr=contract(X1[n],1,Xcontr,2,[3,1,2])
+        Xcontr=contract(X2[n],[1,2],Xcontr,[1,2])
     end
-    A
+    Xcontr
 end
 
 function innerprod(X1::TTtensor,X2::TTtensor)
@@ -288,8 +288,7 @@ function reorth!(X::TTtensor,direction="left",full="no")
             X.cores[n+1]=ttm(X.cores[n+1],Rt,1)
         end
         if full=="full"
-            Q,Rt=qr(tenmat(X.cores[N],row=1:2))
-            Q=Matrix(Q)
+            Q,Rt=Matrix(qr(tenmat(X.cores[N],row=1:2)).Q)
             sz=(size(X.cores[N])[1:2]...,size(Q)[2])
             X.cores[N]=reshape(Q,sz)
         end
@@ -303,8 +302,7 @@ function reorth!(X::TTtensor,direction="left",full="no")
             X.cores[n-1]=ttm(X.cores[n-1],Rt,3)
         end
         if full=="full"
-            Q,Rt=qr(transpose(tenmat(X.cores[1],1)))
-            Q=Matrix(Q)
+            Q=Matrix(qr(transpose(tenmat(X.cores[1],1))).Q)
             sz=(size(Q)[2],size(X.cores[1])[2:3]...)
             X.cores[1]=reshape(Matrix(transpose(Q)),sz)
         end
@@ -318,24 +316,26 @@ function reorth!(X::TensorCell,direction="left",full="no")
     if direction=="left"
         for n=1:N-1
             Q,Rt=qr(tenmat(X[n],row=1:2))
+            Q=Matrix(Q)
             sz=(size(X[n])[1:2]...,size(Q)[2])
             X[n]=reshape(Q,sz)
             X[n+1]=ttm(X[n+1],Rt,1)
         end
         if full=="full"
-            Q,Rt=qr(tenmat(X[N],row=1:2))
+            Q=Matrix(qr(tenmat(X[N],row=1:2)).Q)
             sz=(size(X[N])[1:2]...,size(Q)[2])
             X[N]=reshape(Q,sz)
         end
     elseif direction == "right"
         for n=N:-1:2
             Q,Rt=qr(tenmat(X[n],1)')
+            Q=Matrix(Q)
             sz=(size(Q)[2],size(X[n])[2:3]...)
             X[n]=reshape(Q',sz)
             X[n-1]=ttm(X[n-1],Rt,3)
         end
         if full=="full"
-            Q,Rt=qr(tenmat(X[1],1)')
+            Q=Matrix(qr(tenmat(X[1],1)').Q)
             sz=(size(Q)[2],size(X[1])[2:3]...)
             X[1]=reshape(Q',sz)
         end
@@ -419,7 +419,6 @@ function TTsvd(X::TensorCell;reqrank=[],tol=1e-8,tol_rel=0)
     Isz=[size(X[n],2) for n=1:N]
     l=length(reqrank)
     G=reorth(X,"right")
-
     if l>0
         @assert(l==N-1,"Requested rank of inapropriate size.")
         if any(reqrank.<TTrank(G))==false
@@ -437,13 +436,13 @@ function TTsvd(X::TensorCell;reqrank=[],tol=1e-8,tol_rel=0)
             G[n+1]=ttm(G[n+1],Matrix(transpose(V)),1)
         end
     else
-        #δ=tol/sqrt(N-1)*norm(full(X))
         for n=1:N-1
             U,S,V=svd(tenmat(G[n],row=1:2))
             if tol_rel != 0
                 tol=tol_rel*S[1]
             end
-            K=findall(x-> x>tol ? true : false,S)
+            δ=tol/sqrt(N-1)*norm(TTtensor(G))
+            K=findall(x-> x>δ ? true : false,S)
             U=U[:,K]
             V=V[:,K]
             S=S[K]
