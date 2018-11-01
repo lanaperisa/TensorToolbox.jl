@@ -473,19 +473,29 @@ end
 
 Sequentially truncated HOSVD of a tensor X of predifined rank and processing order p.
 """
-function sthosvd(X::Array{T,N},reqrank::Vector{D},p::Vector{D}) where {T<:Number,D<:Integer,N}
-	@assert(N==length(reqrank)==length(p),"Dimensions mismatch")
+function sthosvd(X::Array{T,N};reqrank=[],order=[],tol=1e-8) where {T<:Number,N}
+    if order==[]
+        order=collect(1:N)
+    end
+    @assert(N==length(order),"Dimensions mismatch")
+    if reqrank!=[]
+        @assert(N==length(reqrank),"Dimensions mismatch")
+    end
 	sz=[size(X)...]
 	fmat=MatrixCell(undef,N)
-	for n=1:N
-		fmat[n]=zeros(sz[n],reqrank[n])
-	end
-	for n in p
+	for n in order
 		Xn=tenmat(X,n)
 		U,S,V=svd(Xn)
-		fmat[n]=U[:,1:reqrank[n]]
-		Xn=diagm(S[1:reqrank[n]])*V'[1:reqrank[n],:]
-		sz[n]=reqrank[n]
+        if reqrank!=[]
+            fmat[n]=U[:,1:reqrank[n]]
+		    Xn=Diagonal(S[1:reqrank[n]])*V'[1:reqrank[n],:]
+            sz[n]=reqrank[n]
+        else
+            K=findall(x-> x>tol ? true : false,S)
+            fmat[n]=U[:,K]
+		    Xn=Diagonal(S[K])*V[:,K]'
+            sz[n]=length(K)
+        end
 		X=matten(Xn,n,sz)
 	end
 	ttensor(X,fmat)

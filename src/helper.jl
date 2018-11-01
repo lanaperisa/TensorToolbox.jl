@@ -311,7 +311,7 @@ function lanczos_tridiag(A::Matrix{N};tol=1e-8,maxit=1000,reqrank=0,p=10) where 
   if reqrank != 0
       K=min(reqrank+p,K);
   end
-  α=zeros(K)
+  isreal(A) ? α=zeros(K) : α=zeros(Complex,K)
   β=zeros(K)
   v=randn(m);
   q=v/norm(v);
@@ -332,7 +332,7 @@ function lanczos_tridiag(A::Matrix{N};tol=1e-8,maxit=1000,reqrank=0,p=10) where 
       Q=[Q r/β[k]]
     end
   end
-  T=SymTridiagonal(α[1:K], β[1:K-1])
+  isreal(α) ? T=SymTridiagonal(α[1:K], β[1:K-1]) : T=Hermitian(Matrix(SymTridiagonal(real(α[1:K]), β[1:K-1]) +im*Diagonal(imag(α[1:K]))))
   Q,T
   end
 
@@ -422,7 +422,11 @@ function randsvd(A::Matrix{T},svdvecs="left";tol=1e-8,maxit=1000,reqrank=0,r=10,
     svdvecs=="left" ? t ='t' : t='n'
     Q=randrange(A,true,t,tol=tol,maxit=maxit,reqrank=reqrank,r=r,p=p)
     svdvecs=="left" ? B=A'*Q : B=A*Q
-    B=Symmetric(B'*B)
+    if isreal(B)
+      B=Symmetric(B'*B)
+    else
+      B=Hermitian(B'*B)
+    end
     E=eigen(B,tol,Inf)
     U=E.vectors[:,end:-1:1];
     S=sqrt.(abs.(E.values[end:-1:1]))
