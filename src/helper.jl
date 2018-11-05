@@ -62,9 +62,9 @@ Column space basis.
 """
 function colspace(X::Matrix{T};method="svd",maxrank=0,atol=1e-8,rtol=0,p=10) where T<:Number
   if method == "lanczos"
-    U,S=lanczos(X,tol=atol,maxrank=maxrank,p=p)
+    U,S=lanczos(X,tol=atol,reqrank=maxrank,p=p)
   elseif method == "randsvd"
-    U,S=randsvd(X,tol=atol,maxrank=maxrank,p=p)
+    U,S=randsvd(X,tol=atol,reqrank=maxrank,p=p)
   else
     U,S,V=svd(X)
   end
@@ -432,7 +432,7 @@ function randsvd(A::Matrix{T},svdvecs="left";tol=1e-8,maxit=1000,reqrank=0,r=10,
     S=sqrt.(abs.(E.values[end:-1:1]))
     if reqrank != 0
       if size(U,2)<reqrank
-	      warn("Requested rank exceeds the actual rank. Try changing tolerance.");
+	      @warn "Requested rank exceeds the actual rank. Try changing tolerance."
         U=Q*U;
       else
 	      U=Q*U[:,1:reqrank]
@@ -450,7 +450,7 @@ function randsvd(A::Matrix{T},svdvecs="left";tol=1e-8,maxit=1000,reqrank=0,r=10,
     U,S,V=svd(B)
     if reqrank != 0
       if size(U,2)<reqrank
-	      warn("Requested rank exceeds the actual rank. Try changing tolerance.");
+	      @warn "Requested rank exceeds the actual rank. Try changing tolerance."
         U=Q*U;
       else
 	      U=Q*U[:,1:reqrank]

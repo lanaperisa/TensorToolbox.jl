@@ -252,10 +252,11 @@ function reorth(X::TensorCell,direction="left",full="no")
             G[n+1]=ttm(G[n+1],Rt,1)
         end
         if full=="full"
-            Q,Rt=qr(tenmat(G[N],row=1:2))
-            Q=Matrix(Q)
-            sz=(size(G[N])[1:2]...,size(Q)[2])
-            G[N]=reshape(Q,sz)
+            # Q,Rt=qr(tenmat(G[N],row=1:2))
+            # Q=Matrix(Q)
+            # sz=(size(G[N])[1:2]...,size(Q)[2])
+            # G[N]=reshape(Q,sz)
+            G[N]=G[N]/norm(G[N])
         end
     elseif direction == "right"
         for n=N:-1:2
@@ -266,10 +267,11 @@ function reorth(X::TensorCell,direction="left",full="no")
             G[n-1]=ttm(G[n-1],Rt,3)
         end
         if full=="full"
-            Q,Rt=qr(transpose(tenmat(G[1],1)))
-            Q=Matrix(Q)
-            sz=(size(Q)[2],size(G[1])[2:3]...)
-            G[1]=reshape(Matrix(transpose(Q)),sz)
+            # Q,Rt=qr(transpose(tenmat(G[1],1)))
+            # Q=Matrix(Q)
+            # sz=(size(Q)[2],size(G[1])[2:3]...)
+            # G[1]=reshape(Matrix(transpose(Q)),sz)
+            G[1]=G[1]/norm(G[1])
         end
     else
         error("Invalid direction. Should be either \"left\" or \"right\".")
@@ -288,9 +290,10 @@ function reorth!(X::TTtensor,direction="left",full="no")
             X.cores[n+1]=ttm(X.cores[n+1],Rt,1)
         end
         if full=="full"
-            Q,Rt=Matrix(qr(tenmat(X.cores[N],row=1:2)).Q)
-            sz=(size(X.cores[N])[1:2]...,size(Q)[2])
-            X.cores[N]=reshape(Q,sz)
+            # Q,Rt=Matrix(qr(tenmat(X.cores[N],row=1:2)).Q)
+            # sz=(size(X.cores[N])[1:2]...,size(Q)[2])
+            # X.cores[N]=reshape(Q,sz)
+            X.cores[N]=X.cores[N]/norm(X.cores[N])
         end
         X.lorth=true
     elseif direction == "right"
@@ -302,9 +305,10 @@ function reorth!(X::TTtensor,direction="left",full="no")
             X.cores[n-1]=ttm(X.cores[n-1],Rt,3)
         end
         if full=="full"
-            Q=Matrix(qr(transpose(tenmat(X.cores[1],1))).Q)
-            sz=(size(Q)[2],size(X.cores[1])[2:3]...)
-            X.cores[1]=reshape(Matrix(transpose(Q)),sz)
+            # Q=Matrix(qr(transpose(tenmat(X.cores[1],1))).Q)
+            # sz=(size(Q)[2],size(X.cores[1])[2:3]...)
+            # X.cores[1]=reshape(Matrix(transpose(Q)),sz)
+            X.cores[1]=X.cores[1]/norm(X.cores[1])
         end
         X.rorth=true
     else
@@ -322,9 +326,10 @@ function reorth!(X::TensorCell,direction="left",full="no")
             X[n+1]=ttm(X[n+1],Rt,1)
         end
         if full=="full"
-            Q=Matrix(qr(tenmat(X[N],row=1:2)).Q)
-            sz=(size(X[N])[1:2]...,size(Q)[2])
-            X[N]=reshape(Q,sz)
+            # Q=Matrix(qr(tenmat(X[N],row=1:2)).Q)
+            # sz=(size(X[N])[1:2]...,size(Q)[2])
+            # X[N]=reshape(Q,sz)
+            X[N]=X[N]/norm(X[N])
         end
     elseif direction == "right"
         for n=N:-1:2
@@ -335,9 +340,10 @@ function reorth!(X::TensorCell,direction="left",full="no")
             X[n-1]=ttm(X[n-1],Rt,3)
         end
         if full=="full"
-            Q=Matrix(qr(tenmat(X[1],1)').Q)
-            sz=(size(Q)[2],size(X[1])[2:3]...)
-            X[1]=reshape(Q',sz)
+            # Q=Matrix(qr(tenmat(X[1],1)').Q)
+            # sz=(size(Q)[2],size(X[1])[2:3]...)
+            # X[1]=reshape(Q',sz)
+            X[1]=X[1]/norm(X[1])
         end
     else
         error("Invalid direction. Should be either \"left\" or \"right\".")

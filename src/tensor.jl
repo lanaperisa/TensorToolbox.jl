@@ -335,7 +335,7 @@ function mkrontv(X1::Array{T1,N},X2::Array{T2,N},M::Matrix{T3},n::Integer,t='n')
   Mprod
 end
 function mkrontm(X1::Array{T1,N},X2::Array{T2,N},M::Matrix{T3},n::Integer,t='n') where {T1<:Number,T2<:Number,T3<:Number,N}
-  warn("Function mkrontm is depricated. Use mkrontv.")
+  @warn "Function mkrontm is depricated. Use mkrontv."
   mkrontv(X1,X2,M,n,t)
 end
 

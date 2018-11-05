@@ -376,7 +376,7 @@ function lanczos(X1::ttensor{T1},X2::ttensor{T2},mode::Integer;reqrank=0,variant
   S=sqrt.(abs.(E.values[end:-1:1]));
   if reqrank!=0
     if reqrank > size(U,2)
-      warn("Required rank for mode $mode exceeds actual rank, the resulting rank will be ",size(U,2),". Try changing tolerance.");
+      @warn "Required rank for mode $mode exceeds actual rank, the resulting rank will be ",size(U,2),". Try changing tolerance.";
     else
       U=U[:,1:reqrank];
       S=S[1:reqrank];
@@ -518,7 +518,7 @@ function mhadtv(X1::ttensor{T1},X2::ttensor{T2},M::Matrix{T3},n::Integer,t='b';v
 end
 
 function mhadtm(X1::ttensor{T1},X2::ttensor{T2},M::Matrix{T3},n::Integer,t='b';variant='B') where {T1<:Number,T2<:Number,T3<:Number}
-  warn("Function mhadtm is depricated. Use mhadtv.")
+  @warn "Function mhadtm is depricated. Use mhadtv."
   mhadtm(X1,X2,M,n,t,variant=variant)
 end
 
@@ -773,7 +773,7 @@ function randsvd(X1::ttensor{T1},X2::ttensor{T2},mode::Integer;variant='B',tol=1
   S=sqrt.(abs.(E.values[end:-1:1]));
   if reqrank != 0
     if reqrank > size(U,2)
-      warn("Required rank for mode $mode exceeds actual rank, the resulting rank will be smaller.")
+      @warn "Required rank for mode $mode exceeds actual rank, the resulting rank will be smaller."
     else
       U=U[:,1:reqrank];
       S=S[1:reqrank];
