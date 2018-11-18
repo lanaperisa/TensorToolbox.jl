@@ -1,4 +1,4 @@
-argmax#Tensors in Kruskal (CP) format + functions
+#Tensors in Kruskal (CP) format + functions
 
 export ktensor, randktensor, arrange, arrange!, cp_als, display, extract, fixsigns, fixsigns!, full, innerprod, isequal, krank, kten2TT, minus, mtimes, mttkrp, ncomponents, ndims
 export normalize, normalize!, nvecs, permutedims, plus, redistribute, redistribute!, size, tenmat, tocell, ttensor, ttm, ttv, uminus, norm
