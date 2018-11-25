@@ -387,6 +387,7 @@ function TTsvd(X::Array{T,N};tol=1e-8,reqrank=[],tol_rel=0) where {T<:Number,N}
     else
         reqrank=[Isz...]
         rnk=0
+		tol=tol/sqrt(N-1)
     end
     G=TensorCell(undef,N)
     Xtmp=copy(X)
@@ -403,10 +404,17 @@ function TTsvd(X::Array{T,N};tol=1e-8,reqrank=[],tol_rel=0) where {T<:Number,N}
             if tol_rel != 0
                 tol=tol_rel*S[1]
             end
-            K=findall(x-> x>tol ? true : false,S)
-            U=U[:,K]
-            S=S[K]
-            V=V[:,K]
+            #K=findall(x-> x>tol ? true : false,S)
+			Sum=0
+			k=0
+			while sqrt(Sum)<=tol
+				Sum=Sum+S[end-k]^2
+				k+=1
+			end
+			K=length(S)-k+1
+            U=U[:,1:K]
+            S=S[1:K]
+            V=V[:,1:K]
             reqrank[n]=length(S)
         end
         G[n]=reshape(U,(R,Isz[n],reqrank[n]))
@@ -422,6 +430,7 @@ end
 
 function TTsvd(X::TensorCell;reqrank=[],tol=1e-8,tol_rel=0)
     N=length(X)
+	tol=tol/sqrt(N-1)
     Isz=[size(X[n],2) for n=1:N]
     l=length(reqrank)
     G=reorth(X,"right")
@@ -447,11 +456,18 @@ function TTsvd(X::TensorCell;reqrank=[],tol=1e-8,tol_rel=0)
             if tol_rel != 0
                 tol=tol_rel*S[1]
             end
-            δ=tol/sqrt(N-1)*norm(TTtensor(G))
-            K=findall(x-> x>δ ? true : false,S)
-            U=U[:,K]
-            V=V[:,K]
-            S=S[K]
+            Sum=0
+			k=0
+			while sqrt(Sum)<=tol
+				Sum=Sum+S[end-k]^2
+				k+=1
+				#@show sum
+			end
+			K=length(S)-k+1
+            #K=findall(x-> x>δ ? true : false,S)
+            U=U[:,1:K]
+            V=V[:,1:K]
+            S=S[1:K]
             G[n]=reshape(U,(size(G[n],1),Isz[n],:))
             G[n+1]=ttm(G[n+1],V*Diagonal(S),1,'t')
         end
