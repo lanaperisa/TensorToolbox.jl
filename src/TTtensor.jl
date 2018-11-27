@@ -1,6 +1,6 @@
 #using TensorToolbox
 
-export TTtensor, randTTtensor, innerprod, full, minus, mtimes, mtimes!, ndims, plus
+export TTtensor, randTTtensor, innerprod, ewprod, full, minus, mtimes, mtimes!, ndims, plus
 export reorth, reorth!, size, TTrank, TTsvd, TTtv, norm
 
 mutable struct TTtensor
@@ -141,6 +141,21 @@ function innerprod(X1::TensorCell,X2::TensorCell)
         v=vec(sum(w))
     end
     v[1]
+end
+
+function ewprod(X1::TTtensor,X2::TTtensor)
+	Isz=size(X1)
+	@assert(Isz == size(X2),"Dimension mismatch.")
+	N=ndims(X1)
+  	cores=TensorCell(undef,N) #initilize cores
+	R=TTrank(X1).*TTrank(X2)
+  	for n=1:N
+    	cores[n]=zeros(R[n],Isz[n],R[n+1])
+    	for i=1:Isz[n]
+        	cores[n][:,i,:]=kron(X1.cores[n][:,i,:],X2.cores[n][:,i,:]);
+    	end
+	end
+  	TTtensor(cores)
 end
 
 function full(X::TTtensor)
@@ -442,9 +457,12 @@ function TTsvd(X::TensorCell;reqrank=[],tol=1e-8,tol_rel=0)
         end
         for n=1:N-1
             U,S,V=svd(tenmat(G[n],row=1:2))
-            if reqrank[n]<size(U,2)
+            if reqrank[n]<=size(U,2)
                 U=U[:,1:reqrank[n]]
                 V=V[:,1:reqrank[n]]*Diagonal(S[1:reqrank[n]])
+			else
+				@warn "Requested rank larger than the actual rank."
+				reqrank[n]=size(U,2)
             end
             n==1 ? sz=(1,Isz[1],reqrank[1]) : sz=(reqrank[n-1],Isz[n],reqrank[n])
             G[n]=reshape(U,sz)

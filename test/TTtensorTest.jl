@@ -200,3 +200,23 @@ X=rand(Xsz...)
 T2=contract(Tfull,collect(2:N-1),X,collect(1:N-2),[1,3,2])
 Y=contract(T,X,2,3)
 @test norm(T2-full(Y)) ≈ 0 atol=1e-12
+
+println("\n... Testing element-wise product of two TTtensor - function ewprod.")
+N=4;
+Isz=[8,7,6,5];
+Rx=[7,6,5];
+Ry=[6,5,4];
+X=randTTtensor(Isz,Rx);
+Y=randTTtensor(Isz,Ry);
+Zfull=full(X).*full(Y);
+Rz=Rx.*Ry;
+Rz=[1;Rz...;1];
+Zcores=TensorCell(undef,N);
+for n=1:N
+    Zcores[n]=zeros(Rz[n],Isz[n],Rz[n+1])
+    for i=1:Isz[n]
+        Zcores[n][:,i,:]=kron(X.cores[n][:,i,:],Y.cores[n][:,i,:]);
+    end
+end
+Z=TTtensor(Zcores);
+@test norm(Zfull-full(Z)) ≈ 0 atol=1e-8

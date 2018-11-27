@@ -160,13 +160,14 @@ function full(X::ttensor{T}) where {T<:Number}
 end
 
 """
-   ewprod(X,Y)
+   ewprod(X::ttensor,Y::ttensor)
+   ewprod(X::TTtensor,Y::TTtensor)
 
-Element-wise product of two ttensors.
+Element-wise product of two ttensors/TTtensors.
 """
 function ewprod(X1::ttensor{T1},X2::ttensor{T2}) where {T1<:Number,T2<:Number}
   @assert(size(X1) == size(X2))
-	fmat=MatrixCell(undef,ndims(X1)) #initilize factor matrix
+  fmat=MatrixCell(undef,ndims(X1)) #initilize factor matrix
   n=1
   for (A1,A2) in zip(X1.fmat,X2.fmat)
       fmat[n]=khatrirao(A1,A2,'t')
