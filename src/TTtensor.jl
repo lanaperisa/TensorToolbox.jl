@@ -148,7 +148,7 @@ function ewprod(X1::TTtensor,X2::TTtensor)
 	@assert(Isz == size(X2),"Dimension mismatch.")
 	N=ndims(X1)
   	cores=TensorCell(undef,N) #initilize cores
-	R=TTrank(X1).*TTrank(X2)
+	R=[1,TTrank(X1).*TTrank(X2)...,1]    
   	for n=1:N
     	cores[n]=zeros(R[n],Isz[n],R[n+1])
     	for i=1:Isz[n]
