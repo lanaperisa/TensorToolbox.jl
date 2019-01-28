@@ -296,7 +296,7 @@ hrank(X)
 
 #Define tensor in TT format by its core tensors:
 
-G=TensorCell(undef,3)
+G=CoreCell(undef,3)
 G[1]=rand(1,4,3)
 G[2]=rand(3,6,4)
 G[3]=rand(4,3,1)

@@ -6,7 +6,7 @@ export sthosvd, tenmat, tkron, ttm, ttt, ttv
 
 Create block diagonal tensor where tensors X and Y are block elements. If X and Y are matrices, equal to blkdiag for sparse matrices.
 """
-function blockdiag(X1::Array{T1,N},X2::Array{T2,N}) where {T1<:Number, T2<:Number, N}
+function blockdiag(X1::Array{<:Number,N},X2::Array{<:Number,N}) where N
   sz=tuple([size(X1)...]+[size(X2)...]...)
   Xd=zeros(sz)
   R1=CartesianIndices(size(X1))
@@ -25,7 +25,7 @@ end
 
 Direct sum od tensors. Equal to blockdiag.
 """
-dirsum(X1::Array{T1},X2::Array{T2}) where {T1<:Number,T2<:Number} = blockdiag(X1,X2)
+dirsum(X1::AbstractArray{<:Number},X2::AbstractArray{<:Number}) = blockdiag(X1,X2)
 
 """
     contract(X,Y)
@@ -35,7 +35,7 @@ dirsum(X1::Array{T1},X2::Array{T2}) where {T1<:Number,T2<:Number} = blockdiag(X1
 Contracted product of tensors. Contract indX modes of array X to indY modes of array Y and permute the result by vector perm.
 Default: indX=[ndims(X)], indY=[1].
 """
-function contract(X1::Array{T1},ind1::Vector{Int},X2::Array{T2},ind2::Vector{Int},perm=[]) where {T1<:Number,T2<:Number}
+function contract(X1::AbstractArray{<:Number},ind1::Vector{Int},X2::AbstractArray{<:Number},ind2::AbstractVector{<:Integer},perm=[])
     sz1=[size(X1)...]
     sz2=[size(X2)...]
     @assert(sz1[ind1]==sz2[ind2],"Dimension mismatch.")
@@ -46,9 +46,9 @@ function contract(X1::Array{T1},ind1::Vector{Int},X2::Array{T2},ind2::Vector{Int
     end
     Xres
 end
-contract(X1::Array{T1},X2::Array{T2},ind::Vector{Int}) where {T1<:Number,T2<:Number} =contract(X1,ind,X2,ind)
-contract(X1::Array{T1},ind1::Int,X2::Array{T2},ind2::Int,perm=[]) where {T1<:Number,T2<:Number} =contract(X1,[ind1],X2,[ind2],perm)
-contract(X1::Array{T1},X2::Array{T2}) where {T1<:Number,T2<:Number} = contract(X1,ndims(X1),X2,1)
+contract(X1::AbstractArray{<:Number},X2::AbstractArray{<:Number},ind::AbstractVector{<:Integer})=contract(X1,ind,X2,ind)
+contract(X1::AbstractArray{<:Number},ind1::Int,X2::AbstractArray{<:Number},ind2::Int,perm=[]) =contract(X1,[ind1],X2,[ind2],perm)
+contract(X1::AbstractArray{<:Number},X2::AbstractArray{<:Number}) = contract(X1,ndims(X1),X2,1)
 
 
 
@@ -63,7 +63,7 @@ Compute a CP decomposition with R components of a tensor X .
 - `maxit`: Maximal number of iterations. Default: 1000.
 - `dimorder': Order of dimensions. Default: 1:ndims(A).
 """
-function cp_als(X::Array{T},R::Integer;init="rand",tol=1e-4,maxit=1000,dimorder=[]) where {T<:Number}
+function cp_als(X::AbstractArray{<:Number},R::Integer;init="rand",tol=1e-4,maxit=1000,dimorder=[])
     N=ndims(X)
     nr=norm(X)
     K=ktensor
@@ -128,7 +128,7 @@ end
 
 Create a diagonal tensor for a given vector of diagonal elements. Generalization of diagm.
 """
-function diagt(v::Vector{T}) where {T<:Number}
+function diagt(v::AbstractVector{<:Number})
   N=length(v)
   sz=tuple(repeat([N],N,1)[:]...)
   D=zeros(sz)
@@ -141,7 +141,7 @@ function diagt(v::Vector{T}) where {T<:Number}
   D
 end
 
-function diagt(v::Vector{T},dims::Vector{D}) where {T<:Number,D<:Integer}
+function diagt(v::AbstractVector{<:Number},dims::AbstractVector{:Integer})
   Dt=diagt(v)
   sz=dims-[size(Dt)...]
   blockdiag(Dt,zeros(sz...))
@@ -160,7 +160,7 @@ Higher-order singular value decomposition.
 - `eps_rel::Number/Vector`: Drop singular values (of mode-n matricization) below eps_rel*sigma_1. Optional.
 - `p::Integer`: Oversampling parameter. Defaul p=10.
 """
-function hosvd(X::Array{T,N};method="svd",reqrank=[],eps_abs=[],eps_rel=[],p=10) where {T<:Number,N}
+function hosvd(X::AbstractArray{<:Number,N};method="svd",reqrank=[],eps_abs=[],eps_rel=[],p=10) where N
   fmat=MatrixCell(undef,N)
 
   reqrank=check_vector_input(reqrank,N,0)
@@ -168,7 +168,7 @@ function hosvd(X::Array{T,N};method="svd",reqrank=[],eps_abs=[],eps_rel=[],p=10)
   eps_rel=check_vector_input(eps_rel,N,0)
 
   for n=1:N
-    Xn=float(tenmat(X,n))
+    Xn=tenmat(X,n)
     if method == "lanczos"
       fmat[n],S=lanczos(Xn,tol=eps_abs[n],reqrank=reqrank[n],p=p)
     elseif method == "randsvd"
@@ -194,7 +194,7 @@ end
 
 Inner product of two tensors.
 """
-function innerprod(X1::Array{T1},X2::Array{T2}) where {T1<:Number,T2<:Number}
+function innerprod(X1::AbstractArray{<:Number,N},X2::AbstractArray{<:Number,N}) where N
 	@assert(size(X1) == size(X2),"Dimension mismatch")
 	sum(X1.*conj(X2))
 end
@@ -211,7 +211,7 @@ Kronecker product of two tensors times matrix (n-mode product): (X ⊗ Y) x₁ M
 - `modes::Integer/Vector` : Modes for multiplication. Default: 1:length(M).
 - `t='t'`: Transpose matrices from M.
 """
-function krontm(X1::Array{T1,N},X2::Array{T2,N},M::MatrixCell,modes::Vector{D},t='n') where {T1<:Number,T2<:Number,D<:Integer,N}
+function krontm(X1::AbstractArray{<:Number,N},X2::AbstractArray{<:Number,N},M::MatrixCell,modes::AbstractVector{<:Integer},t='n') where N
   if t=='t'
     [M[n]=M[n]' for n=1:length(M)]
 	end
@@ -241,12 +241,12 @@ function krontm(X1::Array{T1,N},X2::Array{T2,N},M::MatrixCell,modes::Vector{D},t
 #  end
   X
 end
-krontm(X1::Array{T1},X2::Array{T2},M::Matrix{T3},n::Integer,t='n') where {T1<:Number,T2<:Number,T3<:Number}=krontm(X1,X2,[M],[n],t)
-krontm(X1::Array{T1},X2::Array{T2},M::MatrixCell,t::Char) where {T1<:Number,T2<:Number}=krontm(X1,X2,M,1:length(M),t)
-krontm(X1::Array{T1},X2::Array{T2},M::MatrixCell) where {T1<:Number,T2<:Number}=krontm(X1,X2,M,1:length(M))
-krontm(X1::Array{T1},X2::Array{T2},M::MatrixCell,modes::AbstractRange{D},t::Char) where {T1<:Number,T2<:Number,D<:Integer}=krontm(X1,X2,M,collect(modes),t)
-krontm(X1::Array{T1},X2::Array{T2},M::MatrixCell,modes::AbstractRange{D}) where {T1<:Number,T2<:Number,D<:Integer}=krontm(X1,X2,M,collect(modes))
-function krontm(X1::Array{T1,N},X2::Array{T2,N},M::MatrixCell,n::Integer,t='n') where {T1<:Number,T2<:Number,N}
+krontm(X1::AbstractArray{<:Number,N},X2::AbstractArray{<:Number,N},M::AbstractMatrix{<:Number},n::Integer,t='n') where N=krontm(X1,X2,MatrixCell([M]),[n],t)
+krontm(X1::AbstractArray{<:Number,N},X2::AbstractArray{<:Number,N},M::MatrixCell,t::Char) where N = krontm(X1,X2,M,1:length(M),t)
+krontm(X1::AbstractArray{<:Number,N},X2::AbstractArray{<:Number,N},M::MatrixCell) where N = krontm(X1,X2,M,1:length(M))
+krontm(X1::AbstractArray{<:Number,N},X2::AbstractArray{<:Number,N},M::MatrixCell,modes::AbstractRange{<:Integer},t::Char) where N = krontm(X1,X2,M,collect(modes),t)
+krontm(X1::AbstractArray{<:Number,N},X2::AbstractArray{<:Number,N},M::MatrixCell,modes::AbstractRange{<:Integer}) where N = krontm(X1,X2,M,collect(modes))
+function krontm(X1::AbstractArray{<:Number,N},X2::AbstractArray{<:Number,N},M::MatrixCell,n::Integer,t='n') where N
  	if n>0
  		krontm(X1,X2,M[n],n,t)
  	else
@@ -255,12 +255,12 @@ function krontm(X1::Array{T1,N},X2::Array{T2,N},M::MatrixCell,n::Integer,t='n') 
  	end
 end
 #If array of matrices isn't defined as MatrixCell, but as M=[M1,M2,...,Mn]:
-krontm(X1::Array{T1,N},X2::Array{T2,N},M::Array{Matrix{T3}},modes::Vector{D},t='n') where {T1<:Number,T2<:Number,T3<:Number,D<:Integer,N}=krontm(X1,X2,MatrixCell(M),modes,t)
-krontm(X1::Array{T1},X2::Array{T2},M::Array{Matrix{T3}},t::Char) where {T1<:Number,T2<:Number,T3<:Number}=krontm(X1,X2,MatrixCell(M),t)
-krontm(X1::Array{T1},X2::Array{T2},M::Array{Matrix{T3}}) where {T1<:Number,T2<:Number,T3<:Number}=krontm(X1,X2,MatrixCell(M))
-krontm(X1::Array{T1},X2::Array{T2},M::Array{Matrix{T3}},modes::AbstractRange{D},t::Char) where {T1<:Number,T2<:Number,T3<:Number,D<:Integer}=krontm(X1,X2,MatrixCell{M},modes,t)
-krontm(X1::Array{T1},X2::Array{T2},M::Array{Matrix{T3}},modes::AbstractRange{D}) where {T1<:Number,T2<:Number,T3<:Number,D<:Integer}=krontm(X1,X2,MatrixCell{M},modes)
-krontm(X1::Array{T1,N},X2::Array{T2,N},M::Array{Matrix{T3}},n::Integer,t='n') where {T1<:Number,T2<:Number,T3<:Number,N}=krontm(X1,X2,MatrixCell{M},n,t)
+krontm(X1::AbstractArray{<:Number,N},X2::AbstractArray{<:Number,N},M::Array{Matrix{T},1},modes::AbstractVector{<:Integer},t='n') where {T<:Number,N}=krontm(X1,X2,MatrixCell(M),modes,t)
+krontm(X1::AbstractArray{<:Number,N},X2::AbstractArray{<:Number,N},M::Array{Matrix{T},1},t::Char) where {T<:Number,N}=krontm(X1,X2,MatrixCell(M),t)
+krontm(X1::AbstractArray{<:Number,N},X2::AbstractArray{<:Number,N},M::Array{Matrix{T},1}) where {T<:Number,N}=krontm(X1,X2,MatrixCell(M))
+krontm(X1::AbstractArray{<:Number,N},X2::AbstractArray{<:Number,N},M::Array{Matrix{T},1},modes::AbstractRange{<:Integer},t::Char) where {T<:Number,N}=krontm(X1,X2,MatrixCell(M),modes,t)
+krontm(X1::AbstractArray{<:Number,N},X2::AbstractArray{<:Number,N},M::Array{Matrix{T},1},modes::AbstractRange{<:Integer}) where {T<:Number,N}=krontm(X1,X2,MatrixCell(M),modes)
+krontm(X1::AbstractArray{<:Number,N},X2::AbstractArray{<:Number,N},M::Array{Matrix{T},1},n::Integer,t='n') where {T<:Number,N}=krontm(X1,X2,MatrixCell(M),n,t)
 
 
 """
@@ -269,7 +269,7 @@ krontm(X1::Array{T1,N},X2::Array{T2,N},M::Array{Matrix{T3}},n::Integer,t='n') wh
 
 Fold matrix A into a tensor of dimension dims by mode n or by row and column vectors R and C.
 """
-function matten(A::Matrix{T},n::Integer,dims::Vector{D}) where {T<:Number,D<:Integer}
+function matten(A::AbstractMatrix{<:Number},n::Integer,dims::AbstractVector{<:Integer})
 	@assert(dims[n]==size(A,1),"Dimensions mismatch")
 	m = setdiff(1:length(dims), n)
 	@assert prod(dims[m])==size(A,2)
@@ -277,7 +277,7 @@ function matten(A::Matrix{T},n::Integer,dims::Vector{D}) where {T<:Number,D<:Int
 	permutedims(X,invperm([n;m]))
 end
 
-function matten(A::Matrix{T},row::Vector{D},col::Vector{D},dims::Vector{D}) where {T<:Number,D<:Integer}
+function matten(A::AbstractMatrix{<:Number},row::Vector{<:Integer},col::AbstractVector{<:Integer},dims::Vector{<:Integer})
 	@assert(prod(dims[row])==size(A,1) && prod(dims[col])==size(A,2),"Dimensions mismatch")
 	X = reshape(A,[dims[row];dims[col]]...)
 	permutedims(X,invperm([row;col]))
@@ -290,7 +290,7 @@ Matricized Kronecker product of tensors X and Y times vector v (n-mode multiplic
 If t='t', transpose matricized Kronecker product: (X ⊗ Y)ᵀₙv.
 If v is a matrix, multiply column by column.
 """
-function mkrontv(X1::Array{T1,N},X2::Array{T2,N},v::Vector{T3},n::Integer,t='n') where {T1<:Number,T2<:Number,T3<:Number,N}
+function mkrontv(X1::AbstractArray{<:Number,N},X2::AbstractArray{<:Number,N},v::AbstractVector{<:Number},n::Integer,t='n') where N
   I1=size(X1)
   I2=size(X2)
   kronsize=tuple(([I1...].*[I2...])...);
@@ -316,7 +316,7 @@ function mkrontv(X1::Array{T1,N},X2::Array{T2,N},v::Vector{T3},n::Integer,t='n')
 end
 
 #Matricized Kronecker product times matrix - column by column.
-function mkrontv(X1::Array{T1,N},X2::Array{T2,N},M::Matrix{T3},n::Integer,t='n') where {T1<:Number,T2<:Number,T3<:Number,N}
+function mkrontv(X1::AbstractArray{<:Number,N},X2::AbstractArray{<:Number,N},M::AbstractMatrix{<:Number},n::Integer,t='n') where N
   if sort(collect(size(vec(M))))[1]==1
     return mkrontv(A,B,vec(M));
   end
@@ -334,7 +334,7 @@ function mkrontv(X1::Array{T1,N},X2::Array{T2,N},M::Matrix{T3},n::Integer,t='n')
   end
   Mprod
 end
-function mkrontm(X1::Array{T1,N},X2::Array{T2,N},M::Matrix{T3},n::Integer,t='n') where {T1<:Number,T2<:Number,T3<:Number,N}
+function mkrontm(X1::AbstractArray{<:Number,N},X2::AbstractArray{<:Number,N},M::AbstractMatrix{<:Number},n::Integer,t='n') where N
   @warn "Function mkrontm is depricated. Use mkrontv."
   mkrontv(X1,X2,M,n,t)
 end
@@ -345,10 +345,10 @@ end
 
 Multilinear rank of a tensor with optionally given tolerance.
 """
-function mrank(X::Array{T,N}) where {T<:Number,N}
+function mrank(X::AbstractArray{<:Number,N}) where N
    ntuple(n->nrank(X,n),N)
 end
-function mrank(X::Array{T,N},tol::Number) where {T<:Number,N}
+function mrank(X::AbstractArray{<:Number,N},tol::Number) where N
    ntuple(n->nrank(X,n,tol),N)
 end
 
@@ -359,7 +359,7 @@ end
 
 Mode-n matricized tensor X times Khatri-Rao product of matrices from M (except nth) in reverse order.
 """
-function mttkrp(X::Array{T,N},M::MatrixCell,n::Integer) where {T<:Number,N}
+function mttkrp(X::AbstractArray{<:Number,N},M::MatrixCell,n::Integer) where N
   @assert(N-1<=length(M)<=N,"Wrong number of matrices")
   if length(M)==N-1  #if nth matrix not defined
     push!(M,M[end])
@@ -373,14 +373,14 @@ function mttkrp(X::Array{T,N},M::MatrixCell,n::Integer) where {T<:Number,N}
   Xn=tenmat(X,n)
   Xn*khatrirao(reverse(M[modes]))
 end
-mttkrp(X::Array{T1,N},M::Array{Matrix{T2}},n::Integer) where {T1<:Number,T2<:Number,N}=mttkrp(X,MatrixCell(M),n)
+mttkrp(X::AbstractArray{<:Number},M::Array{Matrix{T},1},n::Integer) where {T<:Number}=mttkrp(X,MatrixCell(M),n)
 
 """
     neye(dims)
 
 Identity tensor of a given dimension. Generalization of eye.
 """
-function neye(dims::Vector{D}) where {D<:Integer}
+function neye(dims::Vector{<:Integer})
   dims=tuple(dims...)
   A=zeros(dims)
   R=CartesianIndices(dims)
@@ -413,10 +413,10 @@ end
 
 Rank of the n-mode matricization of a tensor X (n-rank).
 """
-function nrank(X::Array{T},n::Integer) where {T<:Number}
+function nrank(X::AbstractArray{<:Number},n::Integer)
   rank(tenmat(X,n))
 end
-function nrank(X::Array{T},n::Integer,tol::Number) where {T<:Number}
+function nrank(X::AbstractArray{<:Number},n::Integer,tol::Number)
   rank(tenmat(X,n),tol)
 end
 
@@ -432,7 +432,7 @@ Works with XₙXₙᵀ.
 - `flipsign=true`: Make the largest magnitude element be positive.
 - `svds=true`: Use svds on Xₙ rather than eigs on XₙXₙᵀ.
 """
-function nvecs(X::Array{T},n::Integer,r=0;flipsign=false,svds=false) where {T<:Number}
+function nvecs(X::AbstractArray{<:Number},n::Integer,r=0;flipsign=false,svds=false)
   if r==0
     r=size(X,n)
   end
@@ -462,7 +462,7 @@ function nvecs(X::Array{T},n::Integer,r=0;flipsign=false,svds=false) where {T<:N
 end
 
 #Squeeze all singleton dimensions. **Documentation in Base.jl.
-function dropdims(A::Array{T}) where {T<:Number}
+function dropdims(A::AbstractArray{<:Number})
   sz=size(A)
   sdims=findall(sz.==1) #singleton dimensions
   dropdims(A,dims=tuple(sdims...))
@@ -473,7 +473,7 @@ end
 
 Sequentially truncated HOSVD of a tensor X of predifined rank and processing order p.
 """
-function sthosvd(X::Array{T,N};reqrank=[],order=[],tol=1e-8) where {T<:Number,N}
+function sthosvd(X::AbstractArray{<:Number,N};reqrank=[],order=[],tol=1e-8) where N
     if order==[]
         order=collect(1:N)
     end
@@ -509,7 +509,7 @@ end
 
 Mode-n matricization of a tensor or matricization by row and column vectors R and C.
 """
-function tenmat(X::Array{T,N},n::Integer) where {T<:Number,N}
+function tenmat(X::AbstractArray{<:Number,N},n::Integer) where N
 	@assert(n<=ndims(X),"Mode exceedes number of dimensions")
 	sz=size(X)
 	m=setdiff(1:N,n)
@@ -519,7 +519,7 @@ function tenmat(X::Array{T,N},n::Integer) where {T<:Number,N}
 	reshape(X,sz[n],prod(sz[m]))
 end
 
-function tenmat(X::Array{T,N};row=[],col=[]) where {T<:Number,N}
+function tenmat(X::AbstractArray{<:Number,N};row=[],col=[]) where N
     @assert(row!=[] || col!=[],"Al least one of row and col needs to be specified.")
     if row!=[] && col!=[]
         @assert(sort([row;col])==collect(1:N),"Incorrect mode partitioning.")
@@ -551,7 +551,7 @@ end
 
 Kronecker product of two tensors X and Y. Direct generalization of Kronecker product of matrices.
 """
-function tkron(X1::Array{T1,N},X2::Array{T2,N}) where {T1<:Number,T2<:Number,N}
+function tkron(X1::AbstractArray{<:Number,N},X2::AbstractArray{<:Number,N}) where N
   if N<3
     return kron(X1,X2)
   end
@@ -579,10 +579,10 @@ Tensor times matrix (n-mode product):  X x₁ M₁ x₂ M₂ x₃ ⋯ xₙ Mₙ
 Default modes: 1:length(M).
 If t='t', transpose matrices from M.
 """
-function ttm(X::Array{T,N},A::MatrixCell,modes::Vector{D},t='n') where {T<:Number,D<:Integer,N}
+function ttm(X::AbstractArray{<:Number,N},A::MatrixCell,modes::AbstractVector{<:Integer},t='n') where N
   M=deepcopy(A)
   if t=='t'
-    [M[n]=M[n]' for n=1:length(M)]
+    [M[n]=transpose(M[n]) for n=1:length(M)]
   end
   @assert(length(modes)<=length(M),"Too few matrices.")
   @assert(length(M)<=N,"Too many matrices.")
@@ -606,12 +606,12 @@ function ttm(X::Array{T,N},A::MatrixCell,modes::Vector{D},t='n') where {T<:Numbe
   end
   X
 end
-ttm(X::Array{T1},M::Matrix{T2},n::Integer,t='n') where {T1<:Number,T2<:Number}=ttm(X,Matrix[M],[n],t)
-ttm(X::Array{T},M::MatrixCell,t::Char) where {T<:Number}=ttm(X,M,1:length(M),t)
-ttm(X::Array{T},M::MatrixCell) where {T<:Number}=ttm(X,M,1:length(M))
-ttm(X::Array{T},M::MatrixCell,R::AbstractRange{D},t::Char) where {T<:Number,D<:Integer}=ttm(X,M,collect(R),t)
-ttm(X::Array{T},M::MatrixCell,R::AbstractRange{D}) where {T<:Number,D<:Integer}=ttm(X,M,collect(R))
-function ttm(X::Array{T,N},M::MatrixCell,n::Integer,t='n') where {T<:Number,N}
+ttm(X::AbstractArray{<:Number},M::AbstractMatrix{<:Number},n::Integer,t='n')=ttm(X,MatrixCell([M]),[n],t)
+ttm(X::AbstractArray{<:Number},M::MatrixCell,t::Char)=ttm(X,M,1:length(M),t)
+ttm(X::AbstractArray{<:Number},M::MatrixCell)=ttm(X,M,1:length(M))
+ttm(X::AbstractArray{<:Number},M::MatrixCell,R::AbstractRange{<:Integer},t::Char)=ttm(X,M,collect(R),t)
+ttm(X::AbstractArray{<:Number},M::MatrixCell,R::AbstractRange{<:Integer})=ttm(X,M,collect(R))
+function ttm(X::AbstractArray{<:Number,N},M::MatrixCell,n::Integer,t='n') where N
 	if n>0
 		ttm(X,M[n],n,t)
 	else
@@ -620,19 +620,19 @@ function ttm(X::Array{T,N},M::MatrixCell,n::Integer,t='n') where {T<:Number,N}
 	end
 end
 #If array of matrices isn't defined as MatrixCell, but as M=[M1,M2,...,Mn]:
-ttm(X::Array{T1,N},M::Array{Matrix{T2}},modes::Vector{D},t='n') where {T1<:Number,T2<:Number,D<:Integer,N}=ttm(X,MatrixCell(M),modes,t)
-ttm(X::Array{T1},M::Array{Matrix{T2}},t::Char) where {T1<:Number,T2<:Number}=ttm(X,MatrixCell(M),t)
-ttm(X::Array{T1},M::Array{Matrix{T2}}) where {T1<:Number,T2<:Number}=ttm(X,MatrixCell(M))
-ttm(X::Array{T1},M::Array{Matrix{T2}},R::AbstractRange{D},t::Char) where {T1<:Number,T2<:Number,D<:Integer}=ttm(X,MatrixCell{M},R,t)
-ttm(X::Array{T1},M::Array{Matrix{T2}},R::AbstractRange{D}) where {T1<:Number,T2<:Number,D<:Integer}=ttm(X,MatrixCell(M),R)
-ttm(X::Array{T1,N},M::Array{Matrix{T2}},n::Integer,t='n') where {T1<:Number,T2<:Number,N}=ttm(X,MatrixCell(M),n,t)
+ttm(X::AbstractArray{<:Number},M::Array{Matrix{T},1},modes::Array{<:Integer,1},t='n') where{T<:Number}=ttm(X,MatrixCell(M),modes,t)
+ttm(X::AbstractArray{<:Number},M::Array{Matrix{T},1},t::Char) where{T<:Number}=ttm(X,MatrixCell(M),t)
+ttm(X::AbstractArray{<:Number},M::Array{Matrix{T},1}) where{T<:Number}=ttm(X,MatrixCell(M))
+ttm(X::AbstractArray{<:Number},M::Array{Matrix{T},1},R::AbstractRange{<:Integer},t::Char) where{T<:Number}=ttm(X,MatrixCell(M),R,t)
+ttm(X::AbstractArray{<:Number},M::Array{Matrix{T},1},R::AbstractRange{<:Integer}) where{T<:Number}=ttm(X,MatrixCell(M),R)
+ttm(X::AbstractArray{<:Number},M::Array{Matrix{T},1},n::Integer,t='n') where{T<:Number}=ttm(X,MatrixCell(M),n,t)
 
 """
     ttv(X,Y)
 
 Outer product of two tensors.
 """
-function ttt(X1::Array{T1},X2::Array{T2}) where {T1<:Number,T2<:Number}
+function ttt(X1::AbstractArray{<:Number},X2::AbstractArray{<:Number})
   sz=tuple([[size(X1)...];[size(X2)...]]...);
   Xprod=vec(X1)*vec(X2)';
   reshape(Xprod,sz)
@@ -644,7 +644,7 @@ end
 Tensor times vectors (n-mode product):  X x₁ V₁ x₂ V₂ x₃ ⋯ xₙ Vₙ.
 Default modes: 1:length(M).
 """
-function ttv(X::Array{T,N},V::VectorCell,modes::Vector{D}) where {T<:Number,D<:Integer,N}
+function ttv(X::AbstractArray{<:Number,N},V::VectorCell,modes::AbstractVector{<:Integer}) where N
   remmodes=setdiff(1:N,modes)'
   if N > 1
     X=permutedims(X,[remmodes modes'])
@@ -664,9 +664,10 @@ function ttv(X::Array{T,N},V::VectorCell,modes::Vector{D}) where {T<:Number,D<:I
   end
   X
 end
-ttv(X::Array{T1,N},v::Vector{T2},n::Integer) where {T1<:Number,T2<:Number,N}=ttv(X,Vector[v],[n])
-ttv(X::Array{T,N},V::VectorCell) where {T<:Number,N}=ttv(X,V,collect(1:length(V)))
-function ttv(X::Array{T,N},V::VectorCell,n::Integer) where {T<:Number,N}
+#ttv(X::AbstractArray{<:Number,N},v::AbstractVector{<:Number},n::Integer) where N =ttv(X,[v],[n])
+ttv(X::AbstractArray{<:Number,N},v::AbstractVector{<:Number},n::Integer) where N =ttv(X,VectorCell([v]),[n])
+ttv(X::AbstractArray{<:Number,N},V::VectorCell) where N = ttv(X,V,collect(1:length(V)))
+function ttv(X::AbstractArray{<:Number,N},V::VectorCell,n::Integer) where N
 	if n>0
 		ttv(X,V[n],n)
 	else
@@ -675,6 +676,6 @@ function ttv(X::Array{T,N},V::VectorCell,n::Integer) where {T<:Number,N}
 	end
 end
 #If array of vectors isn't defined as VectorCell, but as V=[v1,v2,...,vn]:
-ttv(X::Array{T1,N},V::Array{Vector{T2}},modes::Vector{D}) where {T1<:Number,T2<:Number,D<:Integer,N}=ttv(X,VectorCell(V),modes)
-ttv(X::Array{T1,N},V::Array{Vector{T2}}) where {T1<:Number,T2<:Number,N}=ttv(X,VectorCell(V))
-ttv(X::Array{T1,N},V::Array{Vector{T2}},n::Integer) where {T1<:Number,T2<:Number,N}=ttv(X,VectorCell(V),n)
+ttv(X::AbstractArray{<:Number,N},V::Array{Vector{T},1},modes::AbstractVector{<:Integer}) where {T<:Number,N} = ttv(X,VectorCell(V),modes)
+ttv(X::AbstractArray{<:Number,N},V::Array{Vector{T},1}) where {T<:Number,N} = ttv(X,VectorCell(V))
+ttv(X::AbstractArray{<:Number,N},V::Array{Vector{T},1},n::Integer) where {T<:Number,N} = ttv(X,VectorCell(V),n)

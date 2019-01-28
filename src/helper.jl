@@ -1,26 +1,39 @@
 #export check_vector_input
 export colspace, eye, ewprod, khatrirao, krontkron, kron, krontv, krtv, tkrtv, lanczos, lanczos_tridiag, randsvd
-export VectorCell, MatrixCell, TensorCell
+export VectorCell, MatrixCell, TensorCell, CoreCell
 
 """
-    VectorCell(N)
+    VectorCell(undef,N)
 
 Cell of vectors of length N.
 """
-const VectorCell = Array{Vector,1}
+const VectorCell = Array{AbstractVector{<:Number},1}
 """
-    MatrixCell(N)
+    MatrixCell(undef,N)
 
 Cell of matrices of length N.
 """
-const MatrixCell = Array{Matrix,1}
+const MatrixCell = Array{AbstractMatrix{<:Number},1}
 """
-    TensorCell(N)
+    TensorCell(undef,N)
 
 Cell of multidimensional arrays of length N.
 """
-const TensorCell = Array{Array,1}
+const TensorCell = Array{AbstractArray{<:Number},1}
+export CoreCell
 
+"""
+    CoreCell(undef,N)
+
+Cell of 3D tensors of length N. Suitable for the cores of TTtensor.
+"""
+const CoreCell = Array{AbstractArray{<:Number,3},1}
+
+# """
+#     ewprod(I1::CartesianIndex,I2::CartesianIndex)
+#
+# Element-wise product of two inputs of type CartesianIndex.
+# """
 function ewprod(I1::CartesianIndex,I2::CartesianIndex)
   N=length(I1)
   @assert(length(I2)==N,"Dimension mismatch.")
@@ -32,7 +45,7 @@ end
 """
     check_vector_input(input,dim,default_value)
 
-Check whether input vector is of appropriate size or if input is number create vector out of it.
+Check whether the input vector is of appropriate size or if input is number create vector out of it.
 """
 function check_vector_input(input,dim::Integer,default_value::Number)
   if length(input)>0
@@ -60,7 +73,7 @@ Column space basis.
 - `rtol::Number`: Drop singular values below rtol*sigma_1. Optional.
 - `p::Integer`: Oversampling parameter used by lanczos and randsvd methods. Defaul p=10.
 """
-function colspace(X::Matrix{T};method="svd",maxrank=0,atol=1e-8,rtol=0,p=10) where T<:Number
+function colspace(X::AbstractMatrix{<:Number};method="svd",maxrank=0,atol=1e-8,rtol=0,p=10)
   if method == "lanczos"
     U,S=lanczos(X,tol=atol,reqrank=maxrank,p=p)
   elseif method == "randsvd"
@@ -80,12 +93,12 @@ function colspace(X::Matrix{T};method="svd",maxrank=0,atol=1e-8,rtol=0,p=10) whe
 end
 
 """
-    eye(n::Integer)
+    eye(n::Integer[,full=1])
 
-Identity matrix of size nxn.
+Identity matrix of size nxn. If full=0, returns type Diagonal.
 """
-function eye(n::Integer)
-  Matrix(1.0I, n, n)
+function eye(n::Integer,full=1)
+  full==1 ? Matrix(1.0I, n, n) : Diagonal(ones(n))
 end
 
 """
@@ -116,14 +129,14 @@ function khatrirao(M::MatrixCell,t='n')
       reshape(X,size(X,1),K)
     end
 end
-khatrirao(M::Array{Matrix{T}},t='n') where T<:Number =khatrirao(MatrixCell(M),t)
-function khatrirao(M1::Matrix{T1}, M2::Matrix{T2},t='n') where {T1<:Number,T2<:Number}
-  M=MatrixCell(undef,2);
-  M[1]=M1;M[2]=M2;
+khatrirao(M::Array{Matrix{<:Number}},t='n')=khatrirao(MatrixCell(M),t)
+function khatrirao(M1::AbstractMatrix{<:Number}, M2::AbstractMatrix{<:Number},t='n')
+  M=MatrixCell(undef,2)
+  M[1]=M1;M[2]=M2
   khatrirao(M,t)
 end
 function khatrirao(M1::MatrixCell, M2::MatrixCell,t='n')
-    @assert(length(M1)==length(M2),"Matrix cells must be of same length.")
+    @assert(length(M1)==length(M2),"Matrix cells must be of the same length.")
     N=length(M1)
     M=MatrixCell(undef,N)
     for n=1:N
@@ -135,7 +148,7 @@ end
 function khatrirao(M::MatrixCell,n::Integer,t='n')
     khatrirao(deleteat!(M,n),t)
 end
-khatrirao(M::Array{Matrix{T}},n::Integer,t='n') where T<:Number=khatrirao(MatrixCell(M),n,t)
+khatrirao(M::Array{Matrix{<:Number}},n::Integer,t='n') =khatrirao(MatrixCell(M),n,t)
 
 
 #Extension of Base.kron to work with MatrixCell
@@ -148,7 +161,7 @@ function kron(M::MatrixCell,t='n')
   K
 end
 #If array of matrices isn't defined as MatrixCell, but as M=[M1,M2,...,Mn]:
-kron(M::Array{Matrix{T}},t='n') where T<:Number =kron(MatrixCell(M),t)
+kron(M::Array{AbstractMatrix{<:Number}},t='n')=kron(MatrixCell(M),t)
 
 """
     krontkron(A,v,t='n')
@@ -166,9 +179,10 @@ function krontkron(A::MatrixCell,v::VectorCell,t='n')
   [w=kron(w,A[n]*v[n]) for n=2:N]
   w
 end
-krontkron(A::Array{Matrix{T1}},v::Array{Vector{T2}},t='n') where {T1<:Number,T2<:Number}=krontkron(MatrixCell(A),VectorCell(v),t)
-krontkron(A::Array{Matrix{T}},v::VectorCell,t='n') where T<:Number=krontkron(MatrixCell(A),v,t)
-krontkron(A::MatrixCell,v::Array{Vector{T}},t='n') where T<:Number=krontkron(A,VectorCell(v),t)
+#If arrays are not defined as VectorCell/MatrixCell, but as [M1,M2,...,Mn]:
+krontkron(A::Array{Matrix{<:Number}},v::Array{Vector{<:Number}},t='n')=krontkron(MatrixCell(A),VectorCell(v),t)
+krontkron(A::Array{Matrix{<:Number}},v::VectorCell,t='n')=krontkron(MatrixCell(A),v,t)
+krontkron(A::MatrixCell,v::Array{Vector{<:Number}},t='n')=krontkron(A,VectorCell(v),t)
 
 """
     krontv(A,B,v)
@@ -176,7 +190,7 @@ krontkron(A::MatrixCell,v::Array{Vector{T}},t='n') where T<:Number=krontkron(A,V
 Kronecker product times vector: (A ⊗ B)v.
 If v is a matrix, multiply column by column.
 """
-function krontv(A::Matrix{T1},B::Matrix{T2},v::Vector{T3}) where {T1<:Number,T2<:Number,T3<:Number}
+function krontv(A::AbstractMatrix{<:Number},B::AbstractMatrix{<:Number},v::AbstractVector{<:Number})
   m,n=size(A);
   p,q=size(B);
   @assert(length(v)==q*n, "Dimensions mismatch.")
@@ -186,7 +200,7 @@ function krontv(A::Matrix{T1},B::Matrix{T2},v::Vector{T3}) where {T1<:Number,T2<
     vec(B*(reshape(v,q,n)*A'));
   end
 end
-function krontv(A::Matrix{T1},B::Matrix{T2},M::Matrix{T3}) where {T1<:Number,T2<:Number,T3<:Number}
+function krontv(A::AbstractMatrix{<:Number},B::AbstractMatrix{<:Number},M::AbstractMatrix{<:Number})
   if sort(collect(size(vec(M))))[1]==1
         return krontv(A,B,vec(M))
   end
@@ -206,7 +220,7 @@ end
 Khatri-Rao product times vector: (A ⊙ B)v.
 If v is a matrix, multiply column by column.
 """
-function krtv(A::Matrix{T1},B::Matrix{T2},v::Vector{T3}) where {T1<:Number,T2<:Number,T3<:Number}
+function krtv(A::AbstractMatrix{<:Number},B::AbstractMatrix{<:Number},v::AbstractVector{<:Number})
   @assert(size(A,2)==size(B,2),"Dimension mismatch.")
   m,n=size(A);
   p=size(B,1);
@@ -217,7 +231,7 @@ function krtv(A::Matrix{T1},B::Matrix{T2},v::Vector{T3}) where {T1<:Number,T2<:N
     vec((B.*v')*A');
   end
 end
-function krtv(A::Matrix{T1},B::Matrix{T2},M::Matrix{T3}) where {T1<:Number,T2<:Number,T3<:Number}
+function krtv(A::AbstractMatrix{<:Number},B::AbstractMatrix{<:Number},M::AbstractMatrix{<:Number})
   @assert(size(A,2)==size(B,2),"Dimension mismatch.")
   if sort(collect(size(vec(M))))[1]==1
     return krtv(A,B,vec(M));
@@ -238,7 +252,7 @@ end
 Transpose Khatri-Rao product times vector: (A ⊙ᵀ B)v.
 If v is a matrix, multiply column by column.
 """
-function tkrtv(A::Matrix{T1},B::Matrix{T2},v::Vector{T3}) where {T1<:Number,T2<:Number,T3<:Number}
+function tkrtv(A::AbstractMatrix{<:Number},B::AbstractMatrix{<:Number},v::AbstractVector{<:Number})
   @assert(size(A,1)==size(B,1),"Dimension mismatch.")
   m,n=size(A)
   p=size(B,2)
@@ -249,7 +263,7 @@ function tkrtv(A::Matrix{T1},B::Matrix{T2},v::Vector{T3}) where {T1<:Number,T2<:
     sum(B.*(A*reshape(v,p,n)'),dims=2)
   end
 end
-function tkrtv(A::Matrix{T1},B::Matrix{T2},M::Matrix{T3}) where {T1<:Number,T2<:Number,T3<:Number}
+function tkrtv(A::AbstractMatrix{<:Number},B::AbstractMatrix{<:Number},M::AbstractMatrix{<:Number})
   @assert(size(A,1)==size(B,1),"Dimension mismatch.")
   if sort(collect(size(vec(M))))[1]==1
     return tkrtv(A,B,vec(M))
@@ -277,7 +291,7 @@ Lanczos based SVD - computes left singular vectors and singular values of a matr
 - `reqrank`: Number of singular values and singular vectors to compute. Optional.
 - `p`: Oversampling parameter. Default: p=10.
 """
-function lanczos(A::Matrix{N};tol=1e-8,maxit=1000,reqrank=0,p=10) where N<:Number
+function lanczos(A::AbstractMatrix{<:Number};tol=1e-8,maxit=1000,reqrank=0,p=10)
   Q,T=lanczos_tridiag(A,tol=tol,maxit=maxit,reqrank=reqrank,p=p)
   E=eigen(T,tol,Inf);
   U=E.vectors[:,end:-1:1];
@@ -305,7 +319,7 @@ Lanczos tridiagonalization algorithm - returns orthonormal Q and symmetric tridi
 - `reqrank`: Number of singular values and singular vectors to compute. Optional.
 - `p`: Oversampling parameter. Default: p=10.
 """
-function lanczos_tridiag(A::Matrix{N};tol=1e-8,maxit=1000,reqrank=0,p=10) where N<:Number
+function lanczos_tridiag(A::AbstractMatrix{<:Number};tol=1e-8,maxit=1000,reqrank=0,p=10)
   m,n=size(A)
   K=min(m,maxit);
   if reqrank != 0
@@ -332,11 +346,11 @@ function lanczos_tridiag(A::Matrix{N};tol=1e-8,maxit=1000,reqrank=0,p=10) where 
       Q=[Q r/β[k]]
     end
   end
-  isreal(α) ? T=SymTridiagonal(α[1:K], β[1:K-1]) : T=Hermitian(Matrix(SymTridiagonal(real(α[1:K]), β[1:K-1]) +im*Diagonal(imag(α[1:K]))))
+  isreal(α) ? T=SymTridiagonal(α[1:K], β[1:K-1]) : T=SymTridiagonal(real(α[1:K]), β[1:K-1]) +im*Diagonal(imag(α[1:K])) #T=Hermitian(Matrix(SymTridiagonal(real(α[1:K]), β[1:K-1]) +im*Diagonal(imag(α[1:K]))))
   Q,T
   end
 
-function randrange(A::Matrix{T},gram=true,t='t';tol=1e-8,maxit=1000,reqrank=0,r=10,p=10) where T<:Number
+function randrange(A::AbstractMatrix{<:Number},gram=true,t='t';tol=1e-8,maxit=1000,reqrank=0,r=10,p=10)
   m,n=size(A)
   if reqrank!=0
     if t=='t'
@@ -416,7 +430,7 @@ Randomized SVD algorithm - returns left singular vectors and singular values of 
 - `r`: Number of samples for stopping criterion. Default: r=10.
 - `p`: Oversampling parameter. Default: p=10.
 """
-function randsvd(A::Matrix{T},svdvecs="left";tol=1e-8,maxit=1000,reqrank=0,r=10,p=10) where T<:Number
+function randsvd(A::AbstractMatrix{<:Number},svdvecs="left";tol=1e-8,maxit=1000,reqrank=0,r=10,p=10)
   m,n=size(A)
   if svdvecs=="left" || svdvecs=="right"
     svdvecs=="left" ? t ='t' : t='n'

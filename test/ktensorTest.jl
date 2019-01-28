@@ -1,13 +1,13 @@
-#using TensorToolboxm, Test, LinearAlgebra
+#using TensorToolbox, Test, LinearAlgebra
 
 println("\n\n****Testing ktensor.jl")
 
-I=5;J=4;K=3;
-a=rand(I);
+Isz=5;J=4;K=3;
+a=rand(Isz);
 b=rand(J);
 c=rand(K);
-X=zeros(I,J,K);
-for i=1:I,j=1:J,k=1:K
+X=zeros(Isz,J,K);
+for i=1:Isz,j=1:J,k=1:K
     X[i,j,k]=a[i]*b[j]*c[k];
 end
 println("\n**Test rank-1 tensor X of size: ", size(X))

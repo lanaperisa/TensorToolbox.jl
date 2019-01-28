@@ -69,7 +69,7 @@ rsz = tuple([[sz...]' 1 1]...)
 Rdm = reshape(randn(rsz), sz);
 N=1e-3 * norm(X) * Rdm / norm(Rdm);
 Y = X + N;
-S=hosvd(Y,reqrank=R);
+S=hosvd(Y,reqrank=R)
 err=norm(T-S)
 noise=norm(N)
 println("Error( norm(T-S) ): ",err,". Noise norm: ",noise,".")
@@ -157,7 +157,7 @@ println("norm(full(ewprod(X,Y)) - full(X).*full(Y)) = ", err)
 
 println("\n\n...Testing singular values of matricizations of Tucker Tensor.")
 R=[3,3,3]
-T=randttensor([10,9,8],R);
+T=randttensor([10,9,8],R)
 println("\nSingular values of matricizations of random Tucker tensor of size ", size(T), ", rank ",R," and norm ",norm(T),".")
 for n=1:ndims(T)
   sv = msvdvals(T,n)

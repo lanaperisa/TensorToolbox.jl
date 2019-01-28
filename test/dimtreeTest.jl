@@ -1,4 +1,4 @@
-#using TensorToolbox, Test, LinearAlgebra
+using TensorToolbox, Test, LinearAlgebra
 
 println("\n\n****Testing dimtree.jl")
 

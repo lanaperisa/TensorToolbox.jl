@@ -3,7 +3,7 @@
 println("\n\n****Testing TTtensor.jl")
 
 N=3
-G=TensorCell(undef,N)
+G=CoreCell(undef,N)
 G[1]=rand(1,4,3)
 G[2]=rand(3,6,4)
 G[3]=rand(4,3,1)
@@ -47,7 +47,7 @@ println("\n...Testing function full, i.e. contracted product (conprod): norm(ful
 
 println("\n...Testing TTsvd with requested rank.")
 
-G=TensorCell(undef,4);
+G=CoreCell(undef,4);
 I=[6,5,6,5]
 R=[4,4,4]
 G[1]=reshape(rand(I[1],R[1]),(1,I[1],R[1]))
@@ -107,7 +107,7 @@ println("Flags: T.lorth = ",T.lorth,", T.rorth = ",T.rorth,".")
 println("\n...Testing TTsvd on TT-tensors.")
 epsilon=1e-8
 println("\nFixed precision problem with ϵ = ",epsilon,".")
-G=TensorCell(undef,4);
+G=CoreCell(undef,4);
 I=[6,5,6,5]
 R=[4,4,4]
 r=2
@@ -167,7 +167,7 @@ for J=3:N
     v=VectorCell(undef,L)
     [v[i]=randn(Isz[J+i-1]) for i=1:L]
     T=TTtv(X,v,J)
-    Gtest=TensorCell(undef,J-1)
+    Gtest=CoreCell(undef,J-1)
     [Gtest[n]=copy(G[n]) for n=1:J-2]
     Gtest[J-1]=contract(G[J-1],TTtv(G[J:end],v))
     @test norm(full(T)-contract(Gtest)) ≈ 0 atol=1e-12

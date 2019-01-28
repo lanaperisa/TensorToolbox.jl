@@ -2,7 +2,7 @@ export dimtree, children, count_leaves, dims, display, height, isequal, ==, is_l
 export left_child_length, lvl, nodes_on_lvl, node2ind, non, parent, positions, show, sibling, structure, subnodes, subtree
 
 """
-    dimtree(leaves::Vector{Int}[,internal_nodes::Vector{Int}])
+    dimtree(leaves::AbstractVector{<:Integer}[,internal_nodes::AbstractVector{<:Integer}])
     dimtree(N[,treetype])
 
 Dimension tree. Create from:
@@ -10,17 +10,17 @@ Dimension tree. Create from:
 - an order of a tensor N and a type treetype of a dimtree. Default: treetype="balanced".
 """
 mutable struct dimtree
-  leaves::Vector{Int}
-  internal_nodes::Vector{Int}
-  function dimtree(leaves::Vector{Int},internal_nodes::Vector{Int})
+  leaves::AbstractVector{<:Integer}
+  internal_nodes::AbstractVector{<:Integer}
+  function dimtree(leaves::AbstractVector{<:Integer},internal_nodes::AbstractVector{<:Integer})
     @assert(length(leaves)==length(internal_nodes)+1,"Incorrect nodes.")
     nodes=sort([leaves;internal_nodes])
     @assert(nodes==collect(1:maximum(nodes)),"Missing nodes.")
     new(leaves,internal_nodes)
   end
 end
-
-function dimtree(leaves::Vector{Int})
+#dimtree(leaves::AbstractVector{<:Integer},internal_nodes::AbstractVector{<:Integer})=dimtree{D1,D2}(leaves,internal_nodes)
+function dimtree(leaves::AbstractVector{<:Integer})
   N=length(leaves)
   nn=2*N-1
   internal_nodes=setdiff(collect(1:nn),leaves)
@@ -267,7 +267,7 @@ function lvl(T::dimtree)
     L
 end
 lvl(T::dimtree,node::Integer)=lvl(T)[node]
-function lvl(T::dimtree,nodes::Vector{Int})
+function lvl(T::dimtree,nodes::AbstractVector{<:Integer})
     [lvl(T)[n] for n in nodes]
 end
 
@@ -285,7 +285,7 @@ end
 
 Convert node numbers to transfer tensor or frames indices in a dimtree T.
 """
-function node2ind(T::dimtree,nodes::Vector{Int})
+function node2ind(T::dimtree,nodes::AbstractVector{<:Integer})
     ind=zeros(Int,length(nodes))
     k=1
     for n in nodes
@@ -326,7 +326,7 @@ function parent(T::dimtree)
   P
 end
 parent(T::dimtree,node::Integer)=parent(T)[node]
-parent(T::dimtree,nodes::Vector{Int})=[parent(T)[n] for n in nodes]
+parent(T::dimtree,nodes::AbstractVector{<:Integer})=[parent(T)[n] for n in nodes]
 
 """
     positions(T)

@@ -3,13 +3,15 @@
 export TTtensor, randTTtensor, innerprod, ewprod, full, minus, mtimes, mtimes!, ndims, plus
 export reorth, reorth!, size, TTrank, TTsvd, TTtv, norm
 
+
+
 mutable struct TTtensor
-  cores::TensorCell
+  cores::CoreCell
   lorth::Bool
   rorth::Bool
-  function TTtensor(cores,lorth,rorth)
+  function TTtensor(cores::CoreCell,lorth::Bool,rorth::Bool)
       N=length(cores)
-      [@assert(ndims(cores[n])==3,"Core tensors must be tensors of order 3!") for n=1:N]
+      #[@assert(ndims(cores[n])==3,"Core tensors must be tensors of order 3!") for n=1:N]
       @assert(size(cores[1],1)==size(cores[N],3)==1,"Core tensors are of incorrect sizes.")
       [@assert(size(cores[n],3)==size(cores[n+1],1),"Dimension mismatch.") for n=1:N-1]
       for G in cores[1:end-1]
@@ -29,7 +31,8 @@ mutable struct TTtensor
       new(cores,lorth,rorth)
   end
 end
-TTtensor(cores::TensorCell)=TTtensor(cores,true,true)
+TTtensor(cores::CoreCell)=TTtensor(cores,true,true)
+TTtensor(cores::Array{Array{T,3},1}) where {T<:Number}=TTtensor(CoreTensor(cores),true,true)
 
 """
     randTTtensor(I::Vector,R::Vector)
@@ -37,10 +40,10 @@ TTtensor(cores::TensorCell)=TTtensor(cores,true,true)
 
 Create random TTtensor of size I and TT-rank rank R, or of order N and size I × ⋯ × I and TT-rank (R,...,R).
 """
-function randTTtensor(I::Vector{D},R::Vector{D}) where {D<:Integer}
+function randTTtensor(I::Vector{<:Integer},R::Vector{<:Integer})
   N=length(I)
   @assert(length(R)==N-1,"Dimension mismatch.")
-  cores=TensorCell(undef,N) #create radnom cores
+  cores=CoreCell(undef,N) #create radnom cores
   Rfull=[1;R;1]
   [cores[n]=randn(Rfull[n],I[n],Rfull[n+1]) for n=1:N]
   TTtensor(cores)
@@ -73,7 +76,7 @@ function contract(T::TTtensor,X::Array,start_mode=1,modes=0)
     end
     X=permutedims(X,[3,2,1])
     N=ndims(T)-modes+1
-    G=TensorCell(undef,N)
+    G=CoreCell(undef,N)
     for n=1:start_mode-1
         G[n]=T.cores[n]
     end
@@ -84,7 +87,7 @@ function contract(T::TTtensor,X::Array,start_mode=1,modes=0)
     TTtensor(G)
 end
 contract(X::Array,T::TTtensor,start_mode=1,modes=0)=contract(T,X,start_mode,modes)
-function contract(X::TensorCell,squeeze=true)
+function contract(X::CoreCell,squeeze=true)
     N=length(X)
     if N==1
         return X[1]
@@ -97,11 +100,11 @@ function contract(X::TensorCell,squeeze=true)
     squeeze == true ? dropdims(Xcontr) : Xcontr
 end
 #
-function contract(X1::TensorCell,X2::TensorCell)
+function contract(X1::CoreCell,X2::CoreCell)
     N=length(X2)
     @assert(length(X1)==N,"Dimensions mismatch.")
     @assert(size(X1)[1:end-1]==size(X2)[1:end-1],"Dimensions mismatch.")
-    Xcontr=Matrix(transpose(dropdims(contract(X1[1],2,X2[1],2))))
+    Xcontr=transpose(dropdims(contract(X1[1],2,X2[1],2)))
     for n=2:N
         Xcontr=contract(X1[n],1,Xcontr,2,[3,1,2])
         Xcontr=contract(X2[n],[1,2],Xcontr,[1,2])
@@ -119,14 +122,14 @@ function innerprod(X1::TTtensor,X2::TTtensor)
     for n=2:ndims(X1)
         w=VectorCell(undef,Isz[n])
         for i=1:Isz[n]
-            w[i]=krontv(Matrix(transpose(X1.cores[n][:,i,:])),Matrix(transpose(X2.cores[n][:,i,:])),vec(v))
+            w[i]=krontv(transpose(X1.cores[n][:,i,:]),transpose(X2.cores[n][:,i,:]),vec(v))
         end
         v=vec(sum(w))
     end
     v[1]
 end
 
-function innerprod(X1::TensorCell,X2::TensorCell)
+function innerprod(X1::CoreCell,X2::CoreCell)
     Isz=[size(X,2) for X in X1]
     @assert(Isz==[size(X,2) for X in X2],"Dimension mismatch.")
     v=kron(X1[1][:,1,:],X2[1][:,1,:])
@@ -136,7 +139,7 @@ function innerprod(X1::TensorCell,X2::TensorCell)
     for n=2:ndims(X1)
         w=VectorCell(undef,Isz[n])
         for i=1:Isz[n]
-            w[i]=krontv(Matrix(transpose(X1[n][:,i,:])),Matrix(transpose(X2[n][:,i,:])),vec(v))
+            w[i]=krontv(transpose(X1[n][:,i,:]),transpose(X2[n][:,i,:]),vec(v))
         end
         v=vec(sum(w))
     end
@@ -147,8 +150,8 @@ function ewprod(X1::TTtensor,X2::TTtensor)
 	Isz=size(X1)
 	@assert(Isz == size(X2),"Dimension mismatch.")
 	N=ndims(X1)
-  	cores=TensorCell(undef,N) #initilize cores
-	R=[1,TTrank(X1).*TTrank(X2)...,1]    
+  	cores=CoreCell(undef,N) #initilize cores
+	R=[1,TTrank(X1).*TTrank(X2)...,1]
   	for n=1:N
     	cores[n]=zeros(R[n],Isz[n],R[n+1])
     	for i=1:Isz[n]
@@ -168,7 +171,7 @@ end
 Subtraction of two TTtensors. Same as: X-Y.
 """
 function minus(X1::TTtensor,X2::TTtensor)
-	X1+(-1)*X2
+	1*X1+(-1)*X2
 end
 -(X1::TTtensor,X2::TTtensor)=minus(X1,X2)
 
@@ -183,19 +186,19 @@ function mtimes(α::Number,X::TTtensor)
 	# TTtensor(G)
     TTtensor(mtimes(α,X.cores))
 end
-*(α::T,X::TTtensor) where {T<:Number}=mtimes(α,X)
-*(X::TTtensor,α::T) where {T<:Number}=*(α,X)
+*(α::Number,X::TTtensor)=mtimes(α,X)
+*(X::TTtensor,α::Number)=*(α,X)
 function mtimes!(α::Number,X::TTtensor)
     X.cores[1]=α*X.cores[1]
 end
-function mtimes(α::Number,G::TensorCell)
+function mtimes(α::Number,G::CoreCell)
     Gcopy=deepcopy(G)
     Gcopy[1]=α*G[1]
 	Gcopy
 end
-*(α::T,G::TensorCell) where {T<:Number} = mtimes(α,G)
-*(G::TensorCell,α::T) where {T<:Number} = *(α,G)
-function mtimes!(α::Number,G::TensorCell)
+*(α::T,G::CoreCell) where {T<:Number} = mtimes(α,G)
+*(G::CoreCell,α::T) where {T<:Number} = *(α,G)
+function mtimes!(α::Number,G::CoreCell)
     G[1]=α*G[1]
 end
 
@@ -231,10 +234,10 @@ function plus(X1::TTtensor,X2::TTtensor)
 end
 +(X1::TTtensor,X2::TTtensor)=plus(X1,X2)
 
-function plus(X1::TensorCell,X2::TensorCell)
+function plus(X1::CoreCell,X2::CoreCell)
     N=length(X1)
     @assert(N==length(X2),"Dimension mismatch.")
-    Xres=TensorCell(undef,N)
+    Xres=CoreCell(undef,N)
     sz=size(X1[1]).+(0,0,size(X2[1])[3])
     Xres[1]=reshape([tenmat(X1[1],1) tenmat(X2[1],1)],sz)
     sz=size(X1[N]).+(size(X2[N])[1],0,0)
@@ -250,12 +253,12 @@ function plus(X1::TensorCell,X2::TensorCell)
     end
 	Xres
 end
-+(X1::TensorCell,X2::TensorCell)=plus(X1,X2)
++(X1::CoreCell,X2::CoreCell)=plus(X1,X2)
 
 function reorth(X::TTtensor,direction="left",full="no")
     TTtensor(reorth(X.cores,direction,full))
 end
-function reorth(X::TensorCell,direction="left",full="no")
+function reorth(X::CoreCell,direction="left",full="no")
     G=deepcopy(X)
     N=length(X)
     if direction=="left"
@@ -330,7 +333,7 @@ function reorth!(X::TTtensor,direction="left",full="no")
         error("Invalid direction. Should be either \"left\" or \"right\".")
     end
 end
-function reorth!(X::TensorCell,direction="left",full="no")
+function reorth!(X::CoreCell,direction="left",full="no")
     N=length(X)
     if direction=="left"
         for n=1:N-1
@@ -375,13 +378,13 @@ end
 
 """
     TTrank(X::TTtensor,full=false)
-    TTrank(X::TensorCell,full=false)
+    TTrank(X::CoreCell,full=false)
 
 Representational TT-rank of X. If cores of X are of size R{n-1} x In x Rn, returns (R1,...,R{n-1}) for full=false or (1,R1,....,Rn) for full=true."""
 function TTrank(X::TTtensor,full=false)
     TTrank(X.cores,full)
 end
-function TTrank(X::TensorCell,full=false)
+function TTrank(X::CoreCell,full=false)
     rnk=[size(X[n])[3] for n=1:length(X)-1]
     if full==true
         rnk=[1,rnk...,1]
@@ -394,7 +397,7 @@ end
     TTsvd(X::TTtensor;tol=1e-8,reqrank=[])
 
 Decomposes full tensor X into its TT format. If input is already a TTtensor, recompresses it."""
-function TTsvd(X::Array{T,N};tol=1e-8,reqrank=[],tol_rel=0) where {T<:Number,N}
+function TTsvd(X::AbstractArray{<:Number,N};tol=1e-8,reqrank=[],tol_rel=0) where N
     Isz=size(X)
     if length(reqrank)>0
         @assert(length(reqrank)==N-1,"Dimension mismatch. For a N-dim tensor, reqrank has to be a vector of length N-1.")
@@ -404,7 +407,7 @@ function TTsvd(X::Array{T,N};tol=1e-8,reqrank=[],tol_rel=0) where {T<:Number,N}
         rnk=0
 		tol=tol/sqrt(N-1)
     end
-    G=TensorCell(undef,N)
+    G=CoreCell(undef,N)
     Xtmp=copy(X)
     for n=1:N-1
         n==1 ?  R=1 : R=reqrank[n-1]
@@ -422,7 +425,7 @@ function TTsvd(X::Array{T,N};tol=1e-8,reqrank=[],tol_rel=0) where {T<:Number,N}
             #K=findall(x-> x>tol ? true : false,S)
 			Sum=0
 			k=0
-			while sqrt(Sum)<=tol
+			while sqrt(Sum)<=tol && length(S)-k>0
 				Sum=Sum+S[end-k]^2
 				k+=1
 			end
@@ -443,16 +446,15 @@ function TTsvd(X::TTtensor;reqrank=[],tol=1e-8,tol_rel=0)
     TTtensor(TTsvd(X.cores,reqrank=reqrank,tol=tol,tol_rel=tol_rel))
 end
 
-function TTsvd(X::TensorCell;reqrank=[],tol=1e-8,tol_rel=0)
+function TTsvd(X::CoreCell;reqrank=[],tol=1e-8,tol_rel=0)
     N=length(X)
 	tol=tol/sqrt(N-1)
     Isz=[size(X[n],2) for n=1:N]
-    l=length(reqrank)
     G=reorth(X,"right")
-    if l>0
-        @assert(l==N-1,"Requested rank of inapropriate size.")
+    if length(reqrank)>0
+        @assert(length(reqrank)==N-1,"Requested rank of inapropriate size.")
         if any(reqrank.<TTrank(G))==false
-            @warn "Requested rank larger than the currect rank."
+            @warn "Requested rank larger than the current rank."
             return X
         end
         for n=1:N-1
@@ -466,7 +468,7 @@ function TTsvd(X::TensorCell;reqrank=[],tol=1e-8,tol_rel=0)
             end
             n==1 ? sz=(1,Isz[1],reqrank[1]) : sz=(reqrank[n-1],Isz[n],reqrank[n])
             G[n]=reshape(U,sz)
-            G[n+1]=ttm(G[n+1],Matrix(transpose(V)),1)
+            G[n+1]=ttm(G[n+1],transpose(V),1)
         end
     else
         for n=1:N-1
@@ -476,16 +478,16 @@ function TTsvd(X::TensorCell;reqrank=[],tol=1e-8,tol_rel=0)
             end
             Sum=0
 			k=0
-			while sqrt(Sum)<=tol
+			while sqrt(Sum)<=tol && length(S)-k>0
 				Sum=Sum+S[end-k]^2
 				k+=1
-				#@show sum
+				#@show Sum
 			end
 			K=length(S)-k+1
-            #K=findall(x-> x>δ ? true : false,S)
-            U=U[:,1:K]
-            V=V[:,1:K]
-            S=S[1:K]
+        	#K=findall(x-> x>δ ? true : false,S)
+        	U=U[:,1:K]
+        	V=V[:,1:K]
+        	S=S[1:K]
             G[n]=reshape(U,(size(G[n],1),Isz[n],:))
             G[n+1]=ttm(G[n+1],V*Diagonal(S),1,'t')
         end
@@ -495,9 +497,9 @@ end
 
 """
     TTtv(X::TTtensor,u::VectorCell,mode::Int)
-    TTtv(X::TTtensor,U::Matrix,mode::Int)
-    TTtv(X::TensorCell,u::VectorCell)
-    TTtv(X::TensorCell,U::Matrix)
+    TTtv(X::TTtensor,U::AbstractMatrix{<:Number},mode::Int)
+    TTtv(X::CoreCell,u::VectorCell)
+    TTtv(X::CoreCell,U::AbstractMatrix{<:Number})
 
 TT-tensor times vector. For N=ndims(X) and n=[mode,mode+1,...,N] contracts nth core
 of the TT-tensor with vector u[N-n+1]. If input is a matrix, then vectors u are its columns.
@@ -507,14 +509,14 @@ function TTtv(X::TTtensor,u::VectorCell,mode::Int)
     if mode==1
         TTtv(X.cores,u)
     else
-        G=TensorCell(undef,mode-1)
+        G=CoreCell(undef,mode-1)
         G[1:mode-1]=deepcopy(X.cores[1:mode-1])
         v=TTtv(X.cores[mode:end],u)
         G[mode-1]=contract(G[mode-1],v)
         mode==2 ? dropdims(G[1]) : TTtensor(G)
     end
 end
-function TTtv(X::TTtensor,U::Matrix,mode::Int)
+function TTtv(X::TTtensor,U::AbstractMatrix{<:Number},mode::Int)
     L=size(U,2)
     u=VectorCell(undef,L)
     for l=1:L
@@ -522,7 +524,7 @@ function TTtv(X::TTtensor,U::Matrix,mode::Int)
     end
     TTtrv(X,U,mode)
 end
-function TTtv(X::TensorCell,u::VectorCell)
+function TTtv(X::CoreCell,u::VectorCell)
     N=length(X)
     @assert(length(u)==N,"Dimension mismatch.")
     G=copy(X[N])
@@ -534,7 +536,7 @@ function TTtv(X::TensorCell,u::VectorCell)
     end
     G
 end
-function TTtv(X::TensorCell,U::Matrix)
+function TTtv(X::CoreCell,U::AbstractMatrix{<:Number})
     Ucell=MatrixCell(undef,1)
     Ucell[1]=U
     TTtrv(X,Ucell)
