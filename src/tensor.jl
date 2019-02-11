@@ -36,11 +36,17 @@ Contracted product of tensors. Contract indX modes of array X to indY modes of a
 Default: indX=[ndims(X)], indY=[1].
 """
 function contract(X1::AbstractArray{<:Number},ind1::Vector{Int},X2::AbstractArray{<:Number},ind2::AbstractVector{<:Integer},perm=[])
+	if length(X1) == 0
+		return X2
+	elseif length(X2)==0
+		return X1
+	end
     sz1=[size(X1)...]
     sz2=[size(X2)...]
     @assert(sz1[ind1]==sz2[ind2],"Dimension mismatch.")
     sz=[sz1[setdiff(1:ndims(X1),ind1)];sz2[setdiff(1:ndims(X2),ind2)]]
-    Xres=reshape(transpose(tenmat(X1,row=ind1))*tenmat(X2,row=ind2),tuple(sz...))
+    #Xres=reshape(transpose(tenmat(X1,row=ind1))*tenmat(X2,row=ind2),tuple(sz...))
+	Xres=reshape(tenmat(X1,row=ind1)'*tenmat(X2,row=ind2),tuple(sz...))
     if perm!=[]
       Xres=permutedims(Xres,perm)
     end
@@ -49,6 +55,13 @@ end
 contract(X1::AbstractArray{<:Number},X2::AbstractArray{<:Number},ind::AbstractVector{<:Integer})=contract(X1,ind,X2,ind)
 contract(X1::AbstractArray{<:Number},ind1::Int,X2::AbstractArray{<:Number},ind2::Int,perm=[]) =contract(X1,[ind1],X2,[ind2],perm)
 contract(X1::AbstractArray{<:Number},X2::AbstractArray{<:Number}) = contract(X1,ndims(X1),X2,1)
+function contract(X1::AbstractArray{<:Number},X2::AbstractArray{<:Number},Xk...)
+	Xres=contract(X1,X2)
+	for k=1:length(Xk)
+		Xres=contract(Xres,Xk[k])
+	end
+	Xres
+end
 
 
 

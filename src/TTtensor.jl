@@ -3,8 +3,6 @@
 export TTtensor, randTTtensor, innerprod, ewprod, full, minus, mtimes, mtimes!, ndims, plus
 export reorth, reorth!, size, TTrank, TTsvd, TTtv, norm
 
-
-
 mutable struct TTtensor
   cores::CoreCell
   lorth::Bool
@@ -32,7 +30,8 @@ mutable struct TTtensor
   end
 end
 TTtensor(cores::CoreCell)=TTtensor(cores,true,true)
-TTtensor(cores::Array{Array{T,3},1}) where {T<:Number}=TTtensor(CoreTensor(cores),true,true)
+TTtensor(cores::Array{Array{T,3},1}) where {T<:Number}=TTtensor(CoreCell(cores),true,true)
+TTtensor(cores::Array{AbstractArray{T,N},1}) where {T<:Number,N}=TTtensor(CoreCell(cores),true,true)
 
 """
     randTTtensor(I::Vector,R::Vector)
