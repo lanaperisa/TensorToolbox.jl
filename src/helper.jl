@@ -366,7 +366,7 @@ function randrange(A::AbstractMatrix{<:Number},gram=true,t='t';tol=1e-8,maxit=10
     else
       error("Wrong input.")
     end
-    Q=qr(Y).Q;
+    Q=Matrix(qr(Y).Q)
   else
     maxit=min(m,n,maxit);
     rangetol=tol*sqrt.(pi/2)/10; #assures ||A-Q*Q'*A||<=tol

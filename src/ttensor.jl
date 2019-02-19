@@ -233,7 +233,8 @@ function hosvd2(X1::ttensor,X2::ttensor;method="randsvd",reqrank=[],eps_abs=[],e
   n=1
   for (A1,A2) in zip(X1.fmat,X2.fmat)
     Ahad=khatrirao(A1,A2,'t')
-    Q[n],R[n]=qr(Ahad)
+    Qm,R[n]=qr(Ahad)
+	Q[n]=Matrix(Qm)
     n+=1
 	 end
   X=hosvd(krontm(X1.cten,X2.cten,R),method=method,reqrank=reqrank,eps_abs=eps_abs,eps_rel=eps_rel,p=p);
@@ -301,20 +302,20 @@ See also: hosvd1, hosvd2, hosvd3.
 function hosvd4(X1::ttensor,X2::ttensor;method="svd",reqrank=[],eps_abs=[],eps_rel=[],p=10)
   @assert(size(X1) == size(X2))
   N=ndims(X1)
-  reqrank=check_vector_input(reqrank,N,0);
-  eps_abs=check_vector_input(eps_abs,N,1e-8);
-  eps_rel=check_vector_input(eps_rel,N,0);
+  reqrank=check_vector_input(reqrank,N,0)
+  eps_abs=check_vector_input(eps_abs,N,1e-8)
+  eps_rel=check_vector_input(eps_rel,N,0)
   Q=MatrixCell(undef,N) #range approximation of tenmat(X1.*X2,n)
   #KR=MatrixCell(undef,N); #transpose Khatri-Rao product of X1.fmat and X2.fmat
-  fmat=MatrixCell(undef,N);
+  fmat=MatrixCell(undef,N)
   #[KR[n]=khatrirao(X1.fmat[n],X2.fmat[n],'t') for n=1:N]
   KR=khatrirao(X1.fmat,X2.fmat,'t')
   for n=1:N
-    Q[n]=randrange(X1.cten,X2.cten,KR,n,reqrank=reqrank[n],tol=eps_abs[n],p=p);
+    Q[n]=randrange(X1.cten,X2.cten,KR,n,reqrank=reqrank[n],tol=eps_abs[n],p=p)
   end
   [fmat[n]=Q[n]'*KR[n] for n=1:N]
   H=krontm(X1.cten,X2.cten,fmat)
-  if norm(reqrank) != 0 #fixed-precision problem
+  if length(reqrank) != 0 #fixed-rank problem
     Htucker=hosvd(H,reqrank=reqrank,method=method,eps_abs=eps_abs,eps_rel=eps_rel)
     [fmat[n]=Q[n]*Htucker.fmat[n] for n=1:N]
     return ttensor(Htucker.cten,fmat)
@@ -683,7 +684,7 @@ function randrange(C1::AbstractArray{<:Number,N},C2::AbstractArray{<:Number,N},K
       Y[:,i]=KR[mode]*mkrontv(C1,C2,w,mode)
     end
     #Q=full(qrfact(Y)[:Q]);
-    Q=qr(Y)[1];
+    Q=Matrix(qr(Y).Q)
   else
     maxit=min(m,n,maxit);
     rangetol=tol*sqrt.(pi/2)/10;
@@ -738,7 +739,7 @@ function randsvd(X1::ttensor,X2::ttensor,mode::Integer;variant='B',tol=1e-8,maxi
   if reqrank!=0
      Y=mhadtv(X1,X2,randn(m,reqrank+p),mode,variant=variant);  #Y=A*(A'*randn(m,reqrank+p));
      #Q=full(qrfact(Y)[:Q]);
-     Q=qr(Y)[1];
+     Q=Matrix(qr(Y).Q)
   else
     maxit=min(m,n,maxit);
     rangetol=tol*sqrt.(pi/2)/10;
@@ -797,7 +798,7 @@ function reorth(X::ttensor)
     n=1;
 		for A in X.fmat
 			Qt,Rt=qr(A)
-			Q[n]=Qt
+			Q[n]=Matrix(Qt)
 			R[n]=Rt
       n+=1
 		end
@@ -816,7 +817,7 @@ function reorth!(X::ttensor)
 	if X.isorth != true
 		for n=1:ndims(X)
 			Q,R=qr(X.fmat[n])
-			X.fmat[n]=Q
+			X.fmat[n]=Matrix(Q)
 			X.cten=ttm(X.cten,R,n)
 		end
     X.isorth=true;

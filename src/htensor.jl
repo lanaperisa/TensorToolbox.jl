@@ -306,7 +306,8 @@ function reorth(X::htensor)
 	R=MatrixCell(undef,N+In)
   n=1;
 	for U in X.fmat
-		fmat[n],R[X.tree.leaves[n]]=qr(U)
+		Q,R[X.tree.leaves[n]]=qr(U)
+		fmat[n]=Matrix(Q)
     n+=1
 	end
   for n in reverse(X.tree.internal_nodes)
@@ -316,7 +317,8 @@ function reorth(X::htensor)
     ind=node2ind(X.tree,n)
     trten[ind]=kron(Rr,Rl)*trten2mat(X.trten[ind])
     if n!=1
-      trten[ind],R[n]=qr(trten[ind])
+      Q,R[n]=qr(trten[ind])
+	  trten[ind]=Matrix(Q)
     end
     trten[ind]=trten2ten(trten[ind],size(Rl,2),size(Rr,2))
   end
@@ -333,7 +335,8 @@ function reorth!(X::htensor)
   R=MatrixCell(undef,N+In)
   n=1;
   for U in X.fmat
-    X.fmat[n],R[X.tree.leaves[n]]=qr(U)
+    Q,R[X.tree.leaves[n]]=qr(U)
+	X.fmat[n]=Matrix(Q)
     n+=1
   end
   for n in reverse(X.tree.internal_nodes)
@@ -343,7 +346,8 @@ function reorth!(X::htensor)
     ind=node2ind(X.tree,n)
     X.trten[ind]=kron(Rr,Rl)*trten2mat(X.trten[ind])
     if n!=1
-      X.trten[ind],R[n]=qr(X.trten[ind])
+      Q,R[n]=qr(X.trten[ind])
+	  X.trten[ind]=Matrix(Q)
     end
     X.trten[ind]=trten2ten(X.trten[ind],size(Rl,2),size(Rr,2))
   end
