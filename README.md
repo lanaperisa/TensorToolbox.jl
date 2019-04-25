@@ -319,7 +319,7 @@ ttv(X,V) #X times vectors from V by each mode
 ```
 The *h-rank* of a tensor in Hierarchical Tucker format:
 ```julia
-X=htrunc(rand(9,8,7),maxrank=X=htrunc(rand(9,8,7),maxrank=2)
+X=htrunc(rand(9,8,7),maxrank=2)
 hrank(X)
 ```
 
@@ -327,7 +327,7 @@ hrank(X)
 
 Define tensor in TT format by its core tensors:
 ```julia
-G=TensorCell(undef,3)
+G=CoreCell(undef,3)
 G[1]=rand(1,4,3)
 G[2]=rand(3,6,4)
 G[3]=rand(4,3,1)
