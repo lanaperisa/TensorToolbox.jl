@@ -46,7 +46,7 @@ function contract(X1::AbstractArray{<:Number},ind1::Vector{Int},X2::AbstractArra
     @assert(sz1[ind1]==sz2[ind2],"Dimension mismatch.")
     sz=[sz1[setdiff(1:ndims(X1),ind1)];sz2[setdiff(1:ndims(X2),ind2)]]
     #Xres=reshape(transpose(tenmat(X1,row=ind1))*tenmat(X2,row=ind2),tuple(sz...))
-	Xres=reshape(tenmat(X1,row=ind1)'*tenmat(X2,row=ind2),tuple(sz...))
+	Xres=reshape(transpose(tenmat(X1,row=ind1))*tenmat(X2,row=ind2),tuple(sz...))
     if perm!=[]
       Xres=permutedims(Xres,perm)
     end
@@ -62,7 +62,7 @@ function contract(X1::AbstractArray{<:Number},X2::AbstractArray{<:Number},Xk...)
 	end
 	Xres
 end
-function contract(X::Array{AbstractArray{<:Number,D},1},squeeze=true) where D
+function contract(X::Array{AbstractArray{<:Number,D} where D,1},squeeze=true)
     N=length(X)
     if N==1
         return X[1]

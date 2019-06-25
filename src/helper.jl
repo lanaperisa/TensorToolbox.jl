@@ -1,5 +1,5 @@
 #export check_vector_input
-export colspace, eye, ewprod, khatrirao, krontkron, kron, krontv, krtv, tkrtv, lanczos, lanczos_tridiag, randsvd
+export colspace, eye, ewprod, khatrirao, krontkron, kron, krontv, krtv, tkrtv, perfect_shuffle, lanczos, lanczos_tridiag, randsvd
 export VectorCell, MatrixCell, TensorCell, CoreCell
 
 """
@@ -276,6 +276,32 @@ function tkrtv(A::AbstractMatrix{<:Number},B::AbstractMatrix{<:Number},M::Abstra
     Mprod[:,j]=tkrtv(A,B,M[:,j])
   end
   Mprod
+end
+
+"""
+    perfect_shuffle(piles_nmbr,piles_len,piles_block=0)
+
+Perfect shuffle vector.
+"""
+function perfect_shuffle(piles_nmbr::Integer,piles_len::Integer,piles_block=[])
+    if piles_block==[]
+        p=zeros(Int,piles_nmbr*piles_len)
+        let
+            i=1
+            for l=1:piles_len, n=1:piles_nmbr
+                p[i]=(n-1)*piles_len+l
+                i+=1
+            end
+        end
+    else
+        @assert(length(piles_block)==piles_nmbr,"Dimension mismatch.")
+        #p=zeros(Int,piles_nmbr*piles_len*piles_block)
+        p=zeros(Int,1,0)
+        for l=1:piles_len, n=1:piles_nmbr
+            p=[p sum(piles_block[1:n-1])*piles_len .+ collect((l-1)*piles_block[n]+1:l*piles_block[n])...]
+        end
+    end
+    p[:]
 end
 
 
