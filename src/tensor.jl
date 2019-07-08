@@ -74,7 +74,18 @@ function contract(X::Array{AbstractArray{<:Number,D} where D,1},squeeze=true)
     end
     squeeze == true ? dropdims(Xcontr) : Xcontr
 end
-
+function contract(X::Array{AbstractArray{<:Number,D},1},squeeze=true) where D
+	N=length(X)
+	if N==1
+		return X[1]
+	end
+	@assert(any([size(X[n])[end]==size(X[n+1])[1] for n=1:N-1]),"Dimensions mismatch.")
+	Xcontr=contract(X[1],X[2])
+	for n=3:N
+		Xcontr=contract(Xcontr,X[n])
+	end
+	squeeze == true ? dropdims(Xcontr) : Xcontr
+end
 
 
 """
