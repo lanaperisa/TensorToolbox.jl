@@ -1,0 +1,10 @@
+cff-version: 1.0.0
+message: If you use this software, please cite it as below.
+authors:
+  - family-names: Periša
+    given-names: Lana
+    orcid: https://orcid.org/0000-0002-9224-6619
+title: "Julia Tensor Toolbox"
+version: 1.0.2
+doi: 10.5281/zenodo.3540787
+date-released: 2019-11-13
