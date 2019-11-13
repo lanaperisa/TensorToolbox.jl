@@ -211,7 +211,7 @@ function htrunc(X::Array{<:Number,N},tree::dimtree;method="svd",maxrank=[],atol=
   end
   htensor(tree,B,U)
 end
-htrunc(X::Array{<:Number,N};method="lapack",maxrank=[],atol=1e-8,rtol=0) where N=htrunc(X,dimtree(ndims(X)),method=method,maxrank=maxrank,atol=atol,rtol=rtol)
+htrunc(X::Array{<:Number,N};method="svd",maxrank=[],atol=1e-8,rtol=0) where N=htrunc(X,dimtree(ndims(X)),method=method,maxrank=maxrank,atol=atol,rtol=rtol)
 
 #Inner product of two htensors. **Documentation in tensor.jl.
 function innerprod(X1::htensor,X2::htensor)

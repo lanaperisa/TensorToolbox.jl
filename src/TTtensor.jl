@@ -279,6 +279,7 @@ function reorth(X::CoreCell,direction="left",full="no")
         for n=N:-1:2
             Q,Rt=qr(transpose(tenmat(G[n],1)))
             Q=Matrix(Q)
+			Rnorm=norm(Rt)
             sz=(size(Q)[2],size(G[n])[2:3]...)
             G[n]=reshape(Matrix(transpose(Q)),sz)
             G[n-1]=ttm(G[n-1],Rt,3)
@@ -448,8 +449,8 @@ end
 function TTsvd(X::CoreCell;reqrank=[],tol=1e-8,tol_rel=0)
     N=length(X)
 	tol=tol/sqrt(N-1)
-    Isz=[size(X[n],2) for n=1:N]
-    G=reorth(X,"right")
+	Isz=[size(X[n],2) for n=1:N]
+ 	G=reorth(X,"right")
     if length(reqrank)>0
         @assert(length(reqrank)==N-1,"Requested rank of inapropriate size.")
         if any(reqrank.<TTrank(G))==false
@@ -473,20 +474,22 @@ function TTsvd(X::CoreCell;reqrank=[],tol=1e-8,tol_rel=0)
         for n=1:N-1
             U,S,V=svd(tenmat(G[n],row=1:2))
             if tol_rel != 0
-                tol=tol_rel*S[1]
+                tol=tol_rel*S[1]/sqrt(N-1)
             end
             Sum=0
 			k=0
-			while sqrt(Sum)<=tol && length(S)-k>0
+			while sqrt(Sum)<tol && length(S)-k>0
 				Sum=Sum+S[end-k]^2
 				k+=1
-				#@show Sum
 			end
-			K=length(S)-k+1
-        	#K=findall(x-> x>δ ? true : false,S)
-        	U=U[:,1:K]
-        	V=V[:,1:K]
-        	S=S[1:K]
+			#K=findall(x-> x>δ ? true : false,S)
+			if k>0
+				K=length(S)-k+1        		
+        		U=U[:,1:K]
+        		V=V[:,1:K]
+        		S=S[1:K]
+			end
+			#@show tol, norm(tenmat(G[n],row=1:2)-U*Diagonal(S)*transpose(V))
             G[n]=reshape(U,(size(G[n],1),Isz[n],:))
             G[n+1]=ttm(G[n+1],V*Diagonal(S),1,'t')
         end
