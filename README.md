@@ -2,6 +2,8 @@
 
 [![Build Status](https://travis-ci.org/lanaperisa/TensorToolbox.jl.svg?branch=master)](https://travis-ci.org/lanaperisa/TensorToolbox.jl)
 
+[![DOI](https://zenodo.org/badge/92327488.svg)](https://zenodo.org/badge/latestdoi/92327488)
+
 Julia package for tensors. Includes functionality for
 - dense tensors, 
 - tensors in Tucker format,
