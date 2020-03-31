@@ -9,41 +9,12 @@ module SparseTensors
 # fullfile(getfield(what('tensor_toolbox'),'path'),'doc','html',...
 # 'bibtex.html#TTB_Sparse')))">[BibTeX]</a>
 
-mutable struct SparseTensor
-    # tensor_toolbox style implementation
-    # vals::Array{T,1}
-    # subs::Array{Tuple{Int,Vararg{Int},1}}
-    # dict::Dict{Tuple{Int,Vararg{Int}},T} # Julia doesn't like this
-    # dict::Dict{NTuple{3,Int},T}
-    vals::Array{T,1} where T
-    subs::Array{UInt,2} # each row is the index of an entry
-    dims::CartesianIndex
-    function SparseTensor(v,subs)
-        newsubs = unique(subs,dims=1)
-
-        # This feels like it should be slow
-        # c.f. dictionary implementation?
-        newinds = [findfirst(r -> r==myr, eachrow(newsubs)|>collect) for myr in eachrow(subs)]
-        vals = zeros(eltype(v),size(newsubs)[1])
-        for i in 1:length(v)
-            vals[newinds[i]] += v[i]
-        end
-
-        dims = CartesianIndex(maximum(newsubs, dims=1)...)
-        new(vals,newsubs,dims)
-    end
-end
-
-# Dict-based implementation is much faster + memory efficient
 # TODO: work out how to mark vararg work
-mutable struct SparseTensorD
-    # tensor_toolbox style implementation
-    # vals::Array{T,1}
-    # subs::Array{Tuple{Int,Vararg{Int},1}}
-    # dict::Dict{Tuple{Int,Vararg{Int}},T} # Julia doesn't like this
+mutable struct SparseTensor
     dict::Dict{NTuple{3,UInt},T} where T
+    # dict::Dict{Tuple{Int,Vararg{Int}},T} # Julia doesn't like this
     #dims::CartesianIndex
-    function SparseTensorD(v::Array{N,1},subs) where N <: Number
+    function SparseTensor(v::Array{N,1},subs) where N <: Number
         newsubs = unique(subs,dims=1)
 
         # This feels like it should be slow
@@ -55,7 +26,7 @@ mutable struct SparseTensorD
         #dims = CartesianIndex(maximum(newsubs, dims=1)...)
         new(dict)#,dims)
     end
-    SparseTensorD(d) = new(d)
+    SparseTensor(d) = new(d)
 end
 
 
@@ -66,16 +37,11 @@ end
 # TODO: define broadcasting
 # See
 # https://docs.julialang.org/en/v1/manual/interfaces/index.html
-function Base.:+(l::SparseTensorD, r::SparseTensorD)
-    SparseTensorD(merge(+,l.dict,r.dict))
+function Base.:+(l::SparseTensor, r::SparseTensor)
+    SparseTensor(merge(+,l.dict,r.dict))
 end
 
 function Base.getindex(A::SparseTensor, inds...)
-    all(Tuple(A.dims) .>= inds) # TODO: or throw index error
-    something(findfirst(r -> Tuple(r) == inds, eachrow(A.subs) |> collect), 0)
-end
-
-function Base.getindex(A::SparseTensorD, inds...)
     get(A.dict,inds,0)
 end
 
@@ -83,12 +49,6 @@ function randtensor(n,d,dims=(256,256,256))
     subs = round.((rand(Float64,n,d)) .* ([d for d in dims]' .-1)) .+ 1 .|> UInt
     vals = rand(n)
     SparseTensor(vals,subs)
-end
-
-function randtensorD(n,d,dims=(256,256,256))
-    subs = round.((rand(Float64,n,d)) .* ([d for d in dims]' .-1)) .+ 1 .|> UInt
-    vals = rand(n)
-    SparseTensorD(vals,subs)
 end
 
 # Base.:* - see ttt.m
