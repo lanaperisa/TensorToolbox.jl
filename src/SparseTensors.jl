@@ -9,7 +9,6 @@ module SparseTensors
 # fullfile(getfield(what('tensor_toolbox'),'path'),'doc','html',...
 # 'bibtex.html#TTB_Sparse')))">[BibTeX]</a>
 
-# TODO: work out how to mark vararg work
 mutable struct SparseTensor{T,N} <: AbstractArray{T,N}
     dict::Dict{NTuple{N,UInt},T}
     # dict::Dict{Tuple{Int,Vararg{Int}},T} # Julia doesn't like this
@@ -57,8 +56,8 @@ function Base.setindex!(A::SparseTensor, value, inds...)
     A.dict[inds] = value
 end
 
-function randtensor(n,d,dims=(256,256,256))
-    subs = vcat(round.((rand(Float64,n,d)) .* ([d for d in dims]' .-1)) .+ 1 .|> UInt, [UInt(d) for d in dims]')
+function randtensor(n,dims=(256,256,256))
+    subs = vcat(round.((rand(Float64,n,length(dims))) .* ([d for d in dims]' .-1)) .+ 1 .|> UInt, [UInt(d) for d in dims]')
     vals = [rand(n); 0.0]
     SparseTensor(vals,subs)
 end
