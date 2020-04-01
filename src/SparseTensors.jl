@@ -10,7 +10,7 @@ module SparseTensors
 # 'bibtex.html#TTB_Sparse')))">[BibTeX]</a>
 
 mutable struct SparseTensor{T,N} <: AbstractArray{T,N}
-    dict::Dict{NTuple{N,UInt},T}
+    dict::Dict{NTuple{N,Int},T}
     # dict::Dict{Tuple{Int,Vararg{Int}},T} # Julia doesn't like this
     #dims::CartesianIndex
     function SparseTensor(v::Array{E,1},subs) where E <: Number
@@ -49,15 +49,12 @@ function Base.getindex(A::SparseTensor, inds::Vararg{Int,N}) where N # this shou
     get(A.dict,inds,0)
 end
 
-IndexStyle(::Type(<:SparseTensor)) = IndexCartesian() # set by default but we should probably document it anyway
-# https://docs.julialang.org/en/v1/manual/interfaces/#documenter-page
-
 function Base.setindex!(A::SparseTensor, value, inds::Vararg{Int,N}) where N
     A.dict[inds] = value
 end
 
 function randtensor(n,dims=(256,256,256))
-    subs = vcat(round.((rand(Float64,n,length(dims))) .* ([d for d in dims]' .-1)) .+ 1 .|> UInt, [UInt(d) for d in dims]')
+    subs = vcat(round.((rand(Float64,n,length(dims))) .* ([d for d in dims]' .-1)) .+ 1 .|> Int, [Int(d) for d in dims]')
     vals = [rand(n); 0.0]
     SparseTensor(vals,subs)
 end
