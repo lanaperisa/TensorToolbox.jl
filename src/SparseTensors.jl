@@ -58,8 +58,8 @@ function Base.setindex!(A::SparseTensor, value, inds...)
 end
 
 function randtensor(n,d,dims=(256,256,256))
-    subs = round.((rand(Float64,n,d)) .* ([d for d in dims]' .-1)) .+ 1 .|> UInt
-    vals = rand(n)
+    subs = vcat(round.((rand(Float64,n,d)) .* ([d for d in dims]' .-1)) .+ 1 .|> UInt, [UInt(d) for d in dims]')
+    vals = [rand(n); 0.0]
     SparseTensor(vals,subs)
 end
 
