@@ -38,21 +38,21 @@ function Base.:+(l::SparseTensor, r::SparseTensor)
     SparseTensor([l.vals; r.vals], [l.subs; r.subs])
 end
 
-# TODO: define broadcasting (or, rather, work out why broadcasting gives zeros)
+# TODO: define broadcasting similarly to this (currently tensors are promoted to dense arrays which is not what we want)
 # See
 # https://docs.julialang.org/en/v1/manual/interfaces/index.html
 function Base.:+(l::SparseTensor, r::SparseTensor)
     SparseTensor(merge(+,l.dict,r.dict))
 end
 
-function Base.getindex(A::SparseTensor, inds...)
+function Base.getindex(A::SparseTensor, inds::Vararg{Int,N}) where N # this should really be where N == ndims(A)
     get(A.dict,inds,0)
 end
 
 IndexStyle(::Type(<:SparseTensor)) = IndexCartesian() # set by default but we should probably document it anyway
 # https://docs.julialang.org/en/v1/manual/interfaces/#documenter-page
 
-function Base.setindex!(A::SparseTensor, value, inds...)
+function Base.setindex!(A::SparseTensor, value, inds::Vararg{Int,N}) where N
     A.dict[inds] = value
 end
 
