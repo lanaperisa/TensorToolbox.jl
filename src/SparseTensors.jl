@@ -10,11 +10,11 @@ module SparseTensors
 # 'bibtex.html#TTB_Sparse')))">[BibTeX]</a>
 
 # TODO: work out how to mark vararg work
-mutable struct SparseTensor
-    dict::Dict{NTuple{3,UInt},T} where T
+mutable struct SparseTensor{T,N} <: AbstractArray{T,N}
+    dict::Dict{NTuple{N,UInt},T}
     # dict::Dict{Tuple{Int,Vararg{Int}},T} # Julia doesn't like this
     #dims::CartesianIndex
-    function SparseTensor(v::Array{N,1},subs) where N <: Number
+    function SparseTensor(v::Array{E,1},subs) where E <: Number
         newsubs = unique(subs,dims=1)
 
         # This feels like it should be slow
@@ -24,9 +24,14 @@ mutable struct SparseTensor
         end
 
         #dims = CartesianIndex(maximum(newsubs, dims=1)...)
-        new(dict)#,dims)
+        SparseTensor(dict)
     end
-    SparseTensor(d) = new(d)
+    SparseTensor(d) = new{d |> values |> eltype, d |> keys |> first |> length}(d)
+end
+
+function Base.size(t::SparseTensor)
+    # Perhaps we should just store this at creation time - cheaper to work it out on subs?
+    maximum(hcat(([k...] for k in keys(t.dict))...),dims=2) |> Tuple
 end
 
 
@@ -34,7 +39,7 @@ function Base.:+(l::SparseTensor, r::SparseTensor)
     SparseTensor([l.vals; r.vals], [l.subs; r.subs])
 end
 
-# TODO: define broadcasting
+# TODO: define broadcasting (or, rather, work out why broadcasting gives zeros)
 # See
 # https://docs.julialang.org/en/v1/manual/interfaces/index.html
 function Base.:+(l::SparseTensor, r::SparseTensor)
@@ -43,6 +48,13 @@ end
 
 function Base.getindex(A::SparseTensor, inds...)
     get(A.dict,inds,0)
+end
+
+IndexStyle(::Type(<:SparseTensor)) = IndexCartesian() # set by default but we should probably document it anyway
+# https://docs.julialang.org/en/v1/manual/interfaces/#documenter-page
+
+function Base.setindex!(A::SparseTensor, value, inds...)
+    A.dict[inds] = value
 end
 
 function randtensor(n,d,dims=(256,256,256))
