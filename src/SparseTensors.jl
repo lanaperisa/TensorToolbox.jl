@@ -51,7 +51,9 @@ function Base.setindex!(A::SparseTensor, value, inds::Vararg{Int,N}) where N
 end
 
 function randtensor(n,dims=(256,256,256))
-    subs = vcat(round.((rand(Float64,n,length(dims))) .* ([d for d in dims]' .-1)) .+ 1 .|> Int, [Int(d) for d in dims]')
+    subs = vcat(round.((rand(Float64,n,length(dims))) .* ([d for d in dims]' .-1)) .+ 1 .|> Int, [d for d in dims]')
+    # hcat([[rand(1:d,n); d] for d in dims]...) is equivalent but takes twice as long
+    # vcat(((N, d) -> rand(1:d)).(1:n,[d for d in dims]'), [d for d in dims]) # ditto
     vals = [rand(n); 0.0]
     SparseTensor(vals,subs)
 end
