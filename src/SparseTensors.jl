@@ -38,9 +38,6 @@ function Base.:+(l::SparseTensor, r::SparseTensor)
     SparseTensor([l.vals; r.vals], [l.subs; r.subs])
 end
 
-# TODO: define broadcasting similarly to this (currently tensors are promoted to dense arrays which is not what we want)
-# See
-# https://docs.julialang.org/en/v1/manual/interfaces/index.html
 function Base.:+(l::SparseTensor, r::SparseTensor)
     SparseTensor(merge(+,l.dict,r.dict))
 end
@@ -58,6 +55,29 @@ function randtensor(n,dims=(256,256,256))
     vals = [rand(n); 0.0]
     SparseTensor(vals,subs)
 end
+
+# Broadcasting - inspired by https://github.com/andyferris/Dictionaries.jl/blob/9b22a254683260354fda8e32291727dfad040106/src/broadcast.jl#L94
+# See also: https://docs.julialang.org/en/v1/manual/interfaces/index.html
+Base.Broadcast.broadcastable(t::SparseTensor) = t
+
+struct SparseTensorBroadcastStyle <: Base.Broadcast.BroadcastStyle
+end
+
+Base.Broadcast.BroadcastStyle(::Type{<:SparseTensor}) = SparseTensorBroadcastStyle()
+
+# TODO: fix SparseTensor(...) .+ {Numbers, AbstractArrays (where indices match)
+# Base.Broadcast.BroadcastStyle(::SparseTensorBroadcastStyle, ::Base.Broadcast.AbstractArrayStyle{0}) = SparseTensorBroadcastStyle()
+
+function Base.Broadcast.broadcasted(::SparseTensorBroadcastStyle, f, args...)
+    merge(f,_getdict.(args)...) |> SparseTensor
+end
+
+@inline _getdict(t::SparseTensor) = t.dict
+
+# I'm not sure what these do but they're not good
+# Base.Broadcast.materialize(t::SparseTensor) = copy(t)
+# Base.Broadcast.materialize!(out::SparseTensor, t::SparseTensor) = copyto!(out, t)
+
 
 # Base.:* - see ttt.m
 end
