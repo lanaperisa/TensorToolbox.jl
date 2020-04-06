@@ -42,6 +42,7 @@ function Base.:+(l::SparseTensor, r::SparseTensor)
     SparseTensor(merge(+,l.dict,r.dict))
 end
 
+# TODO: add error checking - out of bounds etc.
 function Base.getindex(A::SparseTensor, inds::Vararg{Int,N}) where N # this should really be where N == ndims(A)
     get(A.dict,inds,0)
 end
@@ -50,6 +51,7 @@ function Base.setindex!(A::SparseTensor, value, inds::Vararg{Int,N}) where N
     A.dict[inds] = value
 end
 
+# TODO: fix bug: randtensor(10,(10,)) is all zeroes
 function randtensor(n,dims=(256,256,256))
     subs = vcat(round.((rand(Float64,n,length(dims))) .* ([d for d in dims]' .-1)) .+ 1 .|> Int, [d for d in dims]')
     # hcat([[rand(1:d,n); d] for d in dims]...) is equivalent but takes twice as long
@@ -89,4 +91,5 @@ end
 ⊗(l::SparseTensor,r::SparseTensor) = Base.kron
 
 
+# TODO: Support slices / Colon()
 end
