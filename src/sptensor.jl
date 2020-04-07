@@ -1,5 +1,3 @@
-module SparseTensors
-
 # Inspired by:
 #
 # BW Bader and TG Kolda. Efficient MATLAB Computations with Sparse
@@ -8,6 +6,8 @@ module SparseTensors
 # >DOI: 10.1137/060676489</a>. <a href="matlab:web(strcat('file://',...
 # fullfile(getfield(what('tensor_toolbox'),'path'),'doc','html',...
 # 'bibtex.html#TTB_Sparse')))">[BibTeX]</a>
+
+export SparseTensor, ttt, sptenrand
 
 mutable struct SparseTensor{T,N} <: AbstractArray{T,N}
     dict::Dict{NTuple{N,Int},T}
@@ -48,13 +48,15 @@ function Base.setindex!(A::SparseTensor, value, inds::Vararg{Int,N}) where N
 end
 
 # TODO: fix bug: randtensor(10,(10,)) is all zeroes
-function randtensor(n,dims=(256,256,256))
-    subs = vcat(round.((rand(Float64,n,length(dims))) .* ([d for d in dims]' .-1)) .+ 1 .|> Int, [d for d in dims]')
+function sptenrand(dims::Array{Int,1},n::Int)
+    subs = vcat(round.((rand(Float64,n,length(dims))) .* (dims' .-1)) .+ 1 .|> Int, dims')
     # hcat([[rand(1:d,n); d] for d in dims]...) is equivalent but takes twice as long
     # vcat(((N, d) -> rand(1:d)).(1:n,[d for d in dims]'), [d for d in dims]) # ditto
     vals = [rand(n); 0.0]
     SparseTensor(vals,subs)
 end
+
+sptenrand(dims,d::AbstractFloat) = sptenrand(dims,d*prod(dims)|>round|>Int)
 
 # Broadcasting - inspired by https://github.com/andyferris/Dictionaries.jl/blob/9b22a254683260354fda8e32291727dfad040106/src/broadcast.jl#L94
 # See also: https://docs.julialang.org/en/v1/manual/interfaces/index.html
@@ -81,7 +83,7 @@ end
 
 # Base.:* - see ttt.m
 # Outer product: (l⊗r)_{i_1,...,i_n,j_1,...,j_n} = l_{i_1,...,i_n} r_{j_1,...,j_n} (i.e. not the Kronecker product)
-function ⊗(l::SparseTensor, r::SparseTensor)
+function ttt(l::SparseTensor, r::SparseTensor)
     SparseTensor(Dict((a..., b...) => l[a...] * r[b...] for (a, b) in Iterators.product(l.dict |> keys,r.dict |> keys)))
 end
 
@@ -90,4 +92,3 @@ end
 
 # TODO: stop implementing these myself. I should just write a TensorToolbox.jl compatible type and then optimise when I can be bothered. _headdesk_
 # (bonus: it would let me check my maths)
-end
