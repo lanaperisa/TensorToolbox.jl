@@ -33,11 +33,6 @@ function Base.size(t::SparseTensor)
     maximum(hcat(([k...] for k in keys(t.dict))...),dims=2) |> Tuple
 end
 
-
-function Base.:+(l::SparseTensor, r::SparseTensor)
-    SparseTensor([l.vals; r.vals], [l.subs; r.subs])
-end
-
 function Base.:+(l::SparseTensor, r::SparseTensor)
     SparseTensor(merge(+,l.dict,r.dict))
 end
