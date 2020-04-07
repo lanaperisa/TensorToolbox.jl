@@ -1,4 +1,0 @@
-[deps]
-BenchmarkTools = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"
-LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
-TensorToolbox = "9c690861-8ade-587a-897e-15364bc6f718"
