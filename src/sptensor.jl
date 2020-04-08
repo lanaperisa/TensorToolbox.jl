@@ -38,16 +38,20 @@ function Base.:+(l::SparseTensor, r::SparseTensor)
 end
 
 # TODO: add error checking - out of bounds etc.
-# Bug: rank-1 tensors (i.e. vectors) all show as zero as it tries to do 2D indexing, i.e. (10,1)) etc.
-function Base.getindex(A::SparseTensor, inds::Vararg{Int,N}) where N # this should really be where N == ndims(A)
+function Base.getindex(A::SparseTensor{T,N}, inds::Vararg{Int,N}) where {N,T}
     get(A.dict,inds,0)
+end
+# Bug: Julia asks for (1,1) indices for rank-1 tensors - this is a workaround but not a pretty one
+# and this doesn't seem to do anything
+# Base.IndexStyle(::SparseTensor{T,1}) where T = IndexLinear()
+function Base.getindex(A::SparseTensor{T,1}, inds::Vararg{Int,N}) where {N,T}
+    get(A.dict,(inds[1],),0)
 end
 
 function Base.setindex!(A::SparseTensor, value, inds::Vararg{Int,N}) where N
     A.dict[inds] = value
 end
 
-# TODO: fix bug: randtensor(10,(10,)) is all zeroes
 function sptenrand(dims::Array{Int,1},n::Int)
     subs = vcat(round.((rand(Float64,n,length(dims))) .* (dims' .-1)) .+ 1 .|> Int, dims')
     # hcat([[rand(1:d,n); d] for d in dims]...) is equivalent but takes twice as long
