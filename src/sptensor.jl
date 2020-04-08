@@ -12,8 +12,8 @@ export SparseTensor, ttt, sptenrand
 mutable struct SparseTensor{T,N} <: AbstractArray{T,N}
     dict::Dict{NTuple{N,Int},T}
     # dict::Dict{Tuple{Int,Vararg{Int}},T} # Julia doesn't like this
-    #dims::CartesianIndex
-    function SparseTensor(v::Array{E,1},subs) where E <: Number
+    dims::NTuple{N,Int}
+    function SparseTensor(v::Array{E,1},subs::Array{Int,2},dims="auto") where E <: Number
         newsubs = unique(subs,dims=1)
 
         # This feels like it should be slow
@@ -23,15 +23,18 @@ mutable struct SparseTensor{T,N} <: AbstractArray{T,N}
         end
 
         #dims = CartesianIndex(maximum(newsubs, dims=1)...)
-        SparseTensor(dict)
+        SparseTensor(dict,dims == "auto" ? maximum(subs,dims=1) |> Tuple : dims)
     end
-    SparseTensor(d) = new{d |> values |> eltype, d |> keys |> first |> length}(d)
+    SparseTensor(d::Dict,dims) = new{d |> values |> eltype, length(dims)}(d,dims)
+    SparseTensor(d::Dict) = SparseTensor(d,maximum(_indarray(d),dims=1) |> Tuple)
 end
 
-function Base.size(t::SparseTensor)
-    # Perhaps we should just store this at creation time - cheaper to work it out on subs?
-    maximum(hcat(([k...] for k in keys(t.dict))...),dims=2) |> Tuple
+function _indarray(d::Dict)
+    reduce(hcat,d |> keys .|> collect) |> permutedims
 end
+_indarray(t::SparseTensor) = _indarray(t.dict)
+
+Base.size(t::SparseTensor) = t.dims
 
 function Base.:+(l::SparseTensor, r::SparseTensor)
     SparseTensor(merge(+,l.dict,r.dict))
@@ -53,11 +56,9 @@ function Base.setindex!(A::SparseTensor, value, inds::Vararg{Int,N}) where N
 end
 
 function sptenrand(dims::Array{Int,1},n::Int)
-    subs = vcat(round.((rand(Float64,n,length(dims))) .* (dims' .-1)) .+ 1 .|> Int, dims')
-    # hcat([[rand(1:d,n); d] for d in dims]...) is equivalent but takes twice as long
-    # vcat(((N, d) -> rand(1:d)).(1:n,[d for d in dims]'), [d for d in dims]) # ditto
-    vals = [rand(n); 0.0]
-    SparseTensor(vals,subs)
+    subs = round.((rand(Float64,n,length(dims))) .* (dims' .-1)) .+ 1 .|> Int
+    vals = rand(n)
+    SparseTensor(vals,subs,dims|>Tuple)
 end
 
 sptenrand(dims,d::AbstractFloat) = sptenrand(dims,d*prod(dims)|>round|>Int)
