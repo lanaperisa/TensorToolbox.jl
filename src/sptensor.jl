@@ -27,6 +27,7 @@ mutable struct SparseTensor{T,N} <: AbstractArray{T,N}
     end
     SparseTensor(d::Dict,dims) = new{d |> values |> eltype, length(dims)}(d,dims)
     SparseTensor(d::Dict) = SparseTensor(d,maximum(_indarray(d),dims=1) |> Tuple)
+    SparseTensor(a::AbstractArray) = SparseTensor(Dict(Tuple(ind) => a[ind] for ind in findall(x->x!==zero(x),a)),size(a))
 end
 
 function _indarray(d::Dict)
