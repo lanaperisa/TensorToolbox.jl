@@ -70,7 +70,7 @@ end
 Base.Broadcast.BroadcastStyle(::Type{<:SparseTensor{T,N}}) where {T,N} = SparseTensorBroadcastStyle{N}()
 
 # Fall back to dense array if one of the broadcast arguments is a dense array
-Base.Broadcast.BroadcastStyle(::SparseTensorBroadcastStyle{D}, a::Base.Broadcast.DefaultArrayStyle{N}) where {D,N} = Base.Broadcast.DefaultArrayStyle{D}()
+Base.Broadcast.BroadcastStyle(::SparseTensorBroadcastStyle{D}, a::Base.Broadcast.DefaultArrayStyle{N}) where {D,N} = Base.Broadcast.DefaultArrayStyle{max(N,D)}()
 
 # TODO: 
 # - sparse .* dense = sparse 
