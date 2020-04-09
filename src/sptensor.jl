@@ -93,6 +93,13 @@ function ttt(l::SparseTensor, r::SparseTensor)
     SparseTensor(Dict((a..., b...) => l[a...] * r[b...] for (a, b) in Iterators.product(l.dict |> keys,r.dict |> keys)))
 end
 
+function Base.Array(t::SparseTensor)
+    a = zeros(size(t))
+    for (k,v) in t.dict
+        a[k...] = v
+    end
+    a
+end
 
 # TODO: Support slices / Colon()
 
