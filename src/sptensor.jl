@@ -72,6 +72,10 @@ Base.Broadcast.BroadcastStyle(::Type{<:SparseTensor{T,N}}) where {T,N} = SparseT
 # Fall back to dense array if one of the broadcast arguments is a dense array
 Base.Broadcast.BroadcastStyle(::SparseTensorBroadcastStyle{D}, a::Base.Broadcast.DefaultArrayStyle{N}) where {D,N} = Base.Broadcast.DefaultArrayStyle{D}()
 
+# TODO: 
+# - sparse .* dense = sparse 
+# - sparse .+ dense = dense, but it can be sped up by being s .+ d = begin c = copy(d); for (k,v) in s.dict; c[k...] .+ v; end
+# (need to make own SparseDense broadcast style to replace the DefaultArrayStyle above and then make the function below specialise on f={Base.:*,Base.:+}
 
 function Base.Broadcast.broadcasted(::SparseTensorBroadcastStyle, f, args...)
     merge(f,_getdict.(args)...) |> SparseTensor
