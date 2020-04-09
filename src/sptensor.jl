@@ -37,10 +37,6 @@ _indarray(t::SparseTensor) = _indarray(t.dict)
 
 Base.size(t::SparseTensor) = t.dims
 
-function Base.:+(l::SparseTensor, r::SparseTensor)
-    SparseTensor(merge(+,l.dict,r.dict))
-end
-
 # TODO: add error checking - out of bounds etc.
 function Base.getindex(A::SparseTensor{T,N}, inds::Vararg{Int,N}) where {N,T}
     get(A.dict,inds,0)
@@ -68,13 +64,14 @@ sptenrand(dims,d::AbstractFloat) = sptenrand(dims,d*prod(dims)|>round|>Int)
 # See also: https://docs.julialang.org/en/v1/manual/interfaces/index.html
 Base.Broadcast.broadcastable(t::SparseTensor) = t
 
-struct SparseTensorBroadcastStyle <: Base.Broadcast.BroadcastStyle
+struct SparseTensorBroadcastStyle{N} <: Base.Broadcast.AbstractArrayStyle{N}
 end
 
-Base.Broadcast.BroadcastStyle(::Type{<:SparseTensor}) = SparseTensorBroadcastStyle()
+Base.Broadcast.BroadcastStyle(::Type{<:SparseTensor{T,N}}) where {T,N} = SparseTensorBroadcastStyle{N}()
 
-# TODO: fix SparseTensor(...) .+ {Numbers, AbstractArrays (where indices match)
-# Base.Broadcast.BroadcastStyle(::SparseTensorBroadcastStyle, ::Base.Broadcast.AbstractArrayStyle{0}) = SparseTensorBroadcastStyle()
+# Fall back to dense array if one of the broadcast arguments is a dense array
+Base.Broadcast.BroadcastStyle(::SparseTensorBroadcastStyle{D}, a::Base.Broadcast.DefaultArrayStyle{N}) where {D,N} = Base.Broadcast.DefaultArrayStyle{D}()
+
 
 function Base.Broadcast.broadcasted(::SparseTensorBroadcastStyle, f, args...)
     merge(f,_getdict.(args)...) |> SparseTensor
