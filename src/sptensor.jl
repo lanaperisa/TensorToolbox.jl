@@ -39,13 +39,13 @@ Base.size(t::SparseTensor) = t.dims
 
 # TODO: add error checking - out of bounds etc.
 function Base.getindex(A::SparseTensor{T,N}, inds::Vararg{Int,N}) where {N,T}
-    get(A.dict,inds,0)
+    get(A.dict,inds,zero(eltype(A)))
 end
 # Bug: Julia asks for (1,1) indices for rank-1 tensors - this is a workaround but not a pretty one
 # and this doesn't seem to do anything
 # Base.IndexStyle(::SparseTensor{T,1}) where T = IndexLinear()
 function Base.getindex(A::SparseTensor{T,1}, inds::Vararg{Int,N}) where {N,T}
-    get(A.dict,(inds[1],),0)
+    get(A.dict,(inds[1],),zero(eltype(A)))
 end
 
 function Base.setindex!(A::SparseTensor, value, inds::Vararg{Int,N}) where N
