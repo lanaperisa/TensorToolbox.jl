@@ -91,7 +91,7 @@ end
 # Base.:* - see ttt.m
 # Outer product: (l⊗r)_{i_1,...,i_n,j_1,...,j_n} = l_{i_1,...,i_n} r_{j_1,...,j_n} (i.e. not the Kronecker product)
 function ttt(l::SparseTensor, r::SparseTensor)
-    SparseTensor(Dict((a..., b...) => l[a...] * r[b...] for (a, b) in Iterators.product(l.dict |> keys,r.dict |> keys)))
+    SparseTensor(Dict((a..., b...) => l[a...] * r[b...] for (a, b) in Iterators.product(l.dict |> keys,r.dict |> keys)),(l.dims...,r.dims...))
 end
 
 function Base.Array(t::SparseTensor)
