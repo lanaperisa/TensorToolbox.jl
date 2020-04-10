@@ -9,6 +9,8 @@
 
 export SparseTensor, ttt, sptenrand
 
+using SparseArrays
+
 mutable struct SparseTensor{T,N} <: AbstractArray{T,N}
     dict::Dict{NTuple{N,Int},T}
     # dict::Dict{Tuple{Int,Vararg{Int}},T} # Julia doesn't like this
@@ -107,15 +109,16 @@ end
 # - reshape
 # - sparse-vector multiplication
 
-function Base.:*(t::SparseTensor{T,2},v::AbstractArray{T2,1}) where {T,T2}
-    density = (t.dict |> length) / (t.dims |> prod)
-
-    # Heuristic: back off if density means this is slower than base multiply
-    (density > 2e-4) && return Array(t)*v
-    inds = _indarray(t)
-    SparseTensor(Dict((k,) => sum(t[r...]*v[r[2]] for r in eachrow(inds[inds[:,1].==k,:]))
-                      for k in inds[:,1] |> unique),size(v))
+# TODO: 
+# - consider automatically backing off to CSC for all SparseTensor{T,D}
+function SparseArrays.sparse(t::SparseTensor{T,2}) where T
+    i = _indarray(t)
+    sparse(i[:,1],i[:,2],t.dict|>values|>collect,size(t)...)
 end
+
+# TODO: 
+# - consider if the change in type here is too surprising; conversion back to sparse tensor is only a bit slow
+Base.:*(t::SparseTensor{T,2},v::AbstractArray{T2,1}) where {T,T2} = sparse(t)*v
 
 # TODO: Support slices / Colon()
 
