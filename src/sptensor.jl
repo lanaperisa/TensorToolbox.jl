@@ -102,6 +102,16 @@ function Base.Array(t::SparseTensor)
     a
 end
 
+function Base.:*(t::SparseTensor{T,2},v::AbstractArray{T2,1}) where {T,T2}
+    density = (t.dict |> length) / (t.dims |> prod)
+
+    # Heuristic: back off if density means this is slower than base multiply
+    (density > 2e-4) && return Array(t)*v
+    inds = _indarray(t)
+    SparseTensor(Dict((k,) => sum(t[r...]*v[r[2]] for r in eachrow(inds[inds[:,1].==k,:]))
+                      for k in inds[:,1] |> unique),size(v))
+end
+
 # TODO: Support slices / Colon()
 
 # TODO: stop implementing these myself. I should just write a TensorToolbox.jl compatible type and then optimise when I can be bothered. _headdesk_
