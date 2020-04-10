@@ -102,6 +102,11 @@ function Base.Array(t::SparseTensor)
     a
 end
 
+# To implement for ttv:
+# - permutedims
+# - reshape
+# - sparse-vector multiplication
+
 function Base.:*(t::SparseTensor{T,2},v::AbstractArray{T2,1}) where {T,T2}
     density = (t.dict |> length) / (t.dims |> prod)
 
