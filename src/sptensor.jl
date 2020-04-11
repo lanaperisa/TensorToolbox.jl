@@ -19,7 +19,7 @@ mutable struct SparseTensor{T,N} <: AbstractArray{T,N}
         newsubs = unique(subs,dims=1)
 
         # This feels like it should be slow
-        dict = Dict(v => 0.0 for v in Tuple.(eachrow(newsubs)))
+        dict = Dict(s => zero(eltype(v)) for s in Tuple.(eachrow(newsubs)))
         for i in 1:length(v)
             dict[Tuple(subs[i,:])] += v[i]
         end
