@@ -122,5 +122,8 @@ Base.:*(t::SparseTensor{T,2},v::AbstractArray{T2,1}) where {T,T2} = sparse(t)*v
 
 # TODO: Support slices / Colon()
 
+# TODO: less mad version of this
+Base.permutedims(t::SparseTensor,args...) = permutedims(Array(t),args...)
+
 # TODO: stop implementing these myself. I should just write a TensorToolbox.jl compatible type and then optimise when I can be bothered. _headdesk_
 # (bonus: it would let me check my maths)

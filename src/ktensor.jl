@@ -258,7 +258,7 @@ function innerprod(X1::ktensor,X2::ktensor)
   sum(inpr[:])
 end
 function innerprod(X1::ktensor,X2)
-  @assert(isa(X2,ttensor) || isa(X2,Array), "Inner product not available for type $(typeof(X2)).")
+  #@assert(isa(X2,ttensor) || isa(X2,Array), "Inner product not available for type $(typeof(X2)).")
   @assert(size(X1)==size(X2),"Dimension mismatch.")
   inpr=0
   for r=1:ncomponents(X1)
