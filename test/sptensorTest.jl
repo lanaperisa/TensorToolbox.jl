@@ -1,3 +1,6 @@
+import Random
+Random.seed!(1337)
+
 println("\n")
 
 sp = sptenrand([10, 10, 10], 0.01)
