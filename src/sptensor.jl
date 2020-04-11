@@ -9,7 +9,7 @@
 
 export SparseTensor, ttt, sptenrand
 
-using SparseArrays
+import SparseArrays
 
 mutable struct SparseTensor{T,N} <: AbstractArray{T,N}
     dict::Dict{NTuple{N,Int},T}
@@ -118,7 +118,7 @@ end
 
 # TODO: 
 # - consider if the change in type here is too surprising; conversion back to sparse tensor is only a bit slow
-Base.:*(t::SparseTensor{T,2},v::AbstractArray{T2,1}) where {T,T2} = sparse(t)*v
+Base.:*(t::SparseTensor{T,2},v::AbstractArray{T2,1}) where {T,T2} = SparseArrays.sparse(t)*v
 
 # TODO: Support slices / Colon()
 
