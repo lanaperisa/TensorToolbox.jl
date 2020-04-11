@@ -54,13 +54,27 @@ function Base.setindex!(A::SparseTensor, value, inds::Vararg{Int,N}) where N
     A.dict[inds] = value
 end
 
-function sptenrand(dims::Array{Int,1},n::Int)
-    subs = round.((rand(Float64,n,length(dims))) .* (dims' .-1)) .+ 1 .|> Int
-    vals = rand(n)
+# If you need exactly n non-zeroes, provide subrng: n,dims -> Array{Int,2}
+# E.g. 
+# ```
+# subrng=(n,dims)->begin
+#     reduce(hcat, StatsBase.sample(
+#         Iterators.product([range(1;length=e) for e in dims]...) |> collect,
+#         n;
+#         replace=false
+#     ) .|> collect) |> permutedims
+# end
+# ``` (NB: very slow for large numbers of dimensions - ideally we want a sampler that can operate on an iterator)
+function sptenrand(dims::Array{Int,1},n::Int;rng=rand,subrng=_subrng)
+    subs = subrng(n,dims)
+    vals = rng(size(subs)[1])
     SparseTensor(vals,subs,dims|>Tuple)
 end
 
-sptenrand(dims,d::AbstractFloat) = sptenrand(dims,d*prod(dims)|>round|>Int)
+# Generates n indices into dims and discards repeats
+_subrng(n,dims::Array{Int,1}) = unique(round.((rand(Float64,n,length(dims))) .* (dims' .-1)) .+ 1 .|> Int, dims=1)
+
+sptenrand(dims,d::AbstractFloat;kwargs...) = sptenrand(dims,d*prod(dims)|>round|>Int;kwargs...)
 
 # Broadcasting - inspired by https://github.com/andyferris/Dictionaries.jl/blob/9b22a254683260354fda8e32291727dfad040106/src/broadcast.jl#L94
 # See also: https://docs.julialang.org/en/v1/manual/interfaces/index.html
