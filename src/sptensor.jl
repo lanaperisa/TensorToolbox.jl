@@ -94,10 +94,22 @@ Base.Broadcast.BroadcastStyle(::SparseTensorBroadcastStyle{D}, a::Base.Broadcast
 # (need to make own SparseDense broadcast style to replace the DefaultArrayStyle above and then make the function below specialise on f={Base.:*,Base.:+}
 
 function Base.Broadcast.broadcasted(::SparseTensorBroadcastStyle, f, args...)
-    merge(f,_getdict.(args)...) |> SparseTensor
+    # max() currently fails for (2,2,2),(3,1,3) - should return (3,2,3) or maybe just an error
+    SparseTensor(merge_default(f,getfield.(args,:dict)...),max(getfield.(args,:dims)...))
 end
 
-@inline _getdict(t::SparseTensor) = t.dict
+" Merge two dictionaries such that ans[k] = f((get(l,k,0),get(r,k,0)) for all k in keys(l) ∪ keys(r)"
+function merge_default(f,l,r)
+    merged = promote_type(typeof(l),typeof(r))()
+    for k in keys(l)
+        merged[k] = f(l[k],get(r,k,zero(valtype(r))))
+    end
+    for k in keys(r)
+        haskey(merged, k) && continue
+        merged[k] = f(zero(valtype(l)),r[k])
+    end
+    merged
+end
 
 # I'm not sure what these do but they're not good
 # Base.Broadcast.materialize(t::SparseTensor) = copy(t)
