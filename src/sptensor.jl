@@ -130,14 +130,16 @@ function SparseArrays.sparse(t::SparseTensor{T,2}) where T
     sparse(i[:,1],i[:,2],t.dict|>values|>collect,size(t)...)
 end
 
-# TODO: 
-# - consider if the change in type here is too surprising; conversion back to sparse tensor is only a bit slow
-Base.:*(t::SparseTensor{T,2},v::AbstractArray{T2,1}) where {T,T2} = SparseArrays.sparse(t)*v
+Base.:*(t::SparseTensor{T,2},v::AbstractArray{T2,1}) where {T,T2} = begin
+    SparseTensor(SparseArrays.sparse(t)*v)
+end
+
+Base.promote_rule(::Type{SparseTensor{T1,D}},::Type{Array{T2,D}}) where {T1,T2,D} = SparseTensor{promote_type(T1,T2),D}
+
+Base.permutedims(t::SparseTensor,dims) = SparseTensor(Dict(k[vec(dims)] => v for (k,v) in t.dict), t.dims)
+
 
 # TODO: Support slices / Colon()
-
-# TODO: less mad version of this
-Base.permutedims(t::SparseTensor,args...) = permutedims(Array(t),args...)
 
 # TODO: stop implementing these myself. I should just write a TensorToolbox.jl compatible type and then optimise when I can be bothered. _headdesk_
 # (bonus: it would let me check my maths)
