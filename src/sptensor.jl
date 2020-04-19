@@ -122,9 +122,34 @@ end
 # - permutedims
 # - reshape
 # - sparse-vector multiplication
+# function ttv2(X::AbstractArray{<:Number,N},V::VectorCell,modes::AbstractVector{<:Integer}) where N
+#   remmodes=setdiff(1:N,modes)'
+#   if N > 1
+#     X=permutedims(X,[remmodes modes'])
+#     @show [remmodes modes']
+#     @show X
+#   end
+#   sz=size(X)
+#   @show sz
+#   if length(modes) < length(V)
+#     V=V[modes]
+#   end
+#   M=N
+#   for n=length(modes):-1:1
+#     X=reshape(X,prod(sz[1:M-1]),sz[M])
+#     @show X
+#     X=X*V[n]
+#     @show X
+#     M-=1
+#   end
+#   if M>0
+#     X=reshape(X,sz[1:M])
+#   end
+#   X
+# end
 
 # TODO: 
-# - consider automatically backing off to CSC for all SparseTensor{T,D}
+# - consider automatically backing off to CSC for all SparseTensor{T,2}
 function SparseArrays.sparse(t::SparseTensor{T,2}) where T
     i = _indarray(t)
     sparse(i[:,1],i[:,2],t.dict|>values|>collect,size(t)...)
@@ -138,6 +163,26 @@ Base.promote_rule(::Type{SparseTensor{T1,D}},::Type{Array{T2,D}}) where {T1,T2,D
 
 Base.permutedims(t::SparseTensor,dims) = SparseTensor(Dict(k[vec(dims)] => v for (k,v) in t.dict), t.dims)
 
+# heart of ttv for s(2,2,2) and v(2) is thus:
+# julia> reshape(reshape(permutedims(s, [2 3 1]),2*2,2)*v,2,2)
+#
+# which uses dense arrays. Reshape has a special type itself.
+#
+# TS = promote_op(matprod, T, S) # where matprod = x*y + x*y
+# julia> Base.promote_op(+,SparseTensor{Int,2},Array{Int,2})
+# Array{Int64,2}
+#
+# Even though we have the promotion rule above. It uses julia> Core.Compiler.return_type(+,Tuple{T1,T2}) internally.
+# Ideally we should be able to avoid it altoghter.
+
+mutable struct ReshapedSparseTensor{T,D}  # <: AbstractSparseTensor
+    # Will need custom get/set index
+    underlying::SparseTensor{T,D}
+    dims::Dims{D}
+end
+
+function Base.reshape(t::SparseTensor,dims::Dims)
+end
 
 # TODO: Support slices / Colon()
 
