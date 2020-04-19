@@ -12,9 +12,9 @@ export SparseTensor, ttt, sptenrand
 import SparseArrays
 
 mutable struct SparseTensor{T,N} <: AbstractArray{T,N}
-    dict::Dict{NTuple{N,Int},T}
+    dict::Dict{Dims{N},T}
     # dict::Dict{Tuple{Int,Vararg{Int}},T} # Julia doesn't like this
-    dims::NTuple{N,Int}
+    dims::Dims{N}
     function SparseTensor(v::Array{E,1},subs::Array{Int,2},dims="auto") where E <: Number
         newsubs = unique(subs,dims=1)
 
