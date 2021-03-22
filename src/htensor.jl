@@ -127,15 +127,17 @@ end
 function display(X::htensor,name="htensor")
   println("Hierarchical Tucker tensor of size ",size(X),":\n")
   println("$name.tree: ")
+  flush(stdout)
   display(X.tree)
-  #show(stdout, "text/plain", display(X.tree))
   for n=1:length(X.trten)
     println("\n\n$name.trten[$n]:")
-    show(stdout, "text/plain", X.trten[n])
+	flush(stdout)
+	display(X.trten[n])
   end
   for n=1:length(X.fmat)
     println("\n\n$name.fmat[$n]:")
-    show(stdout, "text/plain", X.fmat[n])
+	flush(stdout)
+	display(X.fmat[n])
   end
 end
 

@@ -133,10 +133,12 @@ function display(X::ttensor,name="ttensor")
   end
   print(":\n")
   println("$name.cten: ")
-  show(stdout, "text/plain", X.cten)
+ flush(stdout)
+ display(X.cten)
   for n=1:ndims(X)
       println("\n\n$name.fmat[$n]:")
-      show(stdout, "text/plain", X.fmat[n])
+	  flush(stdout)
+	  display(X.fmat[n])
   end
 end
 
