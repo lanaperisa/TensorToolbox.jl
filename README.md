@@ -16,6 +16,14 @@ Follows the functionality of MATLAB [Tensor toolbox](http://www.sandia.gov/~tgko
 Additionally, it contains algorithms from the paper [Recompression of Hadamard Products
 of Tensors in Tucker Format](http://sma.epfl.ch/~anchpcommon/publications/ttensors_pp.pdf) by D. Kressner and L. Periša.
 
+## Installation
+
+Start Julia and type the following in REPL:
+```
+using Pkg
+Pkg.add("TensorToolbox")
+```
+
 ## Basics
 
 Start with
