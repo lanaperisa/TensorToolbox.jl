@@ -16,6 +16,8 @@ Follows the functionality of MATLAB [Tensor toolbox](http://www.sandia.gov/~tgko
 Additionally, it contains algorithms from the paper [Recompression of Hadamard Products
 of Tensors in Tucker Format](http://sma.epfl.ch/~anchpcommon/publications/ttensors_pp.pdf) by D. Kressner and L. Periša.
 
+**Note:** As of 2023, the package will not be updated anymore. 
+
 ## Basics
 
 Start with
